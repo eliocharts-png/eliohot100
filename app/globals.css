@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+html, body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #0050FF;
+  color: #ffffff;
+}
+
+.section-title {
+  font-family: var(--font-brown-bold), 'Inter', system-ui, sans-serif;
+}
+
+.font-brown-bold {
+  font-family: var(--font-brown-bold), 'Inter', system-ui, sans-serif;
+}
+
+.font-brown-regular,
+.font-brown-light {
+  font-family: var(--font-brown-regular), 'Inter', system-ui, sans-serif;
+}
