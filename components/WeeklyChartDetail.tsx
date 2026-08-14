@@ -140,16 +140,16 @@ export default function WeeklyChartDetail({
    * chart week.
    */
   const currentEntries =
-  entriesByWeek?.[selectedWeek] ??
-  entries;
+    entriesByWeek?.[selectedWeek] ??
+    entries;
 
   /*
    * Get the correct No. 1 count
    * for the selected chart week.
    */
   const currentWeeksAtNumberOne =
-  weeksAtNumberOneByWeek?.[selectedWeek] ??
-  weeksAtNumberOne
+    weeksAtNumberOneByWeek?.[selectedWeek] ??
+    weeksAtNumberOne;
 
   return (
     <section className="space-y-0">
@@ -220,35 +220,148 @@ export default function WeeklyChartDetail({
                   );
 
                 /*
-                 * Only show chart history
-                 * through the selected week.
+                 * Get chart history through
+                 * the selected week.
+                 *
+                 * A null point is inserted
+                 * whenever there is a missing
+                 * chart week. This creates a
+                 * visual break for songs that
+                 * leave and later re-enter.
                  */
-                const graphData =
-                  (
-                    entry.chartHistory ??
-                    []
+                const graphData = (() => {
+                  const history = (
+                    entry.chartHistory ?? []
                   )
                     .filter(
-                      (history) =>
+                      (item) =>
                         parseChartDate(
-                          history.week
+                          item.week
                         ) <=
                         parseChartDate(
                           selectedWeek
                         )
                     )
-                    .map(
-                      (history) => ({
-                        week:
-                          history.week,
-                        rank:
-                          history.rank,
-                        label:
-                          formatDateLabel(
-                            history.week
-                          ),
-                      })
+                    .sort(
+                      (a, b) =>
+                        parseChartDate(
+                          a.week
+                        ) -
+                        parseChartDate(
+                          b.week
+                        )
                     );
+
+                  const data: Array<{
+                    week: string;
+                    rank: number | null;
+                    label: string;
+                  }> = [];
+
+                  for (
+                    let i = 0;
+                    i < history.length;
+                    i++
+                  ) {
+                    const current =
+                      history[i];
+
+                    const previous =
+                      history[i - 1];
+
+                    if (previous) {
+                      const currentDate =
+                        parseChartDate(
+                          current.week
+                        );
+
+                      const previousDate =
+                        parseChartDate(
+                          previous.week
+                        );
+
+                      const weekDifference =
+                        Math.round(
+                          (currentDate -
+                            previousDate) /
+                            (7 *
+                              24 *
+                              60 *
+                              60 *
+                              1000)
+                        );
+
+                      /*
+                       * If more than one chart
+                       * week separates the two
+                       * appearances, insert a
+                       * null point so Recharts
+                       * breaks the line.
+                       */
+                      if (
+                        weekDifference > 1
+                      ) {
+                        const breakDate =
+                          new Date(
+                            previousDate +
+                              7 *
+                                24 *
+                                60 *
+                                60 *
+                                1000
+                          );
+
+                        const month =
+                          String(
+                            breakDate.getMonth() +
+                              1
+                          ).padStart(
+                            2,
+                            '0'
+                          );
+
+                        const day =
+                          String(
+                            breakDate.getDate()
+                          ).padStart(
+                            2,
+                            '0'
+                          );
+
+                        const year =
+                          String(
+                            breakDate.getFullYear()
+                          ).slice(-2);
+
+                        const breakWeek =
+                          `${month}/${day}/${year}`;
+
+                        data.push({
+                          week:
+                            breakWeek,
+                          rank: null,
+                          label:
+                            formatDateLabel(
+                              breakWeek
+                            ),
+                        });
+                      }
+                    }
+
+                    data.push({
+                      week:
+                        current.week,
+                      rank:
+                        current.rank,
+                      label:
+                        formatDateLabel(
+                          current.week
+                        ),
+                    });
+                  }
+
+                  return data;
+                })();
 
                 return (
                   <div
@@ -604,7 +717,6 @@ export default function WeeklyChartDetail({
                                   activeDot={{
                                     r: 5,
                                   }}
-                                  connectNulls
                                 />
 
                               </LineChart>
