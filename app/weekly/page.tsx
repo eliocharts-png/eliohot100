@@ -8,7 +8,8 @@ import type { WeeklyChartPayload } from '@/types';
 export const dynamic = 'force-dynamic';
 
 const weeklySource = sheetSources.find(
-  (source) => source.title === 'THE HOT 100'
+  (source) =>
+    source.title === 'THE HOT 100'
 );
 
 interface WeeklyPageProps {
@@ -26,7 +27,8 @@ export default async function WeeklyPage({
     );
   }
 
-  const params = await searchParams;
+  const params =
+    await searchParams;
 
   const selectedWeek =
     params.week || undefined;
@@ -43,13 +45,23 @@ export default async function WeeklyPage({
       <div className="mx-auto max-w-6xl">
         <WeeklyChartDetail
           title={weeklySource.title}
-          weekLabel={chart.displayWeek}
+          weekLabel={
+            chart.displayWeek
+          }
           week={chart.week}
-          availableWeeks={chart.availableWeeks}
+          availableWeeks={
+            chart.availableWeeks
+          }
           weeksAtNumberOne={
             chart.weeksAtNumberOne
           }
           entries={chart.entries}
+          entriesByWeek={
+            chart.entriesByWeek
+          }
+          weeksAtNumberOneByWeek={
+            chart.weeksAtNumberOneByWeek
+          }
         />
       </div>
     </main>

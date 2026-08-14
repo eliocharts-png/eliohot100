@@ -260,12 +260,8 @@ function createFallbackPayload(
   const fallback =
     fallbackChartData[title] ?? [];
 
-  return {
-    week: '',
-    displayWeek: 'UNKNOWN',
-    availableWeeks: [],
-    weeksAtNumberOne: 0,
-    entries: fallback.map(
+  const fallbackEntries =
+    fallback.map(
       (entry): WeeklyChartEntry => ({
         ...entry,
         week: '',
@@ -280,7 +276,16 @@ function createFallbackPayload(
         hasAnyPriorAppearance: false,
         chartHistory: [],
       })
-    ),
+    );
+
+  return {
+    week: '',
+    displayWeek: 'UNKNOWN',
+    availableWeeks: [],
+    weeksAtNumberOne: 0,
+    entries: fallbackEntries,
+    entriesByWeek: {},
+    weeksAtNumberOneByWeek: {},
   };
 }
 
@@ -420,9 +425,6 @@ export async function fetchWeeklyChartData(
   selectedWeek?: string
 ): Promise<WeeklyChartPayload> {
   try {
-    /*
-     * Fetch CSV.
-     */
     const response =
       await fetch(csvUrl, {
         cache: 'no-store',
@@ -437,9 +439,6 @@ export async function fetchWeeklyChartData(
     const csvText =
       await response.text();
 
-    /*
-     * Parse exactly once.
-     */
     const rows =
       parseCsv(csvText);
 
@@ -449,9 +448,6 @@ export async function fetchWeeklyChartData(
       );
     }
 
-    /*
-     * Get every available week.
-     */
     const weekSet =
       new Set<string>();
 
@@ -474,13 +470,7 @@ export async function fetchWeeklyChartData(
       );
     }
 
-    /*
-     * Determine selected week.
-     *
-     * If no week was provided,
-     * use the latest week.
-     */
-    let currentWeek =
+    const currentWeek =
       selectedWeek &&
       availableWeeks.includes(
         selectedWeek
@@ -490,307 +480,299 @@ export async function fetchWeeklyChartData(
             availableWeeks.length - 1
           ];
 
-    /*
-     * Find previous week.
-     */
-    const currentIndex =
-      availableWeeks.indexOf(
-        currentWeek
-      );
+    const entriesByWeek: Record<
+      string,
+      WeeklyChartEntry[]
+    > = {};
 
-    const previousWeek =
-      currentIndex > 0
-        ? availableWeeks[
-            currentIndex - 1
-          ]
-        : '';
+    const weeksAtNumberOneByWeek: Record<
+      string,
+      number
+    > = {};
 
-    /*
-     * Current week rows.
-     */
-    const currentRows =
-      rows.filter(
-        (row) =>
-          row.week === currentWeek
-      );
-
-    /*
-     * Previous week rows.
-     */
-    const previousRows =
-      rows.filter(
-        (row) =>
-          row.week === previousWeek
-      );
-
-    /*
-     * Previous-week lookup.
-     */
-    const previousMap =
-      new Map<
-        string,
-        RawRow
-      >();
-
-    for (const row of previousRows) {
-      previousMap.set(
-        songKey(
-          row.title,
-          row.artist
-        ),
-        row
-      );
-    }
-
-    /*
-     * Build song history only for songs
-     * appearing on the selected week.
-     */
-    const selectedSongs =
-      new Set<string>();
-
-    for (const row of currentRows) {
-      selectedSongs.add(
-        songKey(
-          row.title,
-          row.artist
-        )
-      );
-    }
-
-    const historyMap =
-      new Map<
-        string,
-        {
-          peak: number;
-          weeks: number;
-          appearedBefore: boolean;
-          chartHistory: {
-            week: string;
-            rank: number;
-          }[];
-        }
-      >();
-
-    for (const row of rows) {
-      const key =
-        songKey(
-          row.title,
-          row.artist
-        );
-
-      if (
-        !selectedSongs.has(key)
-      ) {
-        continue;
-      }
-
-      let history =
-        historyMap.get(key);
-
-      if (!history) {
-        history = {
-          peak: row.rank,
-          weeks: 0,
-          appearedBefore: false,
-          chartHistory: [],
-        };
-
-        historyMap.set(
-          key,
-          history
-        );
-      }
-
-      history.peak =
-        Math.min(
-          history.peak,
-          row.rank
-        );
-
-      history.weeks++;
-
-      if (
-        parseChartDate(row.week) <
-        parseChartDate(currentWeek)
-      ) {
-        history.appearedBefore =
-          true;
-      }
-
-      history.chartHistory.push({
-        week: row.week,
-        rank: row.rank,
-      });
-    }
-
-    /*
-     * Sort selected songs' histories.
-     */
     for (
-      const history of
-        historyMap.values()
+      let weekIndex = 0;
+      weekIndex <
+      availableWeeks.length;
+      weekIndex++
     ) {
-      history.chartHistory.sort(
-        (a, b) =>
-          parseChartDate(
-            a.week
-          ) -
-          parseChartDate(
-            b.week
-          )
-      );
-    }
+      const chartWeek =
+        availableWeeks[weekIndex];
 
-    /*
-     * Count weeks at #1 for the
-     * current #1 song.
-     */
-    const numberOne =
-      currentRows.find(
-        (row) =>
-          row.rank === 1
-      );
+      const previousWeek =
+        weekIndex > 0
+          ? availableWeeks[
+              weekIndex - 1
+            ]
+          : '';
 
-    let weeksAtNumberOne = 0;
-
-    if (numberOne) {
-      const numberOneKey =
-        songKey(
-          numberOne.title,
-          numberOne.artist
+      const currentRows =
+        rows.filter(
+          (row) =>
+            row.week === chartWeek
         );
+
+      const previousRows =
+        rows.filter(
+          (row) =>
+            row.week ===
+            previousWeek
+        );
+
+      const previousMap =
+        new Map<string, RawRow>();
+
+      for (const row of previousRows) {
+        previousMap.set(
+          songKey(
+            row.title,
+            row.artist
+          ),
+          row
+        );
+      }
+
+      const selectedSongs =
+        new Set<string>();
+
+      for (const row of currentRows) {
+        selectedSongs.add(
+          songKey(
+            row.title,
+            row.artist
+          )
+        );
+      }
+
+      const historyMap =
+        new Map<
+          string,
+          {
+            peak: number;
+            weeks: number;
+            appearedBefore: boolean;
+            chartHistory: {
+              week: string;
+              rank: number;
+            }[];
+          }
+        >();
 
       for (const row of rows) {
+        const key =
+          songKey(
+            row.title,
+            row.artist
+          );
+
         if (
-          row.rank !== 1 ||
-          parseChartDate(
-            row.week
-          ) >
-            parseChartDate(
-              currentWeek
-            )
+          !selectedSongs.has(key)
         ) {
           continue;
         }
 
         if (
-          songKey(
-            row.title,
-            row.artist
-          ) === numberOneKey
+          parseChartDate(row.week) >
+          parseChartDate(chartWeek)
         ) {
-          weeksAtNumberOne++;
+          continue;
+        }
+
+        let history =
+          historyMap.get(key);
+
+        if (!history) {
+          history = {
+            peak: row.rank,
+            weeks: 0,
+            appearedBefore: false,
+            chartHistory: [],
+          };
+
+          historyMap.set(
+            key,
+            history
+          );
+        }
+
+        history.peak =
+          Math.min(
+            history.peak,
+            row.rank
+          );
+
+        history.weeks++;
+
+        if (
+          parseChartDate(row.week) <
+          parseChartDate(chartWeek)
+        ) {
+          history.appearedBefore =
+            true;
+        }
+
+        history.chartHistory.push({
+          week: row.week,
+          rank: row.rank,
+        });
+      }
+
+      for (
+        const history of
+          historyMap.values()
+      ) {
+        history.chartHistory.sort(
+          (a, b) =>
+            parseChartDate(
+              a.week
+            ) -
+            parseChartDate(
+              b.week
+            )
+        );
+      }
+
+      const numberOne =
+        currentRows.find(
+          (row) =>
+            row.rank === 1
+        );
+
+      let weeksAtNumberOne = 0;
+
+      if (numberOne) {
+        const numberOneKey =
+          songKey(
+            numberOne.title,
+            numberOne.artist
+          );
+
+        for (const row of rows) {
+          if (
+            row.rank !== 1 ||
+            parseChartDate(
+              row.week
+            ) >
+              parseChartDate(
+                chartWeek
+              )
+          ) {
+            continue;
+          }
+
+          if (
+            songKey(
+              row.title,
+              row.artist
+            ) === numberOneKey
+          ) {
+            weeksAtNumberOne++;
+          }
         }
       }
-    }
 
-    /*
-     * Build entries.
-     */
-    const entries =
-      currentRows
-        .map(
-          (
-            row
-          ): WeeklyChartEntry => {
-            const key =
-              songKey(
-                row.title,
-                row.artist
-              );
+      weeksAtNumberOneByWeek[
+        chartWeek
+      ] = weeksAtNumberOne;
 
-            const previous =
-              previousMap.get(
-                key
-              ) ?? null;
+      entriesByWeek[chartWeek] =
+        currentRows
+          .map(
+            (
+              row
+            ): WeeklyChartEntry => {
+              const key =
+                songKey(
+                  row.title,
+                  row.artist
+                );
 
-            const history =
-              historyMap.get(
-                key
-              );
+              const previous =
+                previousMap.get(
+                  key
+                ) ?? null;
 
-            const appearedBefore =
-              history?.appearedBefore ??
-              false;
+              const history =
+                historyMap.get(
+                  key
+                );
 
-            const movementIcon =
-              getMovementIcon(
-                row.rank,
-                previous
-                  ? previous.rank
-                  : null,
-                appearedBefore
-              );
+              const appearedBefore =
+                history?.appearedBefore ??
+                false;
 
-            return {
-              week: currentWeek,
-
-              rank: row.rank,
-
-              title: row.title,
-
-              artist: row.artist,
-
-              artwork: row.artwork,
-
-              points: row.points,
-
-              lastWeekRank:
-                previous
-                  ? previous.rank
-                  : null,
-
-              lastWeekPoints:
-                previous
-                  ? previous.points
-                  : undefined,
-
-              peakPosition:
-                history?.peak ??
-                row.rank,
-
-              weeksOnChart:
-                history?.weeks ??
-                1,
-
-              arrow:
-                getMovementArrow(
+              const movementIcon =
+                getMovementIcon(
                   row.rank,
                   previous
                     ? previous.rank
-                    : null
-                ),
+                    : null,
+                  appearedBefore
+                );
 
-              movementIcon,
+              return {
+                week: chartWeek,
+                rank: row.rank,
+                title: row.title,
+                artist: row.artist,
+                artwork: row.artwork,
+                points: row.points,
+                lastWeekRank:
+                  previous
+                    ? previous.rank
+                    : null,
+                lastWeekPoints:
+                  previous
+                    ? previous.points
+                    : undefined,
+                peakPosition:
+                  history?.peak ??
+                  row.rank,
+                weeksOnChart:
+                  history?.weeks ??
+                  1,
+                arrow:
+                  getMovementArrow(
+                    row.rank,
+                    previous
+                      ? previous.rank
+                      : null
+                  ),
+                movementIcon,
+                hasAnyPriorAppearance:
+                  appearedBefore,
+                chartHistory:
+                  history?.chartHistory ??
+                  [],
+              };
+            }
+          )
+          .sort(
+            (a, b) =>
+              a.rank - b.rank
+          );
+    }
 
-              hasAnyPriorAppearance:
-                appearedBefore,
+    const entries =
+      entriesByWeek[currentWeek] ??
+      [];
 
-              chartHistory:
-                history?.chartHistory ??
-                [],
-            };
-          }
-        )
-        .sort(
-          (a, b) =>
-            a.rank - b.rank
-        );
+    const weeksAtNumberOne =
+      weeksAtNumberOneByWeek[
+        currentWeek
+      ] ?? 0;
 
     return {
       week: currentWeek,
-
       displayWeek:
         formatDateLabel(
           currentWeek
         ),
-
       availableWeeks,
-
       weeksAtNumberOne,
-
       entries,
+      entriesByWeek,
+      weeksAtNumberOneByWeek,
     };
   } catch (error) {
     console.error(

@@ -1,11 +1,3 @@
-export interface ChartEntry {
-  rank: number;
-  title: string;
-  artist: string;
-}
-
-export type MovementArrow = '▲' | '▼' | '→' | 'NEW';
-
 export type MovementIcon =
   | 'up'
   | 'down'
@@ -13,24 +5,34 @@ export type MovementIcon =
   | 'reentry'
   | 'debut';
 
-export interface WeeklyChartEntry {
-  week: string;
+export interface ChartEntry {
   rank: number;
   title: string;
   artist: string;
+}
+
+export interface ChartHistoryEntry {
+  week: string;
+  rank: number;
+}
+
+export interface WeeklyChartEntry
+  extends ChartEntry {
+  week: string;
   artwork?: string;
   points?: number;
   lastWeekRank: number | null;
   lastWeekPoints?: number;
   peakPosition: number;
   weeksOnChart: number;
-  arrow: MovementArrow;
+  arrow:
+    | 'NEW'
+    | '▲'
+    | '▼'
+    | '→';
   movementIcon: MovementIcon;
   hasAnyPriorAppearance: boolean;
-  chartHistory: {
-    week: string;
-    rank: number;
-  }[];
+  chartHistory: ChartHistoryEntry[];
 }
 
 export interface WeeklyChartPayload {
@@ -39,6 +41,14 @@ export interface WeeklyChartPayload {
   availableWeeks: string[];
   weeksAtNumberOne: number;
   entries: WeeklyChartEntry[];
-  entriesByWeek: Record<string, WeeklyChartEntry[]>;
-  weeksAtNumberOneByWeek: Record<string, number>;
+
+  entriesByWeek: Record<
+    string,
+    WeeklyChartEntry[]
+  >;
+
+  weeksAtNumberOneByWeek: Record<
+    string,
+    number
+  >;
 }

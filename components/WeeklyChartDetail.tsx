@@ -149,7 +149,7 @@ export default function WeeklyChartDetail({
    */
   const currentWeeksAtNumberOne =
   weeksAtNumberOneByWeek?.[selectedWeek] ??
-  weeksAtNumberOne;curl http://localhost:3000
+  weeksAtNumberOne
 
   return (
     <section className="space-y-0">
