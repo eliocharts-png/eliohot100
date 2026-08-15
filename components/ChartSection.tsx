@@ -1,56 +1,99 @@
 'use client';
 
+import Link from 'next/link';
 import type { ChartEntry } from '@/types';
-import { useMediaQuery } from './useMediaQuery';
 
 interface ChartSectionProps {
   title: string;
-  linkLabel: string;
   href: string;
   entries: ChartEntry[];
 }
 
-export function ChartSection({ title, linkLabel, href, entries }: ChartSectionProps) {
-  const isDesktop = useMediaQuery('(min-width: 1024px)', false);
-  const isTabletLandscape = useMediaQuery('(orientation: landscape) and (min-width: 768px)', false);
-  const displayedEntries = isDesktop || isTabletLandscape ? entries.slice(0, 5) : entries.slice(0, 3);
+export default function ChartSection({
+  title,
+  href,
+  entries,
+}: ChartSectionProps) {
+  const previewEntries = entries.slice(0, 5);
 
   return (
-    <section className="space-y-6">
-      <div className="w-full bg-[#0050FF] px-6 py-7 flex items-center justify-between">
-        <h2 className="text-white text-2xl font-bold uppercase tracking-[0.18em] font-brown-bold sm:text-[2.15rem] lg:text-[2.5rem]">
-          {title}
-        </h2>
-        <a
+    <section className="space-y-4">
+
+      {/* SECTION HEADER */}
+      <div className="flex items-end justify-between border-b border-black pb-3">
+        <div>
+          <h2 className="text-2xl font-brown-bold uppercase leading-none tracking-[-0.03em] text-black sm:text-3xl">
+            {title}
+          </h2>
+        </div>
+
+        <Link
           href={href}
-          className="text-white text-sm font-brown-regular uppercase tracking-[0.3em] sm:text-base"
+          className="text-xs font-brown-regular uppercase tracking-[0.15em] text-black transition-opacity hover:opacity-50 sm:text-sm"
         >
-          {linkLabel}
-        </a>
+          VIEW CHART →
+        </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 lg:grid-cols-5">
-        {displayedEntries.map((entry) => (
-          <article key={entry.rank} className="space-y-3">
-            <div className="relative overflow-hidden bg-gradient-to-br from-sky-100 via-slate-100 to-sky-200 pb-[120%]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(236,246,255,0.95),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(205,230,255,0.85),_transparent_30%)]" />
-              <div className="absolute inset-x-0 top-0 h-2/3 bg-slate-200/60" />
-              <div className="absolute inset-x-4 top-4 h-24 bg-white/80 shadow-sm backdrop-blur-sm" />
-              <div className="absolute bottom-4 left-4 h-10 min-w-[2.75rem] bg-[#0050FF] px-3 py-1.5 flex items-center justify-center text-white text-base font-brown-bold">
-                {entry.rank}
-              </div>
-            </div>
-            <div>
-              <p className="text-black font-brown-bold text-base leading-5">
-                {entry.title}
-              </p>
-              <p className="text-[#666666] font-brown-regular text-sm leading-5 tracking-[0.02em]">
-                {entry.artist.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}
-              </p>
-            </div>
-          </article>
-        ))}
+      {/* CHART PREVIEW */}
+      <div className="border border-black/10 bg-white">
+
+        {previewEntries.length > 0 ? (
+          <div>
+            {previewEntries.map(
+              (entry, index) => (
+                <div
+                  key={`${entry.rank}-${entry.title}-${entry.artist}`}
+                  className="flex items-center gap-3 border-t border-black/10 px-3 py-3 first:border-t-0 sm:gap-5 sm:px-5 sm:py-4"
+                >
+
+                  {/* RANK */}
+                  <div className="flex w-8 flex-shrink-0 items-center justify-center sm:w-10">
+                    <p className="text-xl font-brown-bold leading-none text-black sm:text-2xl">
+                      {entry.rank}
+                    </p>
+                  </div>
+
+                  {/* ARTWORK */}
+                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden bg-black/5 sm:h-16 sm:w-16">
+                    {entry.artwork ? (
+                      <img
+                        src={entry.artwork}
+                        alt={`${entry.title} artwork`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[0.4rem] font-brown-regular uppercase tracking-[0.15em] text-black/30">
+                        ARTWORK
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SONG INFO */}
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-base font-brown-bold leading-tight text-black sm:text-xl">
+                      {entry.title}
+                    </p>
+
+                    <p className="mt-1 break-words text-sm font-brown-regular leading-tight text-blue-600 sm:text-base">
+                      {entry.artist}
+                    </p>
+                  </div>
+
+                </div>
+              )
+            )}
+          </div>
+        ) : (
+          <div className="px-5 py-10 text-center">
+            <p className="text-xs font-brown-regular uppercase tracking-[0.18em] text-black/40">
+              NO CHART DATA AVAILABLE
+            </p>
+          </div>
+        )}
+
       </div>
+
     </section>
   );
 }

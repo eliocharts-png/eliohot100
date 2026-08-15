@@ -9,6 +9,7 @@ export interface ChartEntry {
   rank: number;
   title: string;
   artist: string;
+  artwork?: string;
 }
 
 export interface ChartHistoryEntry {
