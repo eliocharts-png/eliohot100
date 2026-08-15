@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import ChartSection from '@/components/ChartSection';
 import { fetchChartData, sheetSources } from '@/lib/chartData';
 import type { ChartEntry } from '@/types';
