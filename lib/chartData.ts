@@ -30,7 +30,7 @@ export const sheetSources: ChartSource[] = [
     title: 'Year-End',
     href: '/year-end',
     csvUrl:
-      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=66844035&single=true&output=csv',
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCwhJoNSmVVS7klopONiGjob6kaRw_1CyjviTVffP_WdbMKZEo4xs_ou7nv-mkd14u25T0KcDshHdJ/pub?gid=1658746037&single=true&output=csv',
   },
 ];
 
@@ -332,8 +332,7 @@ function parseYearEndCsv(
   const rows =
     parsed.data as string[][];
 
-  const entries: YearEndChartEntry[] =
-    [];
+  const entries: YearEndChartEntry[] = [];
 
   for (const row of rows) {
     const year =
@@ -344,38 +343,30 @@ function parseYearEndCsv(
         row[1]?.trim() ?? 0
       );
 
-    const content =
+    const title =
       row[2]?.trim() ?? '';
 
-    const image =
+    const artist =
       row[3]?.trim() ?? '';
+
+    const artwork =
+      row[4]?.trim() ?? '';
 
     if (
       !year ||
       rank <= 0 ||
-      !content
+      !title
     ) {
       continue;
     }
 
-    const parts =
-      content
-        .split(/\r?\n/)
-        .map(
-          (value) =>
-            value.trim()
-        )
-        .filter(Boolean);
-
     entries.push({
       year,
       rank,
-      title:
-        parts[0] ?? content,
-      artist:
-        parts[1] ?? '',
+      title,
+      artist,
       artwork:
-        image || undefined,
+        artwork || undefined,
     });
   }
 
@@ -795,13 +786,25 @@ export async function fetchWeeklyChartData(
                 ) <= currentDate
             );
 
-          const previousWeek =
-            priorHistory.length >
-            0
-              ? priorHistory[
-                  priorHistory.length -
-                    1
+          const previousChartWeekIndex =
+            chronologicalWeeks.indexOf(
+              currentWeek
+            ) - 1;
+
+          const previousChartWeek =
+            previousChartWeekIndex >= 0
+              ? chronologicalWeeks[
+                  previousChartWeekIndex
                 ]
+              : undefined;
+
+          const previousWeek =
+            previousChartWeek
+              ? history.find(
+                  (historyRow) =>
+                    historyRow.week ===
+                    previousChartWeek
+                )
               : undefined;
 
           const lastWeekRank =
