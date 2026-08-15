@@ -1,339 +1,464 @@
-import Papa from 'papaparse';
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 
 type YearEndEntry = {
   year: string;
   rank: number;
   title: string;
   artist: string;
-  artwork?: string;
+  artwork: string;
 };
 
 const YEAR_END_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=66844035&single=true&output=csv';
 
-function parseYearEndCsv(
-  csvText: string
-): YearEndEntry[] {
-  const parsed = Papa.parse(csvText, {
-    header: false,
-    skipEmptyLines: true,
-  });
+function parseCSV(csv: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let value = '';
+  let quoted = false;
 
-  const rows =
-    parsed.data as string[][];
+  for (let i = 0; i < csv.length; i += 1) {
+    const char = csv[i];
 
-  return rows
-    .map((row): YearEndEntry | null => {
-      const year =
-        row[0]?.trim() ?? '';
-
-      const rank =
-        Number(
-          row[1]?.trim() ?? 0
-        );
-
-      const content =
-        row[2]?.trim() ?? '';
-
-      const artwork =
-        row[3]?.trim() ?? '';
-
-      if (
-        !year ||
-        rank <= 0 ||
-        !content
-      ) {
-        return null;
+    if (char === '"') {
+      if (quoted && csv[i + 1] === '"') {
+        value += '"';
+        i += 1;
+      } else {
+        quoted = !quoted;
       }
-
-      const parts =
-        content
-          .split(/\r?\n/)
-          .map((value) =>
-            value.trim()
-          )
-          .filter(Boolean);
-
-      return {
-        year,
-        rank,
-        title:
-          parts[0] ?? content,
-        artist:
-          parts[1] ?? '',
-        artwork:
-          artwork || undefined,
-      };
-    })
-    .filter(
-      (
-        entry
-      ): entry is YearEndEntry =>
-        entry !== null
-    )
-    .sort(
-      (a, b) =>
-        a.rank - b.rank
-    );
-}
-
-async function fetchYearEndData() {
-  try {
-    const response =
-      await fetch(
-        YEAR_END_CSV_URL,
-        {
-          next: {
-            revalidate: 300,
-          },
-        }
-      );
-
-    if (!response.ok) {
-      console.error(
-        `Failed to fetch Year-End chart: HTTP ${response.status}`
-      );
-
-      return {
-        years: [] as string[],
-        entriesByYear:
-          {} as Record<
-            string,
-            YearEndEntry[]
-          >,
-      };
+      continue;
     }
 
-    const csvText =
-      await response.text();
-
-    if (!csvText.trim()) {
-      console.error(
-        'Google Sheets returned empty Year-End data'
-      );
-
-      return {
-        years: [],
-        entriesByYear: {},
-      };
+    if (char === ',' && !quoted) {
+      row.push(value);
+      value = '';
+      continue;
     }
 
-    const entries =
-      parseYearEndCsv(
-        csvText
-      );
-
-    const entriesByYear:
-      Record<
-        string,
-        YearEndEntry[]
-      > = {};
-
-    for (
-      const entry of entries
+    if (
+      (char === '\n' || char === '\r') &&
+      !quoted
     ) {
       if (
-        !entriesByYear[
-          entry.year
-        ]
+        char === '\r' &&
+        csv[i + 1] === '\n'
       ) {
-        entriesByYear[
-          entry.year
-        ] = [];
+        i += 1;
       }
 
-      entriesByYear[
-        entry.year
-      ].push(entry);
+      row.push(value);
+      value = '';
+
+      if (
+        row.some(
+          (cell) => cell.trim() !== ''
+        )
+      ) {
+        rows.push(row);
+      }
+
+      row = [];
+      continue;
     }
 
-    const years =
-      Object.keys(
-        entriesByYear
-      ).sort(
-        (a, b) =>
-          Number(b) -
-          Number(a)
-      );
-
-    return {
-      years,
-      entriesByYear,
-    };
-  } catch (error) {
-    console.error(
-      'Failed to fetch Year-End chart data:',
-      error
-    );
-
-    return {
-      years: [] as string[],
-      entriesByYear:
-        {} as Record<
-          string,
-          YearEndEntry[]
-        >,
-    };
+    value += char;
   }
+
+  if (value !== '' || row.length > 0) {
+    row.push(value);
+
+    if (
+      row.some(
+        (cell) => cell.trim() !== ''
+      )
+    ) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
 }
 
-type YearEndPageProps = {
-  searchParams: Promise<{
-    year?: string;
-  }>;
-};
+function parseSong(
+  content: string
+): {
+  title: string;
+  artist: string;
+} {
+  const parts = content
+    .split(/\r?\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 
-export default async function YearEndPage({
-  searchParams,
-}: YearEndPageProps) {
-  const {
-    years,
-    entriesByYear,
-  } =
-    await fetchYearEndData();
+  return {
+    title: parts[0] || content,
+    artist: parts[1] || '',
+  };
+}
 
-  const params =
-    await searchParams;
+function parseYearEndData(
+  csv: string
+): YearEndEntry[] {
+  const rows = parseCSV(csv);
+  const result: YearEndEntry[] = [];
 
-  const requestedYear =
-    params.year;
+  for (const row of rows) {
+    const year = (row[0] || '').trim();
 
-  const selectedYear =
-    requestedYear &&
-    years.includes(
-      requestedYear
-    )
-      ? requestedYear
-      : years[0] ?? '';
+    const rank = Number(
+      (row[1] || '').trim()
+    );
 
-  const entries =
-    entriesByYear[
-      selectedYear
-    ] ?? [];
+    const content = (
+      row[2] || ''
+    ).trim();
+
+    const artwork = (
+      row[3] || ''
+    ).trim();
+
+    if (
+      !year ||
+      rank <= 0 ||
+      !content
+    ) {
+      continue;
+    }
+
+    const song = parseSong(content);
+
+    result.push({
+      year,
+      rank,
+      title: song.title,
+      artist: song.artist,
+      artwork,
+    });
+  }
+
+  return result.sort((a, b) => {
+    const yearDifference =
+      Number(b.year) - Number(a.year);
+
+    if (yearDifference !== 0) {
+      return yearDifference;
+    }
+
+    return a.rank - b.rank;
+  });
+}
+
+export default function YearEndPage() {
+  const [entries, setEntries] =
+    useState<YearEndEntry[]>([]);
+
+  const [selectedYear, setSelectedYear] =
+    useState('');
+
+  const [showInfo, setShowInfo] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState(false);
+
+  useEffect(() => {
+    async function loadYearEnd() {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const response = await fetch(
+          YEAR_END_CSV_URL
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Year-End request failed: ${response.status}`
+          );
+        }
+
+        const csv =
+          await response.text();
+
+        if (!csv.trim()) {
+          throw new Error(
+            'Year-End CSV is empty'
+          );
+        }
+
+        const data =
+          parseYearEndData(csv);
+
+        setEntries(data);
+
+        const availableYears =
+          Array.from(
+            new Set(
+              data.map(
+                (entry) => entry.year
+              )
+            )
+          ).sort(
+            (a, b) =>
+              Number(b) - Number(a)
+          );
+
+        if (
+          availableYears.length > 0
+        ) {
+          setSelectedYear(
+            availableYears[0]
+          );
+        }
+      } catch (loadError) {
+        console.error(
+          'Failed to load Year-End chart:',
+          loadError
+        );
+
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadYearEnd();
+  }, []);
+
+  const years = useMemo(() => {
+    return Array.from(
+      new Set(
+        entries.map(
+          (entry) => entry.year
+        )
+      )
+    ).sort(
+      (a, b) =>
+        Number(b) - Number(a)
+    );
+  }, [entries]);
+
+  const currentEntries = useMemo(() => {
+    return entries
+      .filter(
+        (entry) =>
+          entry.year === selectedYear
+      )
+      .sort(
+        (a, b) =>
+          a.rank - b.rank
+      );
+  }, [entries, selectedYear]);
 
   return (
     <main className="min-h-screen bg-white text-black">
-      <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-12">
 
-        {/* HEADER */}
-        <header className="mb-10 text-center sm:mb-14">
-          <h1 className="text-[4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
-            YEAR-END
-          </h1>
+      {/* TITLE */}
+      <header className="px-4 pb-6 pt-6 text-center sm:px-6 sm:pb-9 sm:pt-12">
 
-          <p className="mt-3 text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50 sm:text-sm">
-            PERSONAL CHARTS BY ELIO
-          </p>
-        </header>
+        <h1 className="font-brown-bold text-[3.4rem] uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
+          YEAR-END CHARTS
+        </h1>
 
         {/* YEAR DROPDOWN */}
-        <div className="mb-10 flex justify-center">
-          <form
-            method="GET"
-            className="flex items-center gap-3"
+        <div className="mt-6 flex justify-center sm:mt-7">
+
+          <select
+            value={selectedYear}
+            onChange={(event) => {
+              setSelectedYear(
+                event.target.value
+              );
+            }}
+            disabled={
+              loading ||
+              years.length === 0
+            }
+            aria-label="Select year"
+            className="h-10 min-w-[130px] border border-black bg-white px-4 text-center font-brown-bold text-sm uppercase tracking-[0.08em] text-black outline-none focus:border-[#0050FF] sm:h-11 sm:min-w-[170px] sm:px-5 sm:text-lg"
           >
-            <label
-              htmlFor="year"
-              className="font-brown-bold text-sm uppercase tracking-[0.15em]"
-            >
-              Year
-            </label>
+            {years.map((year) => (
+              <option
+                key={year}
+                value={year}
+              >
+                {year}
+              </option>
+            ))}
+          </select>
 
-            <select
-              id="year"
-              name="year"
-              defaultValue={
-                selectedYear
-              }
-              className="border border-black bg-white px-4 py-2 font-brown-regular text-sm uppercase outline-none"
-            >
-              {years.map(
-                (year) => (
-                  <option
-                    key={year}
-                    value={year}
-                  >
-                    {year}
-                  </option>
-                )
-              )}
-            </select>
-
-            <button
-              type="submit"
-              className="border border-black bg-black px-5 py-2 font-brown-bold text-sm uppercase tracking-[0.1em] text-white"
-            >
-              GO
-            </button>
-          </form>
         </div>
 
-        {/* SELECTED YEAR */}
-        {selectedYear && (
-          <div className="mb-8 text-center">
-            <h2 className="font-brown-bold text-3xl uppercase tracking-[-0.03em] sm:text-4xl">
-              {selectedYear}
-            </h2>
+      </header>
+
+      {/* BLUE BANNER */}
+      <div className="mx-auto max-w-6xl px-3 sm:px-6">
+
+        <div className="relative flex min-h-[2.75rem] items-center bg-[#0050FF] px-4 py-3 sm:px-6">
+
+          {/* HOME BUTTON */}
+          <a
+            href="/"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
+          >
+            &lt; HOME
+          </a>
+
+          {/* PERSONAL CHARTS + INFO */}
+          <div className="ml-auto flex max-w-[62%] items-center justify-end gap-1.5 sm:mx-auto sm:max-w-none sm:justify-center sm:gap-2">
+
+            <p className="text-right text-[0.58rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
+              PERSONAL CHARTS BY ELIO
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowInfo(
+                  (current) => !current
+                )
+              }
+              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/80 text-[0.7rem] font-brown-bold leading-none text-white transition hover:bg-white hover:text-[#0050FF]"
+              aria-label={
+                showInfo
+                  ? 'Hide Year-End methodology'
+                  : 'Show Year-End methodology'
+              }
+              aria-expanded={showInfo}
+            >
+              i
+            </button>
+
+          </div>
+
+        </div>
+
+        {/* INFORMATION */}
+        {showInfo && (
+          <div className="border-x border-b border-black/10 bg-white px-3 py-6 sm:px-6">
+
+            <div className="mx-auto max-w-3xl text-center">
+
+              <p className="font-brown-bold text-xs uppercase tracking-[0.2em] text-black">
+                YEAR-END CHARTS
+              </p>
+
+              <p className="mt-3 font-brown-regular text-sm leading-relaxed text-black/70 sm:text-base">
+                <em>
+                  Year-end charts rank songs
+                  based on their performance
+                  throughout each chart year.
+                </em>
+              </p>
+
+            </div>
+
           </div>
         )}
 
-        {/* YEAR-END CHART */}
-        <section className="space-y-0">
-          {entries.map(
-            (entry) => (
-              <article
-                key={`${entry.year}-${entry.rank}-${entry.title}`}
-                className="grid grid-cols-[3.5rem_5rem_1fr] items-center gap-3 border-b border-black/10 py-2 sm:grid-cols-[4rem_6rem_1fr] sm:gap-5"
-              >
+        {/* CHART */}
+        <div className="border-x border-b border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
 
-                {/* RANK */}
-                <div className="flex aspect-square items-center justify-center bg-black">
-                  <span className="font-brown-bold text-2xl text-white sm:text-3xl">
-                    {entry.rank}
-                  </span>
-                </div>
+          {loading && (
+            <div className="flex min-h-[300px] items-center justify-center">
 
-                {/* ARTWORK */}
-                <div className="aspect-square overflow-hidden bg-slate-100">
-                  {entry.artwork ? (
-                    <img
-                      src={
-                        entry.artwork
-                      }
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full" />
-                  )}
-                </div>
-
-                {/* SONG */}
-                <div className="min-w-0">
-                  <p className="font-brown-bold text-lg leading-tight text-black sm:text-xl">
-                    {entry.title}
-                  </p>
-
-                  <p className="mt-1 font-brown-regular text-sm leading-tight text-blue-600 sm:text-base">
-                    {entry.artist}
-                  </p>
-                </div>
-
-              </article>
-            )
-          )}
-
-          {/* EMPTY STATE */}
-          {entries.length === 0 && (
-            <div className="py-20 text-center">
-              <p className="font-brown-regular text-sm uppercase tracking-[0.2em] text-black/50">
-                No Year-End chart data available.
+              <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+                LOADING YEAR-END CHART
               </p>
+
             </div>
           )}
-        </section>
+
+          {!loading && error && (
+            <div className="flex min-h-[300px] items-center justify-center">
+
+              <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+                UNABLE TO LOAD YEAR-END CHART
+              </p>
+
+            </div>
+          )}
+
+          {!loading &&
+            !error &&
+            currentEntries.map(
+              (entry, index) => (
+                <div
+                  key={`${entry.year}-${entry.rank}-${entry.title}`}
+                  className={`flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6 ${
+                    index > 0
+                      ? 'border-t border-black/10'
+                      : ''
+                  }`}
+                >
+
+                  {/* RANK */}
+                  <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
+
+                    <p className="m-0 font-brown-bold text-[1.35rem] leading-none text-black sm:text-[3.5rem]">
+                      {entry.rank}
+                    </p>
+
+                  </div>
+
+                  {/* ARTWORK */}
+                  <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
+
+                    {entry.artwork ? (
+                      <img
+                        src={entry.artwork}
+                        alt={`${entry.title} artwork`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center font-brown-regular text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
+                        ARTWORK
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* TITLE + ARTIST */}
+                  <div className="min-w-0 flex-1">
+
+                    <p className="break-words font-brown-bold text-[0.9rem] leading-[1.08] text-black sm:text-4xl">
+                      {entry.title}
+                    </p>
+
+                    <p className="mt-0.5 break-words font-brown-regular text-[0.72rem] leading-tight text-blue-600 sm:mt-1 sm:text-xl">
+                      {entry.artist}
+                    </p>
+
+                  </div>
+
+                </div>
+              )
+            )}
+
+          {!loading &&
+            !error &&
+            currentEntries.length === 0 && (
+              <div className="flex min-h-[300px] items-center justify-center">
+
+                <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+                  NO YEAR-END CHART DATA AVAILABLE
+                </p>
+
+              </div>
+            )}
+
+        </div>
 
       </div>
+
+      <div className="h-12" />
+
     </main>
   );
 }

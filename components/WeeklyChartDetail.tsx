@@ -150,13 +150,6 @@ export default function WeeklyChartDetail({
     weeksAtNumberOneByWeek?.[selectedWeek] ??
     weeksAtNumberOne;
 
-  /*
-   * GREATEST GAINER
-   *
-   * Highest percentage increase in
-   * points compared with the previous
-   * chart week.
-   */
   let greatestGainerRank: number | null =
     null;
 
@@ -181,12 +174,6 @@ export default function WeeklyChartDetail({
     }
   }
 
-  /*
-   * HOTSHOT DEBUT
-   *
-   * Highest-charting song that is
-   * making its first-ever appearance.
-   */
   const hotshotDebutRank =
     currentEntries
       .filter(
@@ -204,7 +191,7 @@ export default function WeeklyChartDetail({
 
       {/* HEADER */}
       <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
-        <h1 className="text-[4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
+        <h1 className="text-[3.4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
           THE HOT 1OO
         </h1>
       </div>
@@ -250,8 +237,8 @@ export default function WeeklyChartDetail({
             &lt; HOME
           </a>
 
-          {/* CENTER TITLE */}
-          <p className="text-[0.65rem] font-brown-regular uppercase tracking-[0.16em] text-white sm:text-base sm:tracking-[0.2em]">
+          {/* TITLE */}
+          <p className="ml-auto max-w-[70%] text-right text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white sm:mx-auto sm:max-w-none sm:text-base sm:tracking-[0.2em]">
             PERSONAL CHARTS BY ELIO
           </p>
 
@@ -458,14 +445,12 @@ export default function WeeklyChartDetail({
                       </div>
                     )}
 
-                    {/* ========================= */}
                     {/* MOBILE ROW */}
-                    {/* ========================= */}
                     <div className="sm:hidden">
 
-                      <div className="flex items-center gap-2 px-3 py-3">
+                      <div className="flex items-center gap-1.5 px-3 py-3">
 
-                        {/* MOVEMENT */}
+                        {/* MOVEMENT + BULLET */}
                         <button
                           type="button"
                           onClick={() =>
@@ -473,27 +458,43 @@ export default function WeeklyChartDetail({
                               entry.rank
                             )
                           }
-                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center bg-black/10 transition hover:opacity-75"
+                          className="flex h-[4.6rem] w-7 flex-shrink-0 flex-col overflow-hidden transition hover:opacity-75"
                           aria-label={
                             isExpanded
                               ? 'Collapse song details'
                               : 'Show song details'
                           }
                         >
-                          <img
-                            src={`/icons/${getIconFilename(
-                              entry.movementIcon
-                            )}`}
-                            alt={
-                              entry.movementIcon
-                            }
-                            className="h-7 w-7 object-contain"
-                          />
+
+                          {/* MOVEMENT */}
+                          <div className="flex flex-1 items-center justify-center bg-black/10">
+                            <img
+                              src={`/icons/${getIconFilename(
+                                entry.movementIcon
+                              )}`}
+                              alt={
+                                entry.movementIcon
+                              }
+                              className="h-5 w-5 object-contain"
+                            />
+                          </div>
+
+                          {/* BULLET */}
+                          <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
+                            {showBullet && (
+                              <img
+                                src="/icons/bullet.PNG"
+                                alt="trending up"
+                                className="h-5 w-5 object-contain"
+                              />
+                            )}
+                          </div>
+
                         </button>
 
                         {/* RANK */}
-                        <div className="flex w-8 flex-shrink-0 items-center justify-center">
-                          <p className="m-0 text-2xl font-brown-bold leading-none text-black">
+                        <div className="flex w-7 flex-shrink-0 items-center justify-center">
+                          <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
                             {entry.rank}
                           </p>
                         </div>
@@ -528,11 +529,11 @@ export default function WeeklyChartDetail({
 
                         {/* SONG INFORMATION */}
                         <div className="min-w-0 flex-1">
-                          <p className="break-words text-[1.05rem] font-brown-bold leading-[1.05] text-black">
+                          <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
                             {entry.title}
                           </p>
 
-                          <p className="mt-1 break-words text-sm font-brown-regular leading-tight text-blue-600">
+                          <p className="mt-0.5 break-words text-[0.72rem] font-brown-regular leading-tight text-blue-600">
                             {entry.artist}
                           </p>
                         </div>
@@ -545,7 +546,7 @@ export default function WeeklyChartDetail({
                               entry.rank
                             )
                           }
-                          className="flex h-7 w-7 flex-shrink-0 items-center justify-center text-2xl font-brown-regular leading-none text-black/40 transition hover:text-black/60"
+                          className="flex h-7 w-6 flex-shrink-0 items-center justify-center text-xl font-brown-regular leading-none text-black/40 transition hover:text-black/60"
                           aria-label={
                             isHistoryExpanded
                               ? 'Collapse chart history'
@@ -585,9 +586,7 @@ export default function WeeklyChartDetail({
                                 </p>
 
                                 <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {
-                                    entry.peakPosition
-                                  }
+                                  {entry.peakPosition}
                                 </p>
                               </div>
 
@@ -598,9 +597,7 @@ export default function WeeklyChartDetail({
                                 </p>
 
                                 <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {
-                                    entry.weeksOnChart
-                                  }
+                                  {entry.weeksOnChart}
                                 </p>
                               </div>
 
@@ -653,9 +650,7 @@ export default function WeeklyChartDetail({
 
                     </div>
 
-                    {/* ========================= */}
                     {/* DESKTOP ROW */}
-                    {/* ========================= */}
                     <div className="hidden flex-col gap-4 sm:flex sm:flex-row sm:items-stretch sm:gap-0">
 
                       {/* EXPANDED STATS */}
@@ -700,9 +695,7 @@ export default function WeeklyChartDetail({
                                 </p>
 
                                 <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {
-                                    entry.peakPosition
-                                  }
+                                  {entry.peakPosition}
                                 </p>
                               </div>
 
@@ -718,9 +711,7 @@ export default function WeeklyChartDetail({
                                 </p>
 
                                 <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {
-                                    entry.weeksOnChart
-                                  }
+                                  {entry.weeksOnChart}
                                 </p>
                               </div>
 
@@ -914,7 +905,7 @@ export default function WeeklyChartDetail({
 
                         {graphData.length > 0 ? (
 
-                          <div className="h-[260px] w-full sm:h-[320px]">
+                          <div className="h-[220px] w-full sm:h-[320px]">
 
                             <ResponsiveContainer
                               width="100%"
@@ -1021,6 +1012,8 @@ export default function WeeklyChartDetail({
           </div>
         </div>
       </div>
+
     </section>
   );
 }
+

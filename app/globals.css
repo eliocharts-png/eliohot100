@@ -9,7 +9,12 @@
   color: #000000;
 }
 
-html, body {
+html {
+  font-size: 95%;
+}
+
+html,
+body {
   min-height: 100%;
 }
 

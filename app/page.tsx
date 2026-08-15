@@ -2,111 +2,88 @@
 
 import { useEffect, useState } from 'react';
 import ChartSection from '@/components/ChartSection';
-import {
-  sheetSources,
-  type ChartSource,
-} from '@/lib/chartData';
+import { sheetSources } from '@/lib/chartData';
+import type { ChartEntry } from '@/types';
 
-type ChartData = ChartSource & {
-  entries: {
-    rank: number;
-    title: string;
-    artist: string;
-    artwork?: string;
-  }[];
+type ChartData = {
+  title: string;
+  href: string;
+  csvUrl: string;
+  entries: ChartEntry[];
 };
 
 export default function HomePage() {
-  const [charts, setCharts] = useState<ChartData[]>(
-    sheetSources.map((source) => ({
-      ...source,
-      entries: [],
-    }))
-  );
-
-  const [loading, setLoading] = useState(true);
+  const [charts, setCharts] = useState<ChartData[]>([]);
 
   useEffect(() => {
-    let cancelled = false;
-
     async function loadCharts() {
-      try {
-        const results = await Promise.all(
-          sheetSources.map(async (source) => {
-            try {
-              const response = await fetch(
-                `/api/chart?url=${encodeURIComponent(
-                  source.csvUrl
-                )}&title=${encodeURIComponent(
-                  source.title
-                )}`
-              );
+      const loadedCharts: ChartData[] = [];
 
-              if (!response.ok) {
-                console.error(
-                  `Failed to load ${source.title}`
-                );
+      for (const source of sheetSources) {
+        try {
+          const response = await fetch(
+            `/api/chart?url=${encodeURIComponent(
+              source.csvUrl
+            )}&title=${encodeURIComponent(
+              source.title
+            )}`
+          );
 
-                return {
-                  ...source,
-                  entries: [],
-                };
-              }
+          if (!response.ok) {
+            loadedCharts.push({
+              ...source,
+              entries: [],
+            });
+            continue;
+          }
 
-              const data =
-                await response.json();
+          const data = (await response.json()) as {
+            entries?: ChartEntry[];
+          };
 
-              return {
-                ...source,
-                entries:
-                  data.entries ?? [],
-              };
-            } catch (error) {
-              console.error(
-                `Failed to load ${source.title}:`,
-                error
-              );
-
-              return {
-                ...source,
-                entries: [],
-              };
-            }
-          })
-        );
-
-        if (!cancelled) {
-          setCharts(results);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+          loadedCharts.push({
+            ...source,
+            entries: data.entries ?? [],
+          });
+        } catch {
+          loadedCharts.push({
+            ...source,
+            entries: [],
+          });
         }
       }
+
+      setCharts(loadedCharts);
     }
 
     loadCharts();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   return (
     <main className="min-h-screen bg-white text-black">
-      <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-12">
 
-        <header className="mb-10 text-center sm:mb-14">
-          <h1 className="text-[4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
-            CHARTS
+      {/* HEADER */}
+      <div className="mx-auto max-w-6xl px-3 pb-7 pt-6 sm:px-6 sm:pb-10 sm:pt-9">
+
+        <header className="text-center">
+
+          <h1 className="font-brown-bold text-[3.4rem] uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
+            ELIO CHARTS
           </h1>
 
-          <p className="mt-3 text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50 sm:text-sm">
-            PERSONAL CHARTS BY ELIO
+          <p className="mt-3 text-[0.58rem] font-brown-regular uppercase tracking-[0.14em] text-black/50 sm:text-sm sm:tracking-[0.2em]">
+            WEEKLY PERSONAL CHARTS
           </p>
+
         </header>
 
-        <div className="space-y-12">
+      </div>
+
+      {/* CHART SECTIONS */}
+      <div className="mx-auto max-w-6xl px-3 sm:px-6">
+
+        <div className="space-y-9 sm:space-y-12">
+
           {charts.map((chart) => (
             <ChartSection
               key={chart.title}
@@ -115,17 +92,13 @@ export default function HomePage() {
               entries={chart.entries}
             />
           ))}
+
         </div>
 
-        {loading && (
-          <div className="mt-8 text-center">
-            <p className="text-sm font-brown-regular text-black/40">
-              LOADING CHARTS...
-            </p>
-          </div>
-        )}
-
       </div>
+
+      <div className="h-10 sm:h-12" />
+
     </main>
   );
 }
