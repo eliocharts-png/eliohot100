@@ -5,7 +5,7 @@ import {
 } from '@/lib/chartData';
 import type { WeeklyChartPayload } from '@/types';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 const weeklySource = sheetSources.find(
   (source) =>
@@ -45,9 +45,7 @@ export default async function WeeklyPage({
       <div className="mx-auto max-w-6xl">
         <WeeklyChartDetail
           title={weeklySource.title}
-          weekLabel={
-            chart.displayWeek
-          }
+          weekLabel={chart.displayWeek}
           week={chart.week}
           availableWeeks={
             chart.availableWeeks

@@ -508,6 +508,9 @@ export default function GoatPage() {
 
         </div>
       </div>
+
+      <div className="h-12" />
+
     </main>
   );
 }

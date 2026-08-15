@@ -1,0 +1,43 @@
+export default function Loading() {
+  return (
+    <main className="min-h-screen bg-white text-black">
+      <div className="mx-auto max-w-6xl px-3 sm:px-6">
+
+        {/* HEADER */}
+        <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
+          <h1 className="text-[3.4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
+            THE HOT 1OO
+          </h1>
+        </div>
+
+        {/* WEEK SELECTOR PLACEHOLDER */}
+        <div className="flex items-center justify-center bg-white px-4 py-3">
+          <div className="h-10 w-[130px] bg-black/10 sm:h-11 sm:w-[170px]" />
+        </div>
+
+        {/* BLUE BANNER */}
+        <div className="relative flex items-center justify-center bg-[#0050FF] px-4 py-3 sm:px-6">
+
+          <p className="text-center text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
+            PERSONAL CHARTS BY ELIO
+          </p>
+
+        </div>
+
+        {/* LOADING CHART */}
+        <div className="border-x border-b border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+
+          <div className="flex min-h-[300px] items-center justify-center">
+
+            <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+              LOADING HOT 100
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  );
+}
