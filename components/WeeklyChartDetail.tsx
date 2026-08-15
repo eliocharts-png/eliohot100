@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -25,26 +24,54 @@ interface WeeklyChartDetailProps {
   weeksAtNumberOneByWeek: Record<string, number>;
 }
 
-function getIconFilename(
-  movementIcon: string
+function normalizeMovementIcon(
+  movementIcon: string | undefined
 ): string {
-  const iconMap: Record<string, string> = {
-    up: 'up.PNG',
-    down: 'down.PNG',
-    nonmover: 'non-move.PNG',
-    reentry: 'reentry.PNG',
-    debut: 'debut.PNG',
-  };
+  return String(movementIcon ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[-_\s]/g, '');
+}
 
-  return iconMap[movementIcon] || 'up.PNG';
+function getIconFilename(
+  movementIcon: string | undefined
+): string {
+  const normalizedIcon =
+    normalizeMovementIcon(movementIcon);
+
+  switch (normalizedIcon) {
+    case 'reentry':
+    case 'reenter':
+      return 'reentry.PNG';
+
+    case 'debut':
+      return 'debut.PNG';
+
+    case 'down':
+      return 'down.PNG';
+
+    case 'nonmover':
+    case 'nonmovement':
+      return 'non-move.PNG';
+
+    case 'up':
+    default:
+      return 'up.PNG';
+  }
 }
 
 function shouldShowBullet(
   entry: WeeklyChartEntry
 ): boolean {
+  const movement =
+    normalizeMovementIcon(
+      entry.movementIcon
+    );
+
   if (
-    entry.movementIcon === 'reentry' ||
-    entry.movementIcon === 'debut'
+    movement === 'reentry' ||
+    movement === 'reenter' ||
+    movement === 'debut'
   ) {
     return true;
   }
@@ -53,7 +80,10 @@ function shouldShowBullet(
     entry.points !== undefined &&
     entry.lastWeekPoints !== undefined
   ) {
-    return entry.points > entry.lastWeekPoints;
+    return (
+      entry.points >
+      entry.lastWeekPoints
+    );
   }
 
   return false;
@@ -177,11 +207,14 @@ export default function WeeklyChartDetail({
 
   const hotshotDebutRank =
     currentEntries
-      .filter(
-        (entry) =>
-          entry.movementIcon ===
-          'debut'
-      )
+      .filter((entry) => {
+        const movement =
+          normalizeMovementIcon(
+            entry.movementIcon
+          );
+
+        return movement === 'debut';
+      })
       .sort(
         (a, b) =>
           a.rank - b.rank
@@ -207,7 +240,7 @@ export default function WeeklyChartDetail({
             setExpandedRank(null);
             setExpandedHistory(null);
           }}
-          className="cursor-pointer bg-black px-5 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.2em] text-white outline-none sm:text-sm"
+          className="cursor-pointer appearance-none rounded-none bg-black px-5 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.2em] text-white outline-none sm:text-sm"
         >
           {availableWeeks.map(
             (weekOption) => (
@@ -458,7 +491,8 @@ export default function WeeklyChartDetail({
                                 entry.movementIcon
                               )}`}
                               alt={
-                                entry.movementIcon
+                                entry.movementIcon ??
+                                'movement'
                               }
                               className="h-5 w-5 object-contain"
                             />
@@ -568,7 +602,7 @@ export default function WeeklyChartDetail({
                               </div>
 
                               <div className="flex flex-col items-center justify-center">
-                                <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white">
+                                <p className="text-[0.52rem] font-brown-regular uppercase tracking-[0.12em] text-white">
                                   WEEKS ON CHART
                                 </p>
 
@@ -744,7 +778,8 @@ export default function WeeklyChartDetail({
                                 entry.movementIcon
                               )}`}
                               alt={
-                                entry.movementIcon
+                                entry.movementIcon ??
+                                'movement'
                               }
                               className="h-10 w-10 sm:h-12 sm:w-12"
                             />

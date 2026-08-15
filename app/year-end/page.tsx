@@ -1,17 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { sheetSources } from '@/lib/chartData';
+import type { ChartEntry } from '@/types';
 
-type YearEndEntry = {
+type YearEndEntry = ChartEntry & {
   year: string;
-  rank: number;
-  title: string;
-  artist: string;
-  artwork: string;
 };
-
-const YEAR_END_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=66844035&single=true&output=csv';
 
 function parseCSV(csv: string): string[][] {
   const rows: string[][] = [];
@@ -29,6 +24,7 @@ function parseCSV(csv: string): string[][] {
       } else {
         quoted = !quoted;
       }
+
       continue;
     }
 
@@ -103,22 +99,23 @@ function parseYearEndData(
   csv: string
 ): YearEndEntry[] {
   const rows = parseCSV(csv);
+
   const result: YearEndEntry[] = [];
 
   for (const row of rows) {
-    const year = (row[0] || '').trim();
+    const year =
+      (row[0] || '').trim();
 
-    const rank = Number(
-      (row[1] || '').trim()
-    );
+    const rank =
+      Number(
+        (row[1] || '').trim()
+      );
 
-    const content = (
-      row[2] || ''
-    ).trim();
+    const content =
+      (row[2] || '').trim();
 
-    const artwork = (
-      row[3] || ''
-    ).trim();
+    const artwork =
+      (row[3] || '').trim();
 
     if (
       !year ||
@@ -128,7 +125,8 @@ function parseYearEndData(
       continue;
     }
 
-    const song = parseSong(content);
+    const song =
+      parseSong(content);
 
     result.push({
       year,
@@ -139,16 +137,23 @@ function parseYearEndData(
     });
   }
 
-  return result.sort((a, b) => {
-    const yearDifference =
-      Number(b.year) - Number(a.year);
+  return result.sort(
+    (a, b) => {
+      const yearDifference =
+        Number(b.year) -
+        Number(a.year);
 
-    if (yearDifference !== 0) {
-      return yearDifference;
+      if (
+        yearDifference !== 0
+      ) {
+        return yearDifference;
+      }
+
+      return (
+        a.rank - b.rank
+      );
     }
-
-    return a.rank - b.rank;
-  });
+  );
 }
 
 export default function YearEndPage() {
@@ -156,7 +161,10 @@ export default function YearEndPage() {
     useState<YearEndEntry[]>([]);
 
   const [selectedYear, setSelectedYear] =
-    useState('');
+    useState<string>('');
+
+  const [years, setYears] =
+    useState<string[]>([]);
 
   const [showInfo, setShowInfo] =
     useState(false);
@@ -173,9 +181,29 @@ export default function YearEndPage() {
         setLoading(true);
         setError(false);
 
-        const response = await fetch(
-          YEAR_END_CSV_URL
-        );
+        const source =
+          sheetSources.find(
+            (item) =>
+              item.title === 'Year-End'
+          );
+
+        if (!source) {
+          throw new Error(
+            'Year-End chart source not found'
+          );
+        }
+
+        /*
+         * Fetch the Year-End CSV directly.
+         *
+         * Year-End is small enough that
+         * this avoids depending on the
+         * generic latest-week parser.
+         */
+        const response =
+          await fetch(
+            source.csvUrl
+          );
 
         if (!response.ok) {
           throw new Error(
@@ -195,11 +223,17 @@ export default function YearEndPage() {
         const data =
           parseYearEndData(csv);
 
+        if (data.length === 0) {
+          throw new Error(
+            'No Year-End chart entries found'
+          );
+        }
+
         setEntries(data);
 
-        const availableYears =
+        const availableYears: string[] =
           Array.from(
-            new Set(
+            new Set<string>(
               data.map(
                 (entry) => entry.year
               )
@@ -208,6 +242,10 @@ export default function YearEndPage() {
             (a, b) =>
               Number(b) - Number(a)
           );
+
+        setYears(
+          availableYears
+        );
 
         if (
           availableYears.length > 0
@@ -231,30 +269,22 @@ export default function YearEndPage() {
     loadYearEnd();
   }, []);
 
-  const years = useMemo(() => {
-    return Array.from(
-      new Set(
-        entries.map(
-          (entry) => entry.year
+  const currentEntries =
+    useMemo(() => {
+      return entries
+        .filter(
+          (entry) =>
+            entry.year ===
+            selectedYear
         )
-      )
-    ).sort(
-      (a, b) =>
-        Number(b) - Number(a)
-    );
-  }, [entries]);
-
-  const currentEntries = useMemo(() => {
-    return entries
-      .filter(
-        (entry) =>
-          entry.year === selectedYear
-      )
-      .sort(
-        (a, b) =>
-          a.rank - b.rank
-      );
-  }, [entries, selectedYear]);
+        .sort(
+          (a, b) =>
+            a.rank - b.rank
+        );
+    }, [
+      entries,
+      selectedYear,
+    ]);
 
   return (
     <main className="min-h-screen bg-white text-black">
@@ -271,11 +301,11 @@ export default function YearEndPage() {
 
           <select
             value={selectedYear}
-            onChange={(event) => {
+            onChange={(event) =>
               setSelectedYear(
                 event.target.value
-              );
-            }}
+              )
+            }
             disabled={
               loading ||
               years.length === 0
@@ -283,14 +313,16 @@ export default function YearEndPage() {
             aria-label="Select year"
             className="h-10 min-w-[130px] border border-black bg-white px-4 text-center font-brown-bold text-sm uppercase tracking-[0.08em] text-black outline-none focus:border-[#0050FF] sm:h-11 sm:min-w-[170px] sm:px-5 sm:text-lg"
           >
-            {years.map((year) => (
-              <option
-                key={year}
-                value={year}
-              >
-                {year}
-              </option>
-            ))}
+            {years.map(
+              (year) => (
+                <option
+                  key={`year-${year}`}
+                  value={year}
+                >
+                  {year}
+                </option>
+              )
+            )}
           </select>
 
         </div>
@@ -302,7 +334,7 @@ export default function YearEndPage() {
 
         <div className="relative flex min-h-[2.75rem] items-center bg-[#0050FF] px-4 py-3 sm:px-6">
 
-          {/* HOME BUTTON */}
+          {/* HOME */}
           <a
             href="/"
             className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
@@ -310,18 +342,20 @@ export default function YearEndPage() {
             &lt; HOME
           </a>
 
-          {/* PERSONAL CHARTS + INFO */}
+          {/* PERSONAL CHARTS */}
           <div className="ml-auto flex max-w-[62%] items-center justify-end gap-1.5 sm:mx-auto sm:max-w-none sm:justify-center sm:gap-2">
 
             <p className="text-right text-[0.58rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
               PERSONAL CHARTS BY ELIO
             </p>
 
+            {/* INFO */}
             <button
               type="button"
               onClick={() =>
                 setShowInfo(
-                  (current) => !current
+                  (current) =>
+                    !current
                 )
               }
               className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/80 text-[0.7rem] font-brown-bold leading-none text-white transition hover:bg-white hover:text-[#0050FF]"
@@ -365,6 +399,7 @@ export default function YearEndPage() {
         {/* CHART */}
         <div className="border-x border-b border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
 
+          {/* LOADING */}
           {loading && (
             <div className="flex min-h-[300px] items-center justify-center">
 
@@ -375,22 +410,25 @@ export default function YearEndPage() {
             </div>
           )}
 
-          {!loading && error && (
-            <div className="flex min-h-[300px] items-center justify-center">
+          {/* ERROR */}
+          {!loading &&
+            error && (
+              <div className="flex min-h-[300px] items-center justify-center">
 
-              <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
-                UNABLE TO LOAD YEAR-END CHART
-              </p>
+                <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+                  UNABLE TO LOAD YEAR-END CHART
+                </p>
 
-            </div>
-          )}
+              </div>
+            )}
 
+          {/* CHART ENTRIES */}
           {!loading &&
             !error &&
             currentEntries.map(
               (entry, index) => (
                 <div
-                  key={`${entry.year}-${entry.rank}-${entry.title}`}
+                  key={`${entry.year}-${entry.rank}-${entry.title}-${entry.artist}-${index}`}
                   className={`flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6 ${
                     index > 0
                       ? 'border-t border-black/10'
@@ -441,6 +479,7 @@ export default function YearEndPage() {
               )
             )}
 
+          {/* NO DATA */}
           {!loading &&
             !error &&
             currentEntries.length === 0 && (

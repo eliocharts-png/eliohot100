@@ -10,15 +10,21 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+
 import {
   fetchChartData,
   fetchWeeklyChartData,
   sheetSources,
   formatDateLabel,
 } from '@/lib/chartData';
-import type { ChartEntry } from '@/types';
 
-function parseChartDate(value: string): number {
+import type {
+  ChartEntry,
+} from '@/types';
+
+function parseChartDate(
+  value: string
+): number {
   const [month, day, year] =
     value.split('/').map(Number);
 
@@ -65,35 +71,57 @@ function createGraphData(
     i < sortedHistory.length;
     i++
   ) {
-    const current = sortedHistory[i];
-    const previous = sortedHistory[i - 1];
+    const current =
+      sortedHistory[i];
+
+    const previous =
+      sortedHistory[i - 1];
 
     if (previous) {
-      const weekDifference = Math.round(
-        (
-          parseChartDate(current.week) -
-          parseChartDate(previous.week)
-        ) /
-          (7 * 24 * 60 * 60 * 1000)
-      );
-
-      if (weekDifference > 1) {
-        const breakDate = new Date(
-          parseChartDate(previous.week) +
-            7 * 24 * 60 * 60 * 1000
+      const weekDifference =
+        Math.round(
+          (
+            parseChartDate(
+              current.week
+            ) -
+            parseChartDate(
+              previous.week
+            )
+          ) /
+            (7 *
+              24 *
+              60 *
+              60 *
+              1000)
         );
 
-        const month = String(
-          breakDate.getMonth() + 1
-        ).padStart(2, '0');
+      if (weekDifference > 1) {
+        const breakDate =
+          new Date(
+            parseChartDate(
+              previous.week
+            ) +
+              7 *
+                24 *
+                60 *
+                60 *
+                1000
+          );
 
-        const day = String(
-          breakDate.getDate()
-        ).padStart(2, '0');
+        const month =
+          String(
+            breakDate.getMonth() + 1
+          ).padStart(2, '0');
 
-        const year = String(
-          breakDate.getFullYear()
-        ).slice(-2);
+        const day =
+          String(
+            breakDate.getDate()
+          ).padStart(2, '0');
+
+        const year =
+          String(
+            breakDate.getFullYear()
+          ).slice(-2);
 
         data.push({
           week: `${month}/${day}/${year}`,
@@ -112,119 +140,175 @@ function createGraphData(
 }
 
 export default function GoatPage() {
-  const [entries, setEntries] =
-    useState<ChartEntry[]>([]);
+  const [
+    entries,
+    setEntries,
+  ] = useState<ChartEntry[]>([]);
 
-  const [historyMap, setHistoryMap] =
-    useState<
-      Record<
-        string,
-        {
-          week: string;
-          rank: number;
-        }[]
-      >
-    >({});
+  const [
+    historyMap,
+    setHistoryMap,
+  ] = useState<
+    Record<
+      string,
+      {
+        week: string;
+        rank: number;
+      }[]
+    >
+  >({});
 
-  const [expandedRank, setExpandedRank] =
-    useState<number | null>(null);
+  const [
+    expandedRank,
+    setExpandedRank,
+  ] = useState<number | null>(
+    null
+  );
 
-  const [showInfo, setShowInfo] =
-    useState(false);
+  const [
+    showInfo,
+    setShowInfo,
+  ] = useState(false);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadGoat() {
-      const goatSource =
-        sheetSources.find(
-          (source) =>
-            source.title ===
-            'Greatest of All-Time'
-        );
+      try {
+        const goatSource =
+          sheetSources.find(
+            (source) =>
+              source.title ===
+              'Greatest of All-Time'
+          );
 
-      const weeklySource =
-        sheetSources.find(
-          (source) =>
-            source.title ===
-            'THE HOT 100'
-        );
+        const weeklySource =
+          sheetSources.find(
+            (source) =>
+              source.title ===
+              'THE HOT 100'
+          );
 
-      if (
-        !goatSource ||
-        !weeklySource
-      ) {
-        return;
-      }
-
-      const goatEntries =
-        await fetchChartData(
-          goatSource.csvUrl,
-          goatSource.title
-        );
-
-      setEntries(goatEntries);
-
-      const weeklyPayload =
-        await fetchWeeklyChartData(
-          weeklySource.csvUrl,
-          weeklySource.title
-        );
-
-      const history: Record<
-        string,
-        {
-          week: string;
-          rank: number;
-        }[]
-      > = {};
-
-      for (const entry of goatEntries) {
-        const matchingWeekly =
-          weeklyPayload.entriesByWeek;
-
-        const songHistory: {
-          week: string;
-          rank: number;
-        }[] = [];
-
-        for (
-          const week of Object.keys(
-            matchingWeekly
-          )
+        if (
+          !goatSource ||
+          !weeklySource
         ) {
-          const weeklyEntry =
-            matchingWeekly[week].find(
-              (item) =>
-                item.title
-                  .toLowerCase()
-                  .trim() ===
-                  entry.title
-                    .toLowerCase()
-                    .trim() &&
-                item.artist
-                  .toLowerCase()
-                  .trim() ===
-                  entry.artist
-                    .toLowerCase()
-                    .trim()
-            );
-
-          if (weeklyEntry) {
-            songHistory.push({
-              week,
-              rank: weeklyEntry.rank,
-            });
-          }
+          return;
         }
 
-        history[
-          `${entry.title}|||${entry.artist}`
-        ] = songHistory;
-      }
+        /*
+         * Load GOAT first so the list
+         * appears immediately.
+         */
+        const goatEntries =
+          await fetchChartData(
+            goatSource.csvUrl,
+            goatSource.title
+          );
 
-      setHistoryMap(history);
+        if (cancelled) {
+          return;
+        }
+
+        setEntries(
+          goatEntries
+        );
+
+        /*
+         * Load the large Weekly CSV
+         * only in the browser.
+         */
+        const weeklyPayload =
+          await fetchWeeklyChartData(
+            weeklySource.csvUrl
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        const history: Record<
+          string,
+          {
+            week: string;
+            rank: number;
+          }[]
+        > = {};
+
+        for (
+          const entry of goatEntries
+        ) {
+          const matchingWeekly =
+            weeklyPayload.entriesByWeek;
+
+          const songHistory: {
+            week: string;
+            rank: number;
+          }[] = [];
+
+          for (
+            const week of Object.keys(
+              matchingWeekly
+            )
+          ) {
+            const weeklyEntry =
+              matchingWeekly[
+                week
+              ].find(
+                (item) =>
+                  item.title
+                    .toLowerCase()
+                    .trim() ===
+                    entry.title
+                      .toLowerCase()
+                      .trim() &&
+                  item.artist
+                    .toLowerCase()
+                    .trim() ===
+                    entry.artist
+                      .toLowerCase()
+                      .trim()
+              );
+
+            if (weeklyEntry) {
+              songHistory.push({
+                week,
+                rank:
+                  weeklyEntry.rank,
+              });
+            }
+          }
+
+          history[
+            `${entry.title}|||${entry.artist}`
+          ] = songHistory;
+        }
+
+        setHistoryMap(
+          history
+        );
+      } catch (error) {
+        console.error(
+          'Failed to load GOAT chart:',
+          error
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
 
     loadGoat();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -241,7 +325,6 @@ export default function GoatPage() {
       <div className="mx-auto max-w-6xl px-3 sm:px-6">
         <div className="relative flex min-h-[2.75rem] items-center bg-[#0050FF] px-4 py-3 sm:px-6">
 
-          {/* HOME BUTTON */}
           <a
             href="/"
             className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
@@ -249,19 +332,18 @@ export default function GoatPage() {
             &lt; HOME
           </a>
 
-          {/* PERSONAL CHARTS */}
           <div className="ml-auto flex max-w-[65%] items-center justify-end gap-1.5 sm:mx-auto sm:max-w-none sm:justify-center sm:gap-2">
 
             <p className="text-right text-[0.58rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
               PERSONAL CHARTS BY ELIO
             </p>
 
-            {/* INFO BUTTON */}
             <button
               type="button"
               onClick={() =>
                 setShowInfo(
-                  (current) => !current
+                  (current) =>
+                    !current
                 )
               }
               className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/80 text-[0.7rem] font-brown-bold leading-none text-white transition hover:bg-white hover:text-[#0050FF]"
@@ -270,7 +352,9 @@ export default function GoatPage() {
                   ? 'Hide Greatest of All-Time methodology'
                   : 'Show Greatest of All-Time methodology'
               }
-              aria-expanded={showInfo}
+              aria-expanded={
+                showInfo
+              }
             >
               i
             </button>
@@ -304,207 +388,249 @@ export default function GoatPage() {
       <div className="mx-auto max-w-6xl px-3 sm:px-6">
         <div className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
 
-          {entries.map((entry) => {
-            const isExpanded =
-              expandedRank === entry.rank;
+          {loading &&
+            entries.length === 0 && (
+              <div className="flex min-h-[200px] items-center justify-center">
+                <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/40">
+                  LOADING...
+                </p>
+              </div>
+            )}
 
-            const key =
-              `${entry.title}|||${entry.artist}`;
+          {entries.map(
+            (entry) => {
+              const isExpanded =
+                expandedRank ===
+                entry.rank;
 
-            const history =
-              historyMap[key] ?? [];
+              const key =
+                `${entry.title}|||${entry.artist}`;
 
-            const graphData =
-              createGraphData(
-                entry,
-                history
-              );
+              const history =
+                historyMap[key] ??
+                [];
 
-            return (
-              <div
-                key={`${entry.rank}-${entry.title}-${entry.artist}`}
-                className="border-t border-black/10 first:border-t-0"
-              >
+              const graphData =
+                createGraphData(
+                  entry,
+                  history
+                );
 
-                {/* MAIN ROW */}
-                <div className="flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6">
+              return (
+                <div
+                  key={`${entry.rank}-${entry.title}-${entry.artist}`}
+                  className="border-t border-black/10 first:border-t-0"
+                >
 
-                  {/* RANK */}
-                  <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
-                    <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black sm:text-[3.5rem]">
-                      {entry.rank}
-                    </p>
-                  </div>
+                  {/* MAIN ROW */}
+                  <div className="flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6">
 
-                  {/* ARTWORK */}
-                  <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
-                    {entry.artwork ? (
-                      <img
-                        src={entry.artwork}
-                        alt={`${entry.title} artwork`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
-                        ARTWORK
-                      </div>
-                    )}
-                  </div>
-
-                  {/* TITLE + ARTIST */}
-                  <div className="min-w-0 flex-1">
-
-                    <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black sm:text-4xl">
-                      {entry.title}
-                    </p>
-
-                    <p className="mt-0.5 break-words text-[0.72rem] font-brown-regular leading-tight text-blue-600 sm:mt-1 sm:text-xl">
-                      {entry.artist}
-                    </p>
-
-                  </div>
-
-                  {/* HISTORY BUTTON */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedRank(
-                        isExpanded
-                          ? null
-                          : entry.rank
-                      )
-                    }
-                    className="flex h-7 w-6 flex-shrink-0 items-center justify-center text-xl font-brown-regular leading-none text-black/40 transition hover:text-black/60 sm:h-10 sm:w-10 sm:text-3xl"
-                    aria-label={
-                      isExpanded
-                        ? 'Collapse chart history'
-                        : 'Show chart history'
-                    }
-                  >
-                    {isExpanded ? '−' : '+'}
-                  </button>
-
-                </div>
-
-                {/* GRAPH */}
-                {isExpanded && (
-                  <div className="border-t border-black/10 bg-white px-3 py-5 sm:px-8 sm:py-6">
-
-                    <div className="mb-4">
-
-                      <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
-                        CHART RUN
+                    {/* RANK */}
+                    <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
+                      <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black sm:text-[3.5rem]">
+                        {entry.rank}
                       </p>
+                    </div>
 
-                      <p className="mt-1 text-lg font-brown-bold text-black">
+                    {/* ARTWORK */}
+                    <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
+                      {entry.artwork ? (
+                        <img
+                          src={entry.artwork}
+                          alt={`${entry.title} artwork`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
+                          ARTWORK
+                        </div>
+                      )}
+                    </div>
+
+                    {/* TITLE + ARTIST */}
+                    <div className="min-w-0 flex-1">
+
+                      <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black sm:text-4xl">
                         {entry.title}
                       </p>
 
-                      <p className="text-sm font-brown-regular text-blue-600">
+                      <p className="mt-0.5 break-words text-[0.72rem] font-brown-regular leading-tight text-blue-600 sm:mt-1 sm:text-xl">
                         {entry.artist}
                       </p>
 
                     </div>
 
-                    {graphData.length > 0 ? (
-                      <div className="h-[220px] w-full sm:h-[320px]">
+                    {/* HISTORY BUTTON */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedRank(
+                          isExpanded
+                            ? null
+                            : entry.rank
+                        )
+                      }
+                      className="flex h-7 w-6 flex-shrink-0 items-center justify-center text-xl font-brown-regular leading-none text-black/40 transition hover:text-black/60 sm:h-10 sm:w-10 sm:text-3xl"
+                      aria-label={
+                        isExpanded
+                          ? 'Collapse chart history'
+                          : 'Show chart history'
+                      }
+                    >
+                      {isExpanded
+                        ? '−'
+                        : '+'}
+                    </button>
 
-                        <ResponsiveContainer
-                          width="100%"
-                          height="100%"
-                        >
-                          <LineChart
-                            data={graphData}
-                            margin={{
-                              top: 10,
-                              right: 20,
-                              left: 0,
-                              bottom: 10,
-                            }}
-                          >
+                  </div>
 
-                            <CartesianGrid
-                              strokeDasharray="3 3"
-                              stroke="#00000015"
-                            />
+                  {/* GRAPH */}
+                  {isExpanded && (
+                    <div className="border-t border-black/10 bg-white px-3 py-5 sm:px-8 sm:py-6">
 
-                            <XAxis
-                              dataKey="week"
-                              tick={{
-                                fontSize: 10,
-                              }}
-                              tickFormatter={(value) => {
-                                const parts =
-                                  String(value).split('/');
-
-                                if (
-                                  parts.length >= 2
-                                ) {
-                                  return `${parts[0]}/${parts[1]}`;
-                                }
-
-                                return String(value);
-                              }}
-                            />
-
-                            <YAxis
-                              reversed
-                              domain={[1, 100]}
-                              allowDecimals={false}
-                              tick={{
-                                fontSize: 10,
-                              }}
-                              width={30}
-                            />
-
-                            <Tooltip
-                              formatter={(value) => [
-                                `#${value}`,
-                                'Rank',
-                              ]}
-                              labelFormatter={(label) =>
-                                formatDateLabel(
-                                  String(label)
-                                )
-                              }
-                            />
-
-                            <Line
-                              type="monotone"
-                              dataKey="rank"
-                              stroke="#0050FF"
-                              strokeWidth={3}
-                              dot={{
-                                r: 3,
-                                fill: '#0050FF',
-                                stroke: '#0050FF',
-                              }}
-                              activeDot={{
-                                r: 5,
-                              }}
-                              connectNulls={false}
-                            />
-
-                          </LineChart>
-                        </ResponsiveContainer>
-
-                      </div>
-                    ) : (
-                      <div className="flex h-[220px] items-center justify-center bg-black/[0.03]">
+                      <div className="mb-4">
 
                         <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
-                          NO CHART HISTORY AVAILABLE
+                          CHART RUN
+                        </p>
+
+                        <p className="mt-1 text-lg font-brown-bold text-black">
+                          {entry.title}
+                        </p>
+
+                        <p className="text-sm font-brown-regular text-blue-600">
+                          {entry.artist}
                         </p>
 
                       </div>
-                    )}
 
-                  </div>
-                )}
+                      {graphData.length > 0 ? (
+                        <div className="h-[220px] w-full sm:h-[320px]">
 
-              </div>
-            );
-          })}
+                          <ResponsiveContainer
+                            width="100%"
+                            height="100%"
+                          >
+                            <LineChart
+                              data={
+                                graphData
+                              }
+                              margin={{
+                                top: 10,
+                                right: 20,
+                                left: 0,
+                                bottom: 10,
+                              }}
+                            >
+
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#00000015"
+                              />
+
+                              <XAxis
+                                dataKey="week"
+                                tick={{
+                                  fontSize: 10,
+                                }}
+                                tickFormatter={(
+                                  value
+                                ) => {
+                                  const parts =
+                                    String(
+                                      value
+                                    ).split(
+                                      '/'
+                                    );
+
+                                  if (
+                                    parts.length >=
+                                    2
+                                  ) {
+                                    return `${parts[0]}/${parts[1]}`;
+                                  }
+
+                                  return String(
+                                    value
+                                  );
+                                }}
+                              />
+
+                              <YAxis
+                                reversed
+                                domain={[
+                                  1,
+                                  100,
+                                ]}
+                                allowDecimals={
+                                  false
+                                }
+                                tick={{
+                                  fontSize: 10,
+                                }}
+                                width={30}
+                              />
+
+                              <Tooltip
+                                formatter={(
+                                  value
+                                ) => [
+                                  `#${value}`,
+                                  'Rank',
+                                ]}
+                                labelFormatter={(
+                                  label
+                                ) =>
+                                  formatDateLabel(
+                                    String(
+                                      label
+                                    )
+                                  )
+                                }
+                              />
+
+                              <Line
+                                type="monotone"
+                                dataKey="rank"
+                                stroke="#0050FF"
+                                strokeWidth={3}
+                                dot={{
+                                  r: 3,
+                                  fill: '#0050FF',
+                                  stroke:
+                                    '#0050FF',
+                                }}
+                                activeDot={{
+                                  r: 5,
+                                }}
+                                connectNulls={
+                                  false
+                                }
+                              />
+
+                            </LineChart>
+                          </ResponsiveContainer>
+
+                        </div>
+                      ) : (
+                        <div className="flex h-[220px] items-center justify-center bg-black/[0.03]">
+
+                          <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
+                            {loading
+                              ? 'LOADING CHART HISTORY'
+                              : 'NO CHART HISTORY AVAILABLE'}
+                          </p>
+
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+
+                </div>
+              );
+            }
+          )}
 
         </div>
       </div>

@@ -332,7 +332,8 @@ function parseYearEndCsv(
   const rows =
     parsed.data as string[][];
 
-  const entries: YearEndChartEntry[] = [];
+  const entries: YearEndChartEntry[] =
+    [];
 
   for (const row of rows) {
     const year =
@@ -343,30 +344,38 @@ function parseYearEndCsv(
         row[1]?.trim() ?? 0
       );
 
-    const title =
+    const content =
       row[2]?.trim() ?? '';
 
-    const artist =
+    const image =
       row[3]?.trim() ?? '';
-
-    const artwork =
-      row[4]?.trim() ?? '';
 
     if (
       !year ||
       rank <= 0 ||
-      !title
+      !content
     ) {
       continue;
     }
 
+    const parts =
+      content
+        .split(/\r?\n/)
+        .map(
+          (value) =>
+            value.trim()
+        )
+        .filter(Boolean);
+
     entries.push({
       year,
       rank,
-      title,
-      artist,
+      title:
+        parts[0] ?? content,
+      artist:
+        parts[1] ?? '',
       artwork:
-        artwork || undefined,
+        image || undefined,
     });
   }
 
@@ -409,14 +418,26 @@ export async function fetchChartData(
   }
 
   try {
+    /*
+     * THE HOT 100 is a very large CSV
+     * (~10 MB), so it must not be placed
+     * into Next.js's 2 MB data cache.
+     *
+     * GOAT and Year-End remain cached
+     * normally.
+     */
     const response =
       await fetch(
         csvUrl,
-        {
-          next: {
-            revalidate: 300,
-          },
-        }
+        title === 'THE HOT 100'
+          ? {
+              cache: 'no-store',
+            }
+          : {
+              next: {
+                revalidate: 300,
+              },
+            }
       );
 
     if (!response.ok) {
@@ -543,13 +564,16 @@ export async function fetchWeeklyChartData(
   }
 
   try {
+    /*
+     * Weekly data is ~10 MB, so do not
+     * allow Next.js to put the response
+     * into its 2 MB data cache.
+     */
     const response =
       await fetch(
         csvUrl,
         {
-          next: {
-            revalidate: 300,
-          },
+          cache: 'no-store',
         }
       );
 
@@ -727,9 +751,7 @@ export async function fetchWeeklyChartData(
         );
 
       /*
-       * First update the cumulative
-       * #1 total for every song that
-       * is #1 this week.
+       * Update cumulative #1 total.
        */
       for (const row of sortedRows) {
         if (row.rank !== 1) {
@@ -748,7 +770,7 @@ export async function fetchWeeklyChartData(
       }
 
       /*
-       * Build the entries for this week.
+       * Build entries for this week.
        */
       entriesByWeek[
         currentWeek
@@ -874,12 +896,8 @@ export async function fetchWeeklyChartData(
       );
 
       /*
-       * The banner belongs to the song
-       * currently occupying #1.
-       *
-       * Find that song and use its
-       * cumulative total, including
-       * previous nonconsecutive #1 weeks.
+       * Find the current #1 song and
+       * use its cumulative #1 total.
        */
       const numberOneRow =
         sortedRows.find(
