@@ -47,7 +47,7 @@ export default function ChartSection({
 
         <Link
           href={href}
-          prefetch={true}
+          prefetch={false}
           className="ml-3 flex-shrink-0 whitespace-nowrap text-[0.55rem] font-brown-regular uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-70 sm:ml-6 sm:text-base sm:tracking-[0.2em]"
         >
           VIEW CHART →
