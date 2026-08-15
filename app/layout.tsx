@@ -15,7 +15,7 @@ const brownRegular = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'CHARTS',
+  title: 'elio charts',
   description: 'Personal music charts landing page',
 };
 

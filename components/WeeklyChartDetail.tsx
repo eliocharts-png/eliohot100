@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -189,14 +190,12 @@ export default function WeeklyChartDetail({
   return (
     <section className="space-y-0">
 
-      {/* HEADER */}
       <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
         <h1 className="text-[3.4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
           THE HOT 1OO
         </h1>
       </div>
 
-      {/* DATE DROPDOWN */}
       <div className="flex items-center justify-center bg-white px-4 py-3">
         <select
           value={selectedWeek}
@@ -225,11 +224,9 @@ export default function WeeklyChartDetail({
         </select>
       </div>
 
-      {/* BLUE BANNER */}
       <div className="mx-auto max-w-6xl px-3 sm:px-6">
         <div className="relative flex items-center justify-center bg-[#0050FF] px-4 py-3 sm:px-6">
 
-          {/* HOME BUTTON */}
           <a
             href="/"
             className="absolute left-4 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
@@ -237,7 +234,6 @@ export default function WeeklyChartDetail({
             &lt; HOME
           </a>
 
-          {/* TITLE */}
           <p className="ml-auto max-w-[70%] text-right text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white sm:mx-auto sm:max-w-none sm:text-base sm:tracking-[0.2em]">
             PERSONAL CHARTS BY ELIO
           </p>
@@ -245,7 +241,6 @@ export default function WeeklyChartDetail({
         </div>
       </div>
 
-      {/* CHART */}
       <div className="mx-auto max-w-6xl px-3 sm:px-6">
         <div className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
 
@@ -274,11 +269,6 @@ export default function WeeklyChartDetail({
                 const isHotshotDebut =
                   hotshotDebutRank ===
                   entry.rank;
-
-                const pointPercentage =
-                  getPointIncreasePercentage(
-                    entry
-                  );
 
                 const graphData = (() => {
                   const history = (
@@ -413,7 +403,6 @@ export default function WeeklyChartDetail({
                     className="border-t border-black/10 first:border-t-0"
                   >
 
-                    {/* WEEKS AT NO. 1 */}
                     {entry.rank === 1 && (
                       <div className="hidden sm:block">
                         <div className="w-[16.8rem] bg-black px-3 py-2 text-center">
@@ -429,7 +418,6 @@ export default function WeeklyChartDetail({
                       </div>
                     )}
 
-                    {/* MOBILE WEEKS AT NO. 1 */}
                     {entry.rank === 1 && (
                       <div className="block px-3 pt-3 sm:hidden">
                         <div className="bg-black px-3 py-2 text-center">
@@ -445,12 +433,10 @@ export default function WeeklyChartDetail({
                       </div>
                     )}
 
-                    {/* MOBILE ROW */}
                     <div className="sm:hidden">
 
                       <div className="flex items-center gap-1.5 px-3 py-3">
 
-                        {/* MOVEMENT + BULLET */}
                         <button
                           type="button"
                           onClick={() =>
@@ -466,7 +452,6 @@ export default function WeeklyChartDetail({
                           }
                         >
 
-                          {/* MOVEMENT */}
                           <div className="flex flex-1 items-center justify-center bg-black/10">
                             <img
                               src={`/icons/${getIconFilename(
@@ -479,7 +464,6 @@ export default function WeeklyChartDetail({
                             />
                           </div>
 
-                          {/* BULLET */}
                           <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
                             {showBullet && (
                               <img
@@ -492,14 +476,12 @@ export default function WeeklyChartDetail({
 
                         </button>
 
-                        {/* RANK */}
                         <div className="flex w-7 flex-shrink-0 items-center justify-center">
                           <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
                             {entry.rank}
                           </p>
                         </div>
 
-                        {/* ARTWORK */}
                         <button
                           type="button"
                           onClick={() =>
@@ -527,7 +509,6 @@ export default function WeeklyChartDetail({
                           )}
                         </button>
 
-                        {/* SONG INFORMATION */}
                         <div className="min-w-0 flex-1">
                           <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
                             {entry.title}
@@ -538,7 +519,6 @@ export default function WeeklyChartDetail({
                           </p>
                         </div>
 
-                        {/* HISTORY */}
                         <button
                           type="button"
                           onClick={() =>
@@ -560,14 +540,12 @@ export default function WeeklyChartDetail({
 
                       </div>
 
-                      {/* MOBILE STATS */}
                       {isExpanded && (
                         <div className="px-3 pb-3">
 
                           <div className="bg-black px-3 py-3">
                             <div className="grid grid-cols-3 gap-2 text-center text-white">
 
-                              {/* LAST WEEK */}
                               <div className="flex flex-col items-center justify-center">
                                 <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white/70">
                                   LAST WEEK
@@ -579,7 +557,6 @@ export default function WeeklyChartDetail({
                                 </p>
                               </div>
 
-                              {/* PEAK */}
                               <div className="flex flex-col items-center justify-center">
                                 <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white/70">
                                   PEAK
@@ -590,7 +567,6 @@ export default function WeeklyChartDetail({
                                 </p>
                               </div>
 
-                              {/* WEEKS */}
                               <div className="flex flex-col items-center justify-center">
                                 <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white">
                                   WEEKS ON CHART
@@ -604,7 +580,6 @@ export default function WeeklyChartDetail({
                             </div>
                           </div>
 
-                          {/* SPECIAL BADGES */}
                           {(isGreatestGainer ||
                             isHotshotDebut) && (
                             <div className="mt-2 space-y-1">
@@ -619,11 +594,6 @@ export default function WeeklyChartDetail({
                                 >
                                   <p className="text-[0.62rem] font-brown-regular uppercase tracking-[0.14em] text-white">
                                     GREATEST GAINER
-                                    {pointPercentage !==
-                                      null &&
-                                      ` +${pointPercentage.toFixed(
-                                        1
-                                      )}%`}
                                   </p>
                                 </div>
                               )}
@@ -650,10 +620,8 @@ export default function WeeklyChartDetail({
 
                     </div>
 
-                    {/* DESKTOP ROW */}
                     <div className="hidden flex-col gap-4 sm:flex sm:flex-row sm:items-stretch sm:gap-0">
 
-                      {/* EXPANDED STATS */}
                       {isExpanded && (
                         <div className="flex-shrink-0 sm:self-center sm:pr-2">
 
@@ -666,7 +634,6 @@ export default function WeeklyChartDetail({
                           >
                             <div className="grid min-w-[260px] grid-cols-3 gap-3 text-center text-white">
 
-                              {/* LAST WEEK */}
                               <div className="flex flex-col items-center justify-center text-center">
                                 <p className="text-[0.6rem] font-brown-regular uppercase leading-tight tracking-[0.18em] text-white/70">
                                   <span className="block">
@@ -683,7 +650,6 @@ export default function WeeklyChartDetail({
                                 </p>
                               </div>
 
-                              {/* PEAK */}
                               <div className="flex flex-col items-center justify-center text-center">
                                 <p className="text-[0.6rem] font-brown-regular uppercase leading-tight tracking-[0.18em] text-white/70">
                                   <span className="block">
@@ -699,7 +665,6 @@ export default function WeeklyChartDetail({
                                 </p>
                               </div>
 
-                              {/* WEEKS */}
                               <div className="flex flex-col items-center justify-center text-center">
                                 <p className="text-[0.6rem] font-brown-regular uppercase leading-tight tracking-[0.18em] text-white/70">
                                   <span className="block">
@@ -718,7 +683,6 @@ export default function WeeklyChartDetail({
                             </div>
                           </div>
 
-                          {/* SPECIAL DESKTOP BADGES */}
                           {(isGreatestGainer ||
                             isHotshotDebut) && (
                             <div className="mt-1 space-y-1">
@@ -733,11 +697,6 @@ export default function WeeklyChartDetail({
                                 >
                                   <p className="text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white">
                                     GREATEST GAINER
-                                    {pointPercentage !==
-                                      null &&
-                                      ` +${pointPercentage.toFixed(
-                                        1
-                                      )}%`}
                                   </p>
                                 </div>
                               )}
@@ -762,7 +721,6 @@ export default function WeeklyChartDetail({
                         </div>
                       )}
 
-                      {/* MOVEMENT + RANK */}
                       <div className="flex flex-shrink-0 gap-0 px-4 py-4 sm:items-stretch sm:px-0 sm:py-0">
 
                         <button
@@ -780,7 +738,6 @@ export default function WeeklyChartDetail({
                           }
                         >
 
-                          {/* MOVEMENT */}
                           <div className="flex flex-1 items-center justify-center bg-black/10">
                             <img
                               src={`/icons/${getIconFilename(
@@ -793,7 +750,6 @@ export default function WeeklyChartDetail({
                             />
                           </div>
 
-                          {/* BULLET */}
                           <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
                             {showBullet && (
                               <img
@@ -806,7 +762,6 @@ export default function WeeklyChartDetail({
 
                         </button>
 
-                        {/* RANK */}
                         <div className="flex min-h-[120px] w-24 flex-shrink-0 items-center justify-center sm:h-full sm:min-h-0">
                           <p className="m-0 text-center text-[2.5rem] font-brown-bold leading-none text-black sm:text-[3rem]">
                             {entry.rank}
@@ -815,10 +770,8 @@ export default function WeeklyChartDetail({
 
                       </div>
 
-                      {/* SONG INFORMATION */}
                       <div className="flex flex-1 items-center gap-4 px-4 py-4 sm:px-0 sm:py-[3px] sm:pl-0">
 
-                        {/* ARTWORK */}
                         <button
                           type="button"
                           onClick={() =>
@@ -846,7 +799,6 @@ export default function WeeklyChartDetail({
                           )}
                         </button>
 
-                        {/* TITLE + ARTIST */}
                         <div className="min-w-0 flex-1">
 
                           <p className="text-xl font-brown-bold leading-tight text-black sm:text-4xl">
@@ -859,7 +811,6 @@ export default function WeeklyChartDetail({
 
                         </div>
 
-                        {/* HISTORY BUTTON */}
                         <button
                           type="button"
                           onClick={() =>
@@ -883,7 +834,6 @@ export default function WeeklyChartDetail({
 
                     </div>
 
-                    {/* CHART HISTORY GRAPH */}
                     {isHistoryExpanded && (
                       <div className="border-t border-black/10 bg-white px-4 py-6 sm:px-8">
 
@@ -1016,4 +966,3 @@ export default function WeeklyChartDetail({
     </section>
   );
 }
-

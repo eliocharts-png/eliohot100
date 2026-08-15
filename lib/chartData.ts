@@ -34,10 +34,6 @@ export const sheetSources: ChartSource[] = [
   },
 ];
 
-/* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
-/* -------------------------------------------------------------------------- */
-
 function getMovementArrow(
   currentRank: number,
   lastRank: number | null
@@ -179,16 +175,6 @@ function songKey(
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* WEEKLY / HOT 100 CSV                                                       */
-/*                                                                            */
-/* A = Week                                                                   */
-/* B = Rank                                                                   */
-/* C = Song Title / Artist                                                    */
-/* D = Points                                                                  */
-/* K = Artwork Link                                                            */
-/* -------------------------------------------------------------------------- */
-
 function parseCsv(
   csvText: string
 ): RawRow[] {
@@ -257,14 +243,6 @@ function parseCsv(
         row.title
     );
 }
-
-/* -------------------------------------------------------------------------- */
-/* GOAT CSV                                                                   */
-/*                                                                            */
-/* A = Rank                                                                   */
-/* B = Song Title / Artist                                                    */
-/* C = Image Link                                                             */
-/* -------------------------------------------------------------------------- */
 
 function parseGoatCsv(
   csvText: string
@@ -335,15 +313,6 @@ function parseGoatCsv(
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/* YEAR-END CSV                                                               */
-/*                                                                            */
-/* A = Year                                                                   */
-/* B = Rank                                                                   */
-/* C = Song Title / Artist                                                    */
-/* D = Image URL                                                               */
-/* -------------------------------------------------------------------------- */
-
 type YearEndChartEntry =
   ChartEntry & {
     year: string;
@@ -410,15 +379,6 @@ function parseYearEndCsv(
     });
   }
 
-  /*
-   * Newest year first.
-   *
-   * Within each year:
-   * #1, #2, #3, #4, #5...
-   *
-   * This makes the homepage preview show
-   * the Top 5 songs from the newest year.
-   */
   entries.sort(
     (a, b) => {
       const yearDifference =
@@ -444,10 +404,6 @@ function parseYearEndCsv(
     }) => entry
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* HOMEPAGE DATA                                                              */
-/* -------------------------------------------------------------------------- */
 
 export async function fetchChartData(
   csvUrl: string,
@@ -503,20 +459,9 @@ export async function fetchChartData(
     if (
       title === 'Year-End'
     ) {
-      const entries =
-        parseYearEndCsv(
-          csvText
-        );
-
-      if (
-        entries.length === 0
-      ) {
-        console.error(
-          'No Year-End entries found in Google Sheet'
-        );
-      }
-
-      return entries;
+      return parseYearEndCsv(
+        csvText
+      );
     }
 
     const rows =
@@ -588,10 +533,6 @@ export async function fetchChartData(
     return [];
   }
 }
-
-/* -------------------------------------------------------------------------- */
-/* WEEKLY CHART DATA                                                          */
-/* -------------------------------------------------------------------------- */
 
 export async function fetchWeeklyChartData(
   csvUrl: string,
@@ -757,7 +698,32 @@ export async function fetchWeeklyChartData(
       number
     > = {};
 
-    for (const currentWeek of availableWeeks) {
+    /*
+     * Keep a cumulative #1 count for
+     * every song.
+     *
+     * This is deliberately based on
+     * the song itself, not on whether
+     * its #1 run is consecutive.
+     */
+    const cumulativeNumberOneWeeks: Record<
+      string,
+      number
+    > = {};
+
+    /*
+     * Process the chart chronologically
+     * so cumulative #1 totals can build
+     * correctly from the beginning.
+     */
+    const chronologicalWeeks =
+      [...availableWeeks].sort(
+        (a, b) =>
+          parseChartDate(a) -
+          parseChartDate(b)
+      );
+
+    for (const currentWeek of chronologicalWeeks) {
       const currentRows =
         groupedRows[
           currentWeek
@@ -769,6 +735,30 @@ export async function fetchWeeklyChartData(
             a.rank - b.rank
         );
 
+      /*
+       * First update the cumulative
+       * #1 total for every song that
+       * is #1 this week.
+       */
+      for (const row of sortedRows) {
+        if (row.rank !== 1) {
+          continue;
+        }
+
+        const key = songKey(
+          row.title,
+          row.artist
+        );
+
+        cumulativeNumberOneWeeks[key] =
+          (cumulativeNumberOneWeeks[
+            key
+          ] ?? 0) + 1;
+      }
+
+      /*
+       * Build the entries for this week.
+       */
       entriesByWeek[
         currentWeek
       ] = sortedRows.map(
@@ -880,13 +870,38 @@ export async function fetchWeeklyChartData(
         }
       );
 
-      weeksAtNumberOneByWeek[
-        currentWeek
-      ] =
-        sortedRows.filter(
+      /*
+       * The banner belongs to the song
+       * currently occupying #1.
+       *
+       * Find that song and use its
+       * cumulative total, including
+       * previous nonconsecutive #1 weeks.
+       */
+      const numberOneRow =
+        sortedRows.find(
           (row) =>
             row.rank === 1
-        ).length;
+        );
+
+      if (numberOneRow) {
+        const numberOneKey =
+          songKey(
+            numberOneRow.title,
+            numberOneRow.artist
+          );
+
+        weeksAtNumberOneByWeek[
+          currentWeek
+        ] =
+          cumulativeNumberOneWeeks[
+            numberOneKey
+          ] ?? 1;
+      } else {
+        weeksAtNumberOneByWeek[
+          currentWeek
+        ] = 0;
+      }
     }
 
     const entries =
@@ -895,26 +910,9 @@ export async function fetchWeeklyChartData(
       ] ?? [];
 
     const weeksAtNumberOne =
-      availableWeeks.reduce(
-        (
-          count,
-          currentWeek
-        ) => {
-          const currentEntries =
-            entriesByWeek[
-              currentWeek
-            ] ?? [];
-
-          return (
-            count +
-            currentEntries.filter(
-              (entry) =>
-                entry.rank === 1
-            ).length
-          );
-        },
-        0
-      );
+      weeksAtNumberOneByWeek[
+        week
+      ] ?? 0;
 
     return {
       week,

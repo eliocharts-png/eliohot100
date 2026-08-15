@@ -25,191 +25,63 @@ function parseSongArtist(content: string): {
   };
 }
 
-function parseCsvRows(csvText: string): RawRow[] {
-  const parsed = Papa.parse<RawRow>(csvText, {
+function parseRows(csvText: string): RawRow[] {
+  const result = Papa.parse<string[]>(csvText, {
     header: false,
     skipEmptyLines: true,
   });
 
-  return parsed.data;
+  return result.data;
 }
 
-function parseGoat(
-  rows: RawRow[]
-): ChartEntry[] {
-  return rows
-    .map((row): ChartEntry | null => {
-      const rank = Number(
-        row[0]?.trim() ?? 0
-      );
+function parseDate(value: string): number {
+  const parts = value.split('/').map(Number);
 
-      const content =
-        row[1]?.trim() ?? '';
+  if (parts.length !== 3) {
+    return 0;
+  }
 
-      const artwork =
-        row[2]?.trim() ?? '';
+  const month = parts[0];
+  const day = parts[1];
+  const year = parts[2];
 
-      if (
-        rank <= 0 ||
-        !content
-      ) {
-        return null;
-      }
+  if (!month || !day || year === undefined) {
+    return 0;
+  }
 
-      const song =
-        parseSongArtist(content);
+  const fullYear =
+    year < 50 ? 2000 + year : 1900 + year;
 
-      return {
-        rank,
-        title: song.title,
-        artist: song.artist,
-        artwork:
-          artwork || undefined,
-      };
-    })
-    .filter(
-      (
-        entry
-      ): entry is ChartEntry =>
-        entry !== null
-    )
-    .sort(
-      (a, b) =>
-        a.rank - b.rank
-    )
-    .slice(0, 5);
+  return new Date(
+    fullYear,
+    month - 1,
+    day
+  ).getTime();
 }
 
-function parseYearEnd(
-  rows: RawRow[]
-): ChartEntry[] {
+function parseWeekly(rows: RawRow[]): ChartEntry[] {
   const entries: Array<
-    ChartEntry & { year: string }
+    ChartEntry & { week: string }
   > = [];
 
   for (const row of rows) {
-    const year =
-      row[0]?.trim() ?? '';
+    const week = row[0]?.trim() ?? '';
+    const rank = Number(row[1]?.trim() ?? 0);
+    const content = row[2]?.trim() ?? '';
+    const artwork = row[10]?.trim() ?? '';
 
-    const rank = Number(
-      row[1]?.trim() ?? 0
-    );
-
-    const content =
-      row[2]?.trim() ?? '';
-
-    const artwork =
-      row[3]?.trim() ?? '';
-
-    if (
-      !year ||
-      rank <= 0 ||
-      !content
-    ) {
+    if (!week || rank <= 0 || !content) {
       continue;
     }
 
-    const song =
-      parseSongArtist(content);
-
-    entries.push({
-      year,
-      rank,
-      title: song.title,
-      artist: song.artist,
-      artwork:
-        artwork || undefined,
-    });
-  }
-
-  /*
-   * Homepage Year-End preview:
-   * Always show the most recent year.
-   *
-   * This means 2025 currently, rather
-   * than accidentally showing 2010–2014.
-   */
-  const years = Array.from(
-    new Set(
-      entries.map(
-        (entry) => entry.year
-      )
-    )
-  ).sort(
-    (a, b) =>
-      Number(b) - Number(a)
-  );
-
-  const latestYear =
-    years[0];
-
-  if (!latestYear) {
-    return [];
-  }
-
-  return entries
-    .filter(
-      (entry) =>
-        entry.year === latestYear
-    )
-    .sort(
-      (a, b) =>
-        a.rank - b.rank
-    )
-    .slice(0, 5)
-    .map(
-      ({
-        year: _year,
-        ...entry
-      }) => entry
-    );
-}
-
-function parseWeekly(
-  rows: RawRow[]
-): ChartEntry[] {
-  const entries: Array<
-    ChartEntry & {
-      week: string;
-    }
-  > = [];
-
-  for (const row of rows) {
-    const week =
-      row[0]?.trim() ?? '';
-
-    const rank = Number(
-      row[1]?.trim() ?? 0
-    );
-
-    const content =
-      row[2]?.trim() ?? '';
-
-    /*
-     * D = points
-     * K = artwork
-     */
-    const artwork =
-      row[10]?.trim() ?? '';
-
-    if (
-      !week ||
-      rank <= 0 ||
-      !content
-    ) {
-      continue;
-    }
-
-    const song =
-      parseSongArtist(content);
+    const song = parseSongArtist(content);
 
     entries.push({
       week,
       rank,
       title: song.title,
       artist: song.artist,
-      artwork:
-        artwork || undefined,
+      artwork: artwork || undefined,
     });
   }
 
@@ -217,76 +89,114 @@ function parseWeekly(
     return [];
   }
 
-  /*
-   * Convert a chart date into a number
-   * so the newest week can be found.
-   */
-  function dateValue(
-    value: string
-  ): number {
-    const parts =
-      value.split('/').map(Number);
+  const validEntries = entries.filter(
+    (entry) => parseDate(entry.week) > 0
+  );
 
-    if (parts.length !== 3) {
-      return 0;
-    }
-
-    const month = parts[0];
-    const day = parts[1];
-    const year = parts[2];
-
-    if (
-      !month ||
-      !day ||
-      year === undefined
-    ) {
-      return 0;
-    }
-
-    const fullYear =
-      year < 50
-        ? 2000 + year
-        : 1900 + year;
-
-    return new Date(
-      fullYear,
-      month - 1,
-      day
-    ).getTime();
+  if (validEntries.length === 0) {
+    return [];
   }
 
-  const latestWeek =
-    entries.reduce(
-      (latest, entry) => {
-        if (!latest) {
-          return entry.week;
-        }
+  let latestWeek = validEntries[0].week;
 
-        return dateValue(
-          entry.week
-        ) >
-          dateValue(latest)
-          ? entry.week
-          : latest;
-      },
-      ''
-    );
+  for (const entry of validEntries) {
+    if (
+      parseDate(entry.week) >
+      parseDate(latestWeek)
+    ) {
+      latestWeek = entry.week;
+    }
+  }
 
   return entries
     .filter(
-      (entry) =>
-        entry.week === latestWeek
+      (entry) => entry.week === latestWeek
     )
-    .sort(
-      (a, b) =>
-        a.rank - b.rank
-    )
+    .sort((a, b) => a.rank - b.rank)
     .slice(0, 5)
     .map(
-      ({
-        week: _week,
-        ...entry
-      }) => entry
+      ({ week: _week, ...entry }) => entry
+    );
+}
+
+function parseGoat(rows: RawRow[]): ChartEntry[] {
+  return rows
+    .map((row): ChartEntry | null => {
+      const rank = Number(row[0]?.trim() ?? 0);
+      const content = row[1]?.trim() ?? '';
+      const artwork = row[2]?.trim() ?? '';
+
+      if (rank <= 0 || !content) {
+        return null;
+      }
+
+      const song = parseSongArtist(content);
+
+      return {
+        rank,
+        title: song.title,
+        artist: song.artist,
+        artwork: artwork || undefined,
+      };
+    })
+    .filter(
+      (entry): entry is ChartEntry =>
+        entry !== null
+    )
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 5);
+}
+
+function parseYearEnd(rows: RawRow[]): ChartEntry[] {
+  const entries: Array<
+    ChartEntry & { year: string }
+  > = [];
+
+  for (const row of rows) {
+    const year = row[0]?.trim() ?? '';
+    const rank = Number(row[1]?.trim() ?? 0);
+    const content = row[2]?.trim() ?? '';
+    const artwork = row[3]?.trim() ?? '';
+
+    if (!year || rank <= 0 || !content) {
+      continue;
+    }
+
+    const song = parseSongArtist(content);
+
+    entries.push({
+      year,
+      rank,
+      title: song.title,
+      artist: song.artist,
+      artwork: artwork || undefined,
+    });
+  }
+
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const years = Array.from(
+    new Set(entries.map((entry) => entry.year))
+  ).sort(
+    (a, b) => Number(b) - Number(a)
+  );
+
+  const latestYear = years[0];
+
+  if (!latestYear) {
+    return [];
+  }
+
+  return entries
+    .filter(
+      (entry) => entry.year === latestYear
+    )
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 5)
+    .map(
+      ({ year: _year, ...entry }) => entry
     );
 }
 
@@ -295,9 +205,7 @@ export async function GET(
 ) {
   try {
     const url =
-      request.nextUrl.searchParams.get(
-        'url'
-      );
+      request.nextUrl.searchParams.get('url');
 
     const title =
       request.nextUrl.searchParams.get(
@@ -307,61 +215,46 @@ export async function GET(
     if (!url) {
       return NextResponse.json(
         {
-          error:
-            'Missing chart URL',
+          error: 'Missing chart URL',
+          entries: [],
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    const response =
-      await fetch(url, {
-        cache: 'no-store',
-      });
+    const response = await fetch(url, {
+      cache: 'no-store',
+    });
 
     if (!response.ok) {
       return NextResponse.json(
         {
           error:
             `Google Sheets request failed: HTTP ${response.status}`,
+          entries: [],
         },
-        {
-          status: 502,
-        }
+        { status: 502 }
       );
     }
 
-    const csvText =
-      await response.text();
+    const csvText = await response.text();
 
     if (!csvText.trim()) {
-      return NextResponse.json(
-        {
-          entries: [],
-        }
-      );
+      return NextResponse.json({
+        entries: [],
+      });
     }
 
-    const rows =
-      parseCsvRows(csvText);
+    const rows = parseRows(csvText);
 
-    let entries: ChartEntry[] = [];
+    let entries: ChartEntry[];
 
-    if (
-      title ===
-      'Greatest of All-Time'
-    ) {
+    if (title === 'Greatest of All-Time') {
       entries = parseGoat(rows);
-    } else if (
-      title === 'Year-End'
-    ) {
-      entries =
-        parseYearEnd(rows);
+    } else if (title === 'Year-End') {
+      entries = parseYearEnd(rows);
     } else {
-      entries =
-        parseWeekly(rows);
+      entries = parseWeekly(rows);
     }
 
     return NextResponse.json({
@@ -375,13 +268,10 @@ export async function GET(
 
     return NextResponse.json(
       {
-        error:
-          'Failed to load chart data',
+        error: 'Failed to load chart data',
         entries: [],
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
