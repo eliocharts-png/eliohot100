@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import type { ChartEntry } from '@/types';
 import { useMediaQuery } from './useMediaQuery';
 
@@ -45,13 +44,12 @@ export default function ChartSection({
           {displayTitle}
         </h2>
 
-        <Link
+        <a
           href={href}
-          prefetch={false}
           className="ml-3 flex-shrink-0 whitespace-nowrap text-[0.55rem] font-brown-regular uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-70 sm:ml-6 sm:text-base sm:tracking-[0.2em]"
         >
           VIEW CHART →
-        </Link>
+        </a>
 
       </div>
 
