@@ -1,62 +1,36 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import ChartSection from '@/components/ChartSection';
-import { sheetSources } from '@/lib/chartData';
+import { fetchChartData, sheetSources } from '@/lib/chartData';
 import type { ChartEntry } from '@/types';
 
 type ChartData = {
   title: string;
   href: string;
-  csvUrl: string;
   entries: ChartEntry[];
 };
 
-export default function HomePage() {
-  const [charts, setCharts] = useState<ChartData[]>([]);
+export default async function HomePage() {
+  const charts: ChartData[] = await Promise.all(
+    sheetSources.map(async (source) => {
+      try {
+        const entries = await fetchChartData(
+          source.csvUrl,
+          source.title
+        );
 
-  useEffect(() => {
-    async function loadCharts() {
-      const loadedCharts = await Promise.all(
-        sheetSources.map(async (source) => {
-          try {
-            const response = await fetch(
-              `/api/chart?url=${encodeURIComponent(
-                source.csvUrl
-              )}&title=${encodeURIComponent(
-                source.title
-              )}`
-            );
-
-            if (!response.ok) {
-              return {
-                ...source,
-                entries: [],
-              };
-            }
-
-            const data = (await response.json()) as {
-              entries?: ChartEntry[];
-            };
-
-            return {
-              ...source,
-              entries: data.entries ?? [],
-            };
-          } catch {
-            return {
-              ...source,
-              entries: [],
-            };
-          }
-        })
-      );
-
-      setCharts(loadedCharts);
-    }
-
-    loadCharts();
-  }, []);
+        return {
+          title: source.title,
+          href: source.href,
+          entries,
+        };
+      } catch {
+        return {
+          title: source.title,
+          href: source.href,
+          entries: [],
+        };
+      }
+    })
+  );
 
   return (
     <main className="min-h-screen bg-white text-black">
