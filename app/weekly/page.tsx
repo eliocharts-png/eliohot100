@@ -36,32 +36,40 @@ export default async function WeeklyPage({
   const chart: WeeklyChartPayload =
     await fetchWeeklyChartData(
       weeklySource.csvUrl,
-      weeklySource.title,
-      selectedWeek
+      selectedWeek,
+      weeklySource.title
     );
 
   return (
-    <main className="min-h-screen bg-white px-5 py-10 text-black">
-      <div className="mx-auto max-w-6xl">
-        <WeeklyChartDetail
-          title={weeklySource.title}
-          weekLabel={chart.displayWeek}
-          week={chart.week}
-          availableWeeks={
-            chart.availableWeeks
-          }
-          weeksAtNumberOne={
-            chart.weeksAtNumberOne
-          }
-          entries={chart.entries}
-          entriesByWeek={
-            chart.entriesByWeek
-          }
-          weeksAtNumberOneByWeek={
-            chart.weeksAtNumberOneByWeek
-          }
-        />
+    <main className="min-h-screen bg-white text-black">
+
+      <div className="pt-[3.8rem]">
+
+        <div className="mx-auto max-w-6xl px-3 sm:px-6">
+
+          <WeeklyChartDetail
+            title={weeklySource.title}
+            weekLabel={chart.displayWeek}
+            week={chart.week}
+            availableWeeks={
+              chart.availableWeeks
+            }
+            weeksAtNumberOne={
+              chart.weeksAtNumberOne
+            }
+            entries={chart.entries}
+            entriesByWeek={
+              chart.entriesByWeek
+            }
+            weeksAtNumberOneByWeek={
+              chart.weeksAtNumberOneByWeek
+            }
+          />
+
+        </div>
+
       </div>
+
     </main>
   );
 }

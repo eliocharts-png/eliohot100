@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import SiteHeader from '@/components/SiteHeader';
 
 const brownBold = localFont({
   src: '../fonts/Brown-Bold.ttf',
@@ -15,14 +16,24 @@ const brownRegular = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'elio charts',
-  description: 'Personal music charts landing page',
+  title: 'Elio Charts',
+  description: 'Personal charts by Elio',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className={`${brownBold.variable} ${brownRegular.variable}`}>
-      <body>{children}</body>
+    <html lang="en">
+      <body
+        className={`${brownBold.variable} ${brownRegular.variable}`}
+      >
+        <SiteHeader />
+
+        {children}
+      </body>
     </html>
   );
 }

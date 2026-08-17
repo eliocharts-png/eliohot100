@@ -144,24 +144,11 @@ export default function WeeklyChartDetail({
   entriesByWeek,
   weeksAtNumberOneByWeek,
 }: WeeklyChartDetailProps) {
-  const [expandedRank, setExpandedRank] =
-    useState<number | null>(null);
-
   const [expandedHistory, setExpandedHistory] =
     useState<number | null>(null);
 
   const [selectedWeek, setSelectedWeek] =
     useState(week);
-
-  const toggleEntry = (
-    rank: number
-  ) => {
-    setExpandedRank((current) =>
-      current === rank
-        ? null
-        : rank
-    );
-  };
 
   const toggleHistory = (
     rank: number
@@ -223,11 +210,19 @@ export default function WeeklyChartDetail({
   return (
     <section className="space-y-0">
 
+      {/* =========================================
+          CHART TITLE
+      ========================================== */}
+
       <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
         <h1 className="text-[3.4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
           THE HOT 1OO
         </h1>
       </div>
+
+      {/* =========================================
+          DATE SELECTOR
+      ========================================== */}
 
       <div className="flex items-center justify-center bg-white px-4 py-3">
         <select
@@ -237,7 +232,6 @@ export default function WeeklyChartDetail({
               event.target.value
             );
 
-            setExpandedRank(null);
             setExpandedHistory(null);
           }}
           className="cursor-pointer appearance-none rounded-none bg-black px-5 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.2em] text-white outline-none sm:text-sm"
@@ -257,8 +251,13 @@ export default function WeeklyChartDetail({
         </select>
       </div>
 
-      <div className="mx-auto max-w-6xl px-3 sm:px-6">
-        <div className="relative flex items-center justify-center bg-[#0050FF] px-4 py-3 sm:px-6">
+      {/* =========================================
+          BLUE HEADER
+          SAME WIDTH AS CHART
+      ========================================== */}
+
+    <div className="mx-auto max-w-[68rem] px-3 sm:px-6">        
+      <div className="relative flex w-full items-center justify-center bg-[#0050FF] px-4 py-3 sm:px-6">
 
           <a
             href="/"
@@ -274,17 +273,17 @@ export default function WeeklyChartDetail({
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-3 sm:px-6">
-        <div className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+      {/* =========================================
+          CHART CONTAINER
+      ========================================== */}
+
+<div className="mx-auto max-w-[68rem] px-3 sm:px-6">
+          <div className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
 
           <div className="space-y-0">
 
             {currentEntries.map(
               (entry) => {
-
-                const isExpanded =
-                  expandedRank ===
-                  entry.rank;
 
                 const isHistoryExpanded =
                   expandedHistory ===
@@ -302,6 +301,10 @@ export default function WeeklyChartDetail({
                 const isHotshotDebut =
                   hotshotDebutRank ===
                   entry.rank;
+
+                /* =================================
+                   CHART HISTORY DATA
+                ================================= */
 
                 const graphData = (() => {
                   const history = (
@@ -433,8 +436,12 @@ export default function WeeklyChartDetail({
                 return (
                   <div
                     key={`${entry.rank}-${entry.title}-${entry.artist}`}
-                    className="border-t border-black/10 first:border-t-0"
+                    className="group border-y border-black/10 transition-colors duration-150 first:border-t-0 hover:border-[#0050FF]"
                   >
+
+                    {/* =================================
+                        #1 BANNER
+                    ================================== */}
 
                     {entry.rank === 1 && (
                       <div className="hidden sm:block">
@@ -466,24 +473,17 @@ export default function WeeklyChartDetail({
                       </div>
                     )}
 
+                    {/* =================================
+                        MOBILE
+                    ================================== */}
+
                     <div className="sm:hidden">
 
                       <div className="flex items-center gap-1.5 px-3 py-3">
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="flex h-[4.6rem] w-7 flex-shrink-0 flex-col overflow-hidden transition hover:opacity-75"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse song details'
-                              : 'Show song details'
-                          }
-                        >
+                        {/* MOVEMENT */}
+
+                        <div className="flex h-[4.6rem] w-7 flex-shrink-0 flex-col overflow-hidden">
 
                           <div className="flex flex-1 items-center justify-center bg-black/10">
                             <img
@@ -508,7 +508,9 @@ export default function WeeklyChartDetail({
                             )}
                           </div>
 
-                        </button>
+                        </div>
+
+                        {/* RANK */}
 
                         <div className="flex w-7 flex-shrink-0 items-center justify-center">
                           <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
@@ -516,20 +518,9 @@ export default function WeeklyChartDetail({
                           </p>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="h-[4.6rem] w-[4.6rem] flex-shrink-0 cursor-pointer overflow-hidden bg-black/5"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse song details'
-                              : 'Show song details'
-                          }
-                        >
+                        {/* ARTWORK */}
+
+                        <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5">
                           {entry.artwork ? (
                             <img
                               src={entry.artwork}
@@ -541,7 +532,9 @@ export default function WeeklyChartDetail({
                               ARTWORK
                             </div>
                           )}
-                        </button>
+                        </div>
+
+                        {/* SONG */}
 
                         <div className="min-w-0 flex-1">
                           <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
@@ -552,6 +545,8 @@ export default function WeeklyChartDetail({
                             {entry.artist}
                           </p>
                         </div>
+
+                        {/* HISTORY */}
 
                         <button
                           type="button"
@@ -574,148 +569,92 @@ export default function WeeklyChartDetail({
 
                       </div>
 
-                      {isExpanded && (
-                        <div className="px-3 pb-3">
-
-                          <div className="bg-black px-3 py-3">
-                            <div className="grid grid-cols-3 gap-2 text-center text-white">
-
-                              <div className="flex flex-col items-center justify-center">
-                                <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white/70">
-                                  LAST WEEK
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {entry.lastWeekRank ??
-                                    '—'}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col items-center justify-center">
-                                <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white/70">
-                                  PEAK
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {entry.peakPosition}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col items-center justify-center">
-                                <p className="text-[0.52rem] font-brown-regular uppercase tracking-[0.12em] text-white">
-                                  WEEKS ON CHART
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold text-white">
-                                  {entry.weeksOnChart}
-                                </p>
-                              </div>
-
-                            </div>
-                          </div>
-
-                          {(isGreatestGainer ||
-                            isHotshotDebut) && (
-                            <div className="mt-2 space-y-1">
-
-                              {isGreatestGainer && (
-                                <div
-                                  className="relative bg-black px-4 py-2.5 text-center"
-                                  style={{
-                                    clipPath:
-                                      'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
-                                  }}
-                                >
-                                  <p className="text-[0.62rem] font-brown-regular uppercase tracking-[0.14em] text-white">
-                                    GREATEST GAINER
-                                  </p>
-                                </div>
-                              )}
-
-                              {isHotshotDebut && (
-                                <div
-                                  className="relative bg-black px-4 py-2.5 text-center"
-                                  style={{
-                                    clipPath:
-                                      'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
-                                  }}
-                                >
-                                  <p className="text-[0.62rem] font-brown-regular uppercase tracking-[0.14em] text-white">
-                                    HOTSHOT DEBUT
-                                  </p>
-                                </div>
-                              )}
-
-                            </div>
-                          )}
-
-                        </div>
-                      )}
-
                     </div>
 
-                    <div className="hidden flex-col gap-4 sm:flex sm:flex-row sm:items-stretch sm:gap-0">
+                    {/* =================================
+                        DESKTOP
+                    ================================== */}
 
-                      {isExpanded && (
-                        <div className="flex-shrink-0 sm:self-center sm:pr-2">
+                    <div className="hidden sm:flex sm:flex-row sm:items-stretch">
+
+                      {/* =================================
+                          LEFT FIXED AREA
+                      ================================== */}
+
+                      <div className="relative flex flex-shrink-0 items-stretch">
+
+                        {/* =================================
+                            PEN PANEL
+                        ================================== */}
+
+                        <div className="pointer-events-none absolute right-full top-1/2 z-20 hidden -translate-y-1/2 pr-2 group-hover:block">
 
                           <div
-                            className="relative inline-block bg-black px-4 py-3 shadow-sm"
+                            className="relative bg-black px-2 py-3 shadow-md"
                             style={{
                               clipPath:
-                                'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
+                                'polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%)',
                             }}
                           >
-                            <div className="grid min-w-[260px] grid-cols-3 gap-3 text-center text-white">
 
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-[0.6rem] font-brown-regular uppercase leading-tight tracking-[0.18em] text-white/70">
-                                  <span className="block">
-                                    LAST
-                                  </span>
-                                  <span className="block">
-                                    WEEK
-                                  </span>
-                                </p>
+                            <div className="grid w-[155px] grid-cols-3 gap-2 text-center text-white">
 
-                                <p className="mt-1 text-sm font-brown-bold text-white">
+                              {/* LAST WEEK */}
+
+                              <div className="flex min-w-0 flex-col items-center justify-center text-center">
+
+                                <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
+  LAST
+  <br />
+  WEEK
+</p>
+
+                                <p className="mt-1 text-base font-brown-bold leading-none text-white">
                                   {entry.lastWeekRank ??
                                     '—'}
                                 </p>
+
                               </div>
 
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-[0.6rem] font-brown-regular uppercase leading-tight tracking-[0.18em] text-white/70">
-                                  <span className="block">
-                                    PEAK
-                                  </span>
-                                  <span className="block">
-                                    POSITION
-                                  </span>
-                                </p>
+                              {/* PEAK POSITION */}
 
-                                <p className="mt-1 text-sm font-brown-bold text-white">
+                              <div className="flex min-w-0 flex-col items-center justify-center text-center">
+
+                                <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
+  PEAK
+  <br />
+  POSITION
+</p>
+
+                                <p className="mt-1 text-base font-brown-bold leading-none text-white">
                                   {entry.peakPosition}
                                 </p>
+
                               </div>
 
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-[0.6rem] font-brown-regular uppercase leading-tight tracking-[0.18em] text-white/70">
-                                  <span className="block">
-                                    WEEKS ON
-                                  </span>
-                                  <span className="block">
-                                    CHART
-                                  </span>
-                                </p>
+                              {/* WEEKS ON CHART */}
 
-                                <p className="mt-1 text-sm font-brown-bold text-white">
+                              <div className="flex min-w-0 flex-col items-center justify-center text-center">
+
+                                <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
+  WEEKS ON
+  <br />
+  CHART
+</p>
+
+                                <p className="mt-1 text-base font-brown-bold leading-none text-white">
                                   {entry.weeksOnChart}
                                 </p>
+
                               </div>
 
                             </div>
+
                           </div>
+
+                          {/* =================================
+                              GREATEST GAINER / HOTSHOT
+                          ================================== */}
 
                           {(isGreatestGainer ||
                             isHotshotDebut) && (
@@ -723,13 +662,13 @@ export default function WeeklyChartDetail({
 
                               {isGreatestGainer && (
                                 <div
-                                  className="relative inline-block bg-black px-4 py-2 text-center"
+                                  className="relative inline-block bg-black px-3 py-2"
                                   style={{
                                     clipPath:
-                                      'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
+                                      'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)',
                                   }}
                                 >
-                                  <p className="text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white">
+                                  <p className="text-[0.68rem] font-brown-regular uppercase leading-none tracking-[0.1em] text-white">
                                     GREATEST GAINER
                                   </p>
                                 </div>
@@ -737,13 +676,13 @@ export default function WeeklyChartDetail({
 
                               {isHotshotDebut && (
                                 <div
-                                  className="relative inline-block bg-black px-4 py-2 text-center"
+                                  className="relative inline-block bg-black px-3 py-2"
                                   style={{
                                     clipPath:
-                                      'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
+                                      'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)',
                                   }}
                                 >
-                                  <p className="text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white">
+                                  <p className="text-[0.68rem] font-brown-regular uppercase leading-none tracking-[0.1em] text-white">
                                     HOTSHOT DEBUT
                                   </p>
                                 </div>
@@ -753,24 +692,12 @@ export default function WeeklyChartDetail({
                           )}
 
                         </div>
-                      )}
 
-                      <div className="flex flex-shrink-0 gap-0 px-4 py-4 sm:items-stretch sm:px-0 sm:py-0">
+                        {/* =================================
+                            MOVEMENT
+                        ================================== */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="flex h-auto w-12 flex-shrink-0 flex-row gap-0 transition hover:opacity-75 sm:h-full sm:w-12 sm:flex-col"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse song details'
-                              : 'Show song details'
-                          }
-                        >
+                        <div className="flex w-12 flex-shrink-0 flex-col">
 
                           <div className="flex flex-1 items-center justify-center bg-black/10">
                             <img
@@ -781,7 +708,7 @@ export default function WeeklyChartDetail({
                                 entry.movementIcon ??
                                 'movement'
                               }
-                              className="h-10 w-10 sm:h-12 sm:w-12"
+                              className="h-12 w-12 object-contain"
                             />
                           </div>
 
@@ -790,37 +717,34 @@ export default function WeeklyChartDetail({
                               <img
                                 src="/icons/bullet.PNG"
                                 alt="trending up"
-                                className="h-10 w-10 sm:h-12 sm:w-12"
+                                className="h-12 w-12 object-contain"
                               />
                             )}
                           </div>
 
-                        </button>
+                        </div>
 
-                        <div className="flex min-h-[120px] w-24 flex-shrink-0 items-center justify-center sm:h-full sm:min-h-0">
-                          <p className="m-0 text-center text-[2.5rem] font-brown-bold leading-none text-black sm:text-[3rem]">
+                        {/* =================================
+                            RANK
+                        ================================== */}
+
+                        <div className="flex w-24 flex-shrink-0 items-center justify-center">
+                          <p className="m-0 text-center text-[3rem] font-brown-bold leading-none text-black">
                             {entry.rank}
                           </p>
                         </div>
 
                       </div>
 
-                      <div className="flex flex-1 items-center gap-4 px-4 py-4 sm:px-0 sm:py-[3px] sm:pl-0">
+                      {/* =================================
+                          ARTWORK + SONG
+                      ================================== */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="h-[6rem] w-[6rem] flex-shrink-0 cursor-pointer overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse song details'
-                              : 'Show song details'
-                          }
-                        >
+                      <div className="flex min-w-0 flex-1 items-center gap-4 py-[3px]">
+
+                        {/* ARTWORK */}
+
+                        <div className="h-[7.8rem] w-[7.8rem] flex-shrink-0 overflow-hidden bg-black/5">
                           {entry.artwork ? (
                             <img
                               src={entry.artwork}
@@ -832,7 +756,9 @@ export default function WeeklyChartDetail({
                               ARTWORK
                             </div>
                           )}
-                        </button>
+                        </div>
+
+                        {/* SONG */}
 
                         <div className="min-w-0 flex-1">
 
@@ -845,6 +771,8 @@ export default function WeeklyChartDetail({
                           </p>
 
                         </div>
+
+                        {/* HISTORY */}
 
                         <button
                           type="button"
@@ -868,6 +796,10 @@ export default function WeeklyChartDetail({
                       </div>
 
                     </div>
+
+                    {/* =================================
+                        CHART HISTORY
+                    ================================== */}
 
                     {isHistoryExpanded && (
                       <div className="border-t border-black/10 bg-white px-4 py-6 sm:px-8">

@@ -193,16 +193,12 @@ export default function YearEndPage() {
           );
         }
 
-        /*
-         * Fetch the Year-End CSV directly.
-         *
-         * Year-End is small enough that
-         * this avoids depending on the
-         * generic latest-week parser.
-         */
         const response =
           await fetch(
-            source.csvUrl
+            source.csvUrl,
+            {
+              cache: 'no-store',
+            }
           );
 
         if (!response.ok) {
@@ -240,7 +236,8 @@ export default function YearEndPage() {
             )
           ).sort(
             (a, b) =>
-              Number(b) - Number(a)
+              Number(b) -
+              Number(a)
           );
 
         setYears(
@@ -266,7 +263,7 @@ export default function YearEndPage() {
       }
     }
 
-    loadYearEnd();
+    void loadYearEnd();
   }, []);
 
   const currentEntries =
@@ -289,214 +286,259 @@ export default function YearEndPage() {
   return (
     <main className="min-h-screen bg-white text-black">
 
-      {/* TITLE */}
-      <header className="px-4 pb-6 pt-6 text-center sm:px-6 sm:pb-9 sm:pt-12">
+      {/* ===================================================
+       * MAIN CONTENT
+       * ================================================= */}
 
-        <h1 className="font-brown-bold text-[3.4rem] uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
-          YEAR-END CHARTS
-        </h1>
+      <div className="pt-[3.8rem]">
 
-        {/* YEAR DROPDOWN */}
-        <div className="mt-6 flex justify-center sm:mt-7">
+        {/* =================================================
+         * TITLE
+         * ================================================= */}
 
-          <select
-            value={selectedYear}
-            onChange={(event) =>
-              setSelectedYear(
-                event.target.value
-              )
-            }
-            disabled={
-              loading ||
-              years.length === 0
-            }
-            aria-label="Select year"
-            className="h-10 min-w-[130px] border border-black bg-white px-4 text-center font-brown-bold text-sm uppercase tracking-[0.08em] text-black outline-none focus:border-[#0050FF] sm:h-11 sm:min-w-[170px] sm:px-5 sm:text-lg"
-          >
-            {years.map(
-              (year) => (
-                <option
-                  key={`year-${year}`}
-                  value={year}
-                >
-                  {year}
-                </option>
-              )
-            )}
-          </select>
+        <header className="px-4 pb-6 pt-6 sm:px-6 sm:pb-8 sm:pt-8">
 
-        </div>
+          <div className="mx-auto max-w-6xl">
 
-      </header>
+            <div className="text-center">
 
-      {/* BLUE BANNER */}
-      <div className="mx-auto max-w-6xl px-3 sm:px-6">
-
-        <div className="relative flex min-h-[2.75rem] items-center bg-[#0050FF] px-4 py-3 sm:px-6">
-
-          {/* HOME */}
-          <a
-            href="/"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
-          >
-            &lt; HOME
-          </a>
-
-          {/* PERSONAL CHARTS */}
-          <div className="ml-auto flex max-w-[62%] items-center justify-end gap-1.5 sm:mx-auto sm:max-w-none sm:justify-center sm:gap-2">
-
-            <p className="text-right text-[0.58rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
-              PERSONAL CHARTS BY ELIO
-            </p>
-
-            {/* INFO */}
-            <button
-              type="button"
-              onClick={() =>
-                setShowInfo(
-                  (current) =>
-                    !current
-                )
-              }
-              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/80 text-[0.7rem] font-brown-bold leading-none text-white transition hover:bg-white hover:text-[#0050FF]"
-              aria-label={
-                showInfo
-                  ? 'Hide Year-End methodology'
-                  : 'Show Year-End methodology'
-              }
-              aria-expanded={showInfo}
-            >
-              i
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* INFORMATION */}
-        {showInfo && (
-          <div className="border-x border-b border-black/10 bg-white px-3 py-6 sm:px-6">
-
-            <div className="mx-auto max-w-3xl text-center">
-
-              <p className="font-brown-bold text-xs uppercase tracking-[0.2em] text-black">
+              <h1 className="font-brown-bold text-[3.4rem] uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
                 YEAR-END CHARTS
-              </p>
+              </h1>
 
-              <p className="mt-3 font-brown-regular text-sm leading-relaxed text-black/70 sm:text-base">
-                <em>
-                  Year-end charts rank songs
-                  based on their performance
-                  throughout each chart year.
-                </em>
-              </p>
+              {/* YEAR DROPDOWN */}
+
+              <div className="mt-6 flex justify-center sm:mt-7">
+
+                <select
+                  value={selectedYear}
+                  onChange={(event) =>
+                    setSelectedYear(
+                      event.target.value
+                    )
+                  }
+                  disabled={
+                    loading ||
+                    years.length === 0
+                  }
+                  aria-label="Select year"
+                  className="h-10 min-w-[130px] border border-black bg-white px-4 text-center font-brown-bold text-sm uppercase tracking-[0.08em] text-black outline-none focus:border-[#0050FF] sm:h-11 sm:min-w-[170px] sm:px-5 sm:text-lg"
+                >
+                  {years.map(
+                    (year) => (
+                      <option
+                        key={`year-${year}`}
+                        value={year}
+                      >
+                        {year}
+                      </option>
+                    )
+                  )}
+                </select>
+
+              </div>
 
             </div>
 
           </div>
-        )}
 
-        {/* CHART */}
-        <div className="border-x border-b border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+        </header>
 
-          {/* LOADING */}
-          {loading && (
-            <div className="flex min-h-[300px] items-center justify-center">
+        {/* =================================================
+         * BLUE BANNER
+         * ================================================= */}
 
-              <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
-                LOADING YEAR-END CHART
+        <div className="mx-auto max-w-6xl px-3 sm:px-6">
+
+          <div className="relative flex min-h-[2.75rem] items-center bg-[#0050FF] px-4 py-3 sm:px-6">
+
+            {/* HOME */}
+
+            <a
+              href="/"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
+            >
+              &lt; HOME
+            </a>
+
+            {/* PERSONAL CHARTS */}
+
+            <div className="ml-auto flex max-w-[62%] items-center justify-end gap-1.5 sm:mx-auto sm:max-w-none sm:justify-center sm:gap-2">
+
+              <p className="text-right text-[0.58rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
+                PERSONAL CHARTS BY ELIO
               </p>
+
+              {/* INFO */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowInfo(
+                    (current) =>
+                      !current
+                  )
+                }
+                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/80 text-[0.7rem] font-brown-bold leading-none text-white transition hover:bg-white hover:text-[#0050FF]"
+                aria-label={
+                  showInfo
+                    ? 'Hide Year-End methodology'
+                    : 'Show Year-End methodology'
+                }
+                aria-expanded={
+                  showInfo
+                }
+              >
+                i
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+           * INFORMATION
+           * ================================================= */}
+
+          {showInfo && (
+            <div className="border-x border-b border-black/10 bg-white px-3 py-6 sm:px-6">
+
+              <div className="mx-auto max-w-3xl text-center">
+
+                <p className="font-brown-bold text-xs uppercase tracking-[0.2em] text-black">
+                  YEAR-END CHARTS
+                </p>
+
+                <p className="mt-3 font-brown-regular text-sm leading-relaxed text-black/70 sm:text-base">
+                  <em>
+                    Year-end charts rank songs
+                    based on their performance
+                    throughout each chart year.
+                  </em>
+                </p>
+
+              </div>
 
             </div>
           )}
 
-          {/* ERROR */}
-          {!loading &&
-            error && (
+          {/* =================================================
+           * CHART
+           * ================================================= */}
+
+          <div className="border-x border-b border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+
+            {/* LOADING */}
+
+            {loading && (
               <div className="flex min-h-[300px] items-center justify-center">
 
                 <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
-                  UNABLE TO LOAD YEAR-END CHART
+                  LOADING YEAR-END CHART
                 </p>
 
               </div>
             )}
 
-          {/* CHART ENTRIES */}
-          {!loading &&
-            !error &&
-            currentEntries.map(
-              (entry, index) => (
-                <div
-                  key={`${entry.year}-${entry.rank}-${entry.title}-${entry.artist}-${index}`}
-                  className={`flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6 ${
-                    index > 0
-                      ? 'border-t border-black/10'
-                      : ''
-                  }`}
-                >
+            {/* ERROR */}
 
-                  {/* RANK */}
-                  <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
+            {!loading &&
+              error && (
+                <div className="flex min-h-[300px] items-center justify-center">
 
-                    <p className="m-0 font-brown-bold text-[1.35rem] leading-none text-black sm:text-[3.5rem]">
-                      {entry.rank}
-                    </p>
-
-                  </div>
-
-                  {/* ARTWORK */}
-                  <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
-
-                    {entry.artwork ? (
-                      <img
-                        src={entry.artwork}
-                        alt={`${entry.title} artwork`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center font-brown-regular text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
-                        ARTWORK
-                      </div>
-                    )}
-
-                  </div>
-
-                  {/* TITLE + ARTIST */}
-                  <div className="min-w-0 flex-1">
-
-                    <p className="break-words font-brown-bold text-[0.9rem] leading-[1.08] text-black sm:text-4xl">
-                      {entry.title}
-                    </p>
-
-                    <p className="mt-0.5 break-words font-brown-regular text-[0.72rem] leading-tight text-blue-600 sm:mt-1 sm:text-xl">
-                      {entry.artist}
-                    </p>
-
-                  </div>
+                  <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+                    UNABLE TO LOAD YEAR-END CHART
+                  </p>
 
                 </div>
-              )
-            )}
+              )}
 
-          {/* NO DATA */}
-          {!loading &&
-            !error &&
-            currentEntries.length === 0 && (
-              <div className="flex min-h-[300px] items-center justify-center">
+            {/* =================================================
+             * CHART ENTRIES
+             * ================================================= */}
 
-                <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
-                  NO YEAR-END CHART DATA AVAILABLE
-                </p>
+            {!loading &&
+              !error &&
+              currentEntries.map(
+                (entry, index) => (
+                  <div
+                    key={`${entry.year}-${entry.rank}-${entry.title}-${entry.artist}-${index}`}
+                    className={`flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6 ${
+                      index > 0
+                        ? 'border-t border-black/10'
+                        : ''
+                    }`}
+                  >
 
-              </div>
-            )}
+                    {/* RANK */}
+
+                    <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
+
+                      <p className="m-0 font-brown-bold text-[1.35rem] leading-none text-black sm:text-[3.5rem]">
+                        {entry.rank}
+                      </p>
+
+                    </div>
+
+                    {/* ARTWORK */}
+
+                    <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
+
+                      {entry.artwork ? (
+                        <img
+                          src={entry.artwork}
+                          alt={`${entry.title} artwork`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center font-brown-regular text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
+                          ARTWORK
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* TITLE + ARTIST */}
+
+                    <div className="min-w-0 flex-1">
+
+                      <p className="break-words font-brown-bold text-[0.9rem] leading-[1.08] text-black sm:text-4xl">
+                        {entry.title}
+                      </p>
+
+                      <p className="mt-0.5 break-words font-brown-regular text-[0.72rem] leading-tight text-blue-600 sm:mt-1 sm:text-xl">
+                        {entry.artist}
+                      </p>
+
+                    </div>
+
+                  </div>
+                )
+              )}
+
+            {/* =================================================
+             * NO DATA
+             * ================================================= */}
+
+            {!loading &&
+              !error &&
+              currentEntries.length === 0 && (
+                <div className="flex min-h-[300px] items-center justify-center">
+
+                  <p className="font-brown-regular text-xs uppercase tracking-[0.2em] text-black/50">
+                    NO YEAR-END CHART DATA AVAILABLE
+                  </p>
+
+                </div>
+              )}
+
+          </div>
 
         </div>
 
-      </div>
+        <div className="h-12" />
 
-      <div className="h-12" />
+      </div>
 
     </main>
   );

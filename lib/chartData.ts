@@ -20,12 +20,24 @@ export const sheetSources: ChartSource[] = [
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=2098313277&single=true&output=csv',
   },
+
   {
     title: 'Greatest of All-Time',
     href: '/goat',
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=861998262&single=true&output=csv',
   },
+
+  /*
+   * DECADE-END — 2010s
+   */
+  {
+    title: 'Decade-End 2010s',
+    href: '/decade-end/2010s',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1710077475&single=true&output=csv',
+  },
+
   {
     title: 'Year-End',
     href: '/year-end',
@@ -191,7 +203,9 @@ function parseCsv(
 
   return rows
     .map(
-      (row): RawRow => {
+      (
+        row
+      ): RawRow => {
         const week =
           row[0]?.trim() ?? '';
 
@@ -245,6 +259,83 @@ function parseCsv(
 }
 
 function parseGoatCsv(
+  csvText: string
+): ChartEntry[] {
+  const parsed = Papa.parse(
+    csvText,
+    {
+      header: false,
+      skipEmptyLines: true,
+    }
+  );
+
+  const rows =
+    parsed.data as string[][];
+
+  return rows
+    .map(
+      (
+        row
+      ): ChartEntry | null => {
+        const rank =
+          Number(
+            row[0]?.trim() ?? 0
+          );
+
+        const content =
+          row[1]?.trim() ?? '';
+
+        const image =
+          row[2]?.trim() ?? '';
+
+        if (
+          rank <= 0 ||
+          !content
+        ) {
+          return null;
+        }
+
+        const parts =
+          content
+            .split(/\r?\n/)
+            .map(
+              (value) =>
+                value.trim()
+            )
+            .filter(Boolean);
+
+        return {
+          rank,
+          title:
+            parts[0] ?? content,
+          artist:
+            parts[1] ?? '',
+          artwork:
+            image || undefined,
+        };
+      }
+    )
+    .filter(
+      (
+        entry
+      ): entry is ChartEntry =>
+        entry !== null
+    )
+    .sort(
+      (a, b) =>
+        a.rank - b.rank
+    );
+}
+
+/*
+ * DECADE-END
+ *
+ * This is kept separate from GOAT.
+ *
+ * The 2010s Decade-End chart uses
+ * its own Google Sheets CSV source.
+ */
+function parseDecadeEndCsv(
   csvText: string
 ): ChartEntry[] {
   const parsed = Papa.parse(
@@ -392,7 +483,8 @@ function parseYearEndCsv(
       }
 
       return (
-        a.rank - b.rank
+        a.rank -
+        b.rank
       );
     }
   );
@@ -403,6 +495,27 @@ function parseYearEndCsv(
       ...entry
     }) => entry
   );
+}
+
+/*
+ * Adds a cache-busting parameter to
+ * Google Sheets CSV requests.
+ *
+ * Google occasionally returns HTTP 400
+ * for repeated requests to the same
+ * published CSV URL. A unique query
+ * parameter prevents that request from
+ * being treated as a stale/reused request.
+ */
+function getFreshCsvUrl(
+  csvUrl: string
+): string {
+  const separator =
+    csvUrl.includes('?')
+      ? '&'
+      : '?';
+
+  return `${csvUrl}${separator}_=${Date.now()}`;
 }
 
 export async function fetchChartData(
@@ -418,26 +531,28 @@ export async function fetchChartData(
   }
 
   try {
+    const freshUrl =
+      getFreshCsvUrl(csvUrl);
+
     /*
-     * THE HOT 100 is a very large CSV
-     * (~10 MB), so it must not be placed
-     * into Next.js's 2 MB data cache.
+     * Do not allow Google Sheets
+     * responses to enter Next.js's
+     * 2 MB data cache.
      *
-     * GOAT and Year-End remain cached
-     * normally.
+     * This is especially important
+     * for THE HOT 100, which is
+     * approximately 10 MB.
+     *
+     * GOAT and DECADE-END also use
+     * no-store so Google Sheets HTTP
+     * responses are not tied to cache.
      */
     const response =
       await fetch(
-        csvUrl,
-        title === 'THE HOT 100'
-          ? {
-              cache: 'no-store',
-            }
-          : {
-              next: {
-                revalidate: 300,
-              },
-            }
+        freshUrl,
+        {
+          cache: 'no-store',
+        }
       );
 
     if (!response.ok) {
@@ -464,6 +579,15 @@ export async function fetchChartData(
       'Greatest of All-Time'
     ) {
       return parseGoatCsv(
+        csvText
+      );
+    }
+
+    if (
+      title ===
+      'Decade-End 2010s'
+    ) {
+      return parseDecadeEndCsv(
         csvText
       );
     }
@@ -565,13 +689,13 @@ export async function fetchWeeklyChartData(
 
   try {
     /*
-     * Weekly data is ~10 MB, so do not
-     * allow Next.js to put the response
-     * into its 2 MB data cache.
+     * Weekly data is approximately
+     * 10 MB, so it must never enter
+     * Next.js's 2 MB data cache.
      */
     const response =
       await fetch(
-        csvUrl,
+        getFreshCsvUrl(csvUrl),
         {
           cache: 'no-store',
         }
@@ -655,9 +779,9 @@ export async function fetchWeeklyChartData(
         week: '',
         displayWeek: 'UNKNOWN',
         availableWeeks: [],
-        weeksAtNumberOne: 0,
         entries: [],
         entriesByWeek: {},
+        weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
     }
@@ -713,24 +837,11 @@ export async function fetchWeeklyChartData(
       number
     > = {};
 
-    /*
-     * Keep a cumulative #1 count for
-     * every song.
-     *
-     * This is deliberately based on
-     * the song itself, not on whether
-     * its #1 run is consecutive.
-     */
     const cumulativeNumberOneWeeks: Record<
       string,
       number
     > = {};
 
-    /*
-     * Process the chart chronologically
-     * so cumulative #1 totals can build
-     * correctly from the beginning.
-     */
     const chronologicalWeeks =
       [...availableWeeks].sort(
         (a, b) =>
@@ -896,8 +1007,7 @@ export async function fetchWeeklyChartData(
       );
 
       /*
-       * Find the current #1 song and
-       * use its cumulative #1 total.
+       * Find current #1 song.
        */
       const numberOneRow =
         sortedRows.find(

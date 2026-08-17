@@ -7,12 +7,86 @@ interface ChartSectionProps {
   title: string;
   href: string;
   entries: ChartEntry[];
+  loading?: boolean;
+}
+
+function ChartSectionSkeleton({
+  title,
+}: {
+  title: string;
+}) {
+  const displayTitle =
+    title === 'Year-End'
+      ? 'YEAR-END CHARTS'
+      : title;
+
+  return (
+    <section className="space-y-4 sm:space-y-6">
+
+      {/* BLUE SECTION HEADER */}
+      <div className="flex min-h-[3rem] w-full items-center bg-[#0050FF] px-3 py-2.5 sm:min-h-[4.5rem] sm:px-6 sm:py-4">
+
+        <h2 className="min-w-0 flex-1 truncate font-brown-bold text-[1rem] uppercase leading-none tracking-[0.1em] text-white sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]">
+          {displayTitle}
+        </h2>
+
+        {/* VIEW CHART SKELETON */}
+        <div className="ml-3 h-3 w-20 animate-pulse bg-white/30 sm:ml-6 sm:h-4 sm:w-28" />
+
+      </div>
+
+      {/* SONG PREVIEW SKELETON */}
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5">
+
+        {Array.from({ length: 5 }).map(
+          (_, index) => (
+            <article
+              key={`skeleton-${index}`}
+              className={`min-w-0 ${
+                index >= 3
+                  ? 'hidden lg:block'
+                  : ''
+              }`}
+            >
+
+              {/* ARTWORK SKELETON */}
+              <div className="relative">
+
+                <div className="aspect-square w-full animate-pulse bg-black/[0.08]" />
+
+                {/* RANK SKELETON */}
+                <div className="absolute bottom-0 left-0 h-7 w-[1.9rem] animate-pulse bg-[#0050FF]/70 sm:h-10 sm:w-[2.75rem]" />
+
+              </div>
+
+              {/* SONG INFORMATION SKELETON */}
+              <div className="mt-2 min-w-0 sm:mt-3">
+
+                {/* TITLE */}
+                <div className="h-3.5 w-[85%] animate-pulse bg-black/[0.08] sm:h-5" />
+
+                <div className="mt-1 h-3.5 w-[65%] animate-pulse bg-black/[0.08] sm:h-5" />
+
+                {/* ARTIST */}
+                <div className="mt-1.5 h-2.5 w-[55%] animate-pulse bg-black/[0.05] sm:mt-2 sm:h-4" />
+
+              </div>
+
+            </article>
+          )
+        )}
+
+      </div>
+
+    </section>
+  );
 }
 
 export default function ChartSection({
   title,
   href,
   entries,
+  loading = false,
 }: ChartSectionProps) {
   const isDesktop = useMediaQuery(
     '(min-width: 1024px)',
@@ -33,6 +107,14 @@ export default function ChartSection({
     title === 'Year-End'
       ? 'YEAR-END CHARTS'
       : title;
+
+  if (loading) {
+    return (
+      <ChartSectionSkeleton
+        title={title}
+      />
+    );
+  }
 
   return (
     <section className="space-y-4 sm:space-y-6">

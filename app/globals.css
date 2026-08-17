@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-brown-regular), system-ui, sans-serif;
   background-color: #ffffff;
   color: #000000;
 }
@@ -22,6 +22,7 @@ body {
   margin: 0;
   padding: 0;
   background: #ffffff;
+  font-family: var(--font-brown-regular), system-ui, sans-serif;
 }
 
 * {
@@ -33,15 +34,58 @@ body {
   color: #ffffff;
 }
 
+/* =========================================================
+   BROWN FONT CLASSES
+   ========================================================= */
+
 .section-title {
-  font-family: var(--font-brown-bold), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-brown-bold), system-ui, sans-serif;
 }
 
 .font-brown-bold {
-  font-family: var(--font-brown-bold), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-brown-bold), system-ui, sans-serif;
 }
 
-.font-brown-regular,
+.font-brown-regular {
+  font-family: var(--font-brown-regular), system-ui, sans-serif;
+}
+
 .font-brown-light {
-  font-family: var(--font-brown-regular), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-brown-regular), system-ui, sans-serif;
+}
+
+/* =========================================================
+   CHART LOADING / SKELETON ANIMATION
+   ========================================================= */
+
+@keyframes chart-loading-shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.chart-loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    #eeeeee 0%,
+    #f8f8f8 35%,
+    #ffffff 50%,
+    #f8f8f8 65%,
+    #eeeeee 100%
+  );
+  background-size: 1000px 100%;
+  animation: chart-loading-shimmer 1.6s infinite linear;
+}
+
+/* Respect users who prefer reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-loading-shimmer {
+    animation: none;
+    background: #eeeeee;
+  }
 }
