@@ -476,7 +476,7 @@ export default function WeeklyChartDetail({
                     )}
 
                     {entry.rank === 1 && (
-                      <div className="block sm:hidden px-3 pt-3">
+                      <div className="block px-3 pt-3 sm:hidden">
                         <div className="bg-black px-3 py-2 text-center">
                           <p className="text-xs font-brown-regular uppercase tracking-[0.1em] text-white">
                             {currentWeeksAtNumberOne}{' '}
@@ -500,7 +500,7 @@ export default function WeeklyChartDetail({
                           MOBILE SONG ROW
                       ================================== */}
 
-                      <div className="relative flex w-full items-stretch">
+                      <div className="relative flex min-h-[5.1rem] w-full items-stretch pb-1">
 
                         {/* MOVEMENT */}
 
@@ -608,13 +608,17 @@ export default function WeeklyChartDetail({
                               ? 'Hide chart statistics'
                               : 'Show chart statistics'
                           }
-                          className="absolute bottom-0 left-1/2 z-10 flex h-5 w-10 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-t-full bg-black text-white shadow-sm"
+                          className="absolute bottom-0 left-1/2 z-10 flex h-3.5 w-8 -translate-x-1/2 items-center justify-center rounded-t-full bg-[#0050FF] text-white"
                         >
-                          <span className="relative -top-[1px] text-[0.75rem] font-brown-bold leading-none">
-                            {isStatsExpanded
-                              ? '⌃'
-                              : '⌄'}
-                          </span>
+                          <span
+                            className="relative -top-[1px] block h-[5px] w-[11px] border-b-[2px] border-l-[2px] border-white"
+                            style={{
+                              transform:
+                                isStatsExpanded
+                                  ? 'rotate(135deg)'
+                                  : 'rotate(-45deg)',
+                            }}
+                          />
                         </button>
 
                       </div>
@@ -712,6 +716,8 @@ export default function WeeklyChartDetail({
 
                             <div className="grid w-[155px] grid-cols-3 gap-2 text-center text-white">
 
+                              {/* LAST WEEK */}
+
                               <div className="flex min-w-0 flex-col items-center justify-center text-center">
 
                                 <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
@@ -727,6 +733,8 @@ export default function WeeklyChartDetail({
 
                               </div>
 
+                              {/* PEAK POSITION */}
+
                               <div className="flex min-w-0 flex-col items-center justify-center text-center">
 
                                 <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
@@ -740,6 +748,8 @@ export default function WeeklyChartDetail({
                                 </p>
 
                               </div>
+
+                              {/* WEEKS ON CHART */}
 
                               <div className="flex min-w-0 flex-col items-center justify-center text-center">
 
@@ -758,6 +768,8 @@ export default function WeeklyChartDetail({
                             </div>
 
                           </div>
+
+                          {/* GREATEST GAINER / HOTSHOT */}
 
                           {(isGreatestGainer ||
                             isHotshotDebut) && (
@@ -839,6 +851,8 @@ export default function WeeklyChartDetail({
 
                       <div className="flex min-w-0 flex-1 items-center gap-4 py-[3px]">
 
+                        {/* ARTWORK */}
+
                         <div className="h-[7.8rem] w-[7.8rem] flex-shrink-0 overflow-hidden bg-black/5">
                           {entry.artwork ? (
                             <img
@@ -853,6 +867,8 @@ export default function WeeklyChartDetail({
                           )}
                         </div>
 
+                        {/* SONG */}
+
                         <div className="min-w-0 flex-1">
 
                           <p className="text-xl font-brown-bold leading-tight text-black sm:text-4xl">
@@ -864,6 +880,8 @@ export default function WeeklyChartDetail({
                           </p>
 
                         </div>
+
+                        {/* HISTORY */}
 
                         <button
                           type="button"

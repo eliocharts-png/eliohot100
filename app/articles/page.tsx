@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import {
   analyzeWeeklyHot100,
 } from '@/lib/weeklyHot100Analysis';
