@@ -40,89 +40,87 @@ function ArtistChartSkeleton() {
 
       {/* CHART */}
 
-      <div className="mx-auto max-w-6xl px-3 sm:px-6">
-        <div className="overflow-hidden border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+      <div className="mx-auto max-w-6xl px-3 pb-16 sm:px-6 sm:pb-24">
 
-          <div className="space-y-0">
+        <div className="space-y-0">
 
-            {Array.from({ length: 10 }).map(
-              (_, index) => (
-                <div
-                  key={index}
-                  className="border-t border-black/10 first:border-t-0"
-                >
+          {Array.from({ length: 10 }).map(
+            (_, index) => (
+              <div
+                key={index}
+                className="border-t border-black/10 first:border-t-0"
+              >
 
-                  {/* MOBILE */}
+                {/* MOBILE */}
 
-                  <div className="flex items-center gap-2 px-3 py-3 sm:hidden">
+                <div className="flex items-center gap-2 px-3 py-3 sm:hidden">
 
-                    <div className="flex h-[4.6rem] w-7 flex-shrink-0 flex-col overflow-hidden">
+                  <div className="flex h-[4.6rem] w-7 flex-shrink-0 flex-col overflow-hidden">
 
-                      <div className="flex flex-1 animate-pulse items-center justify-center bg-black/[0.06]" />
+                    <div className="flex flex-1 animate-pulse items-center justify-center bg-black/[0.06]" />
 
-                      <div className="flex flex-1 animate-pulse items-center justify-center bg-[#0050FF]/20" />
-
-                    </div>
-
-                    <div className="flex h-7 w-7 flex-shrink-0 animate-pulse items-center justify-center bg-black/[0.05]" />
-
-                    <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 animate-pulse bg-black/[0.07]" />
-
-                    <div className="min-w-0 flex-1 space-y-2">
-
-                      <div className="h-4 w-[85%] animate-pulse bg-black/[0.07]" />
-
-                      <div className="h-3 w-[60%] animate-pulse bg-black/[0.05]" />
-
-                    </div>
-
-                    <div className="h-7 w-6 flex-shrink-0 animate-pulse bg-black/[0.05]" />
+                    <div className="flex flex-1 animate-pulse items-center justify-center bg-[#0050FF]/20" />
 
                   </div>
 
-                  {/* DESKTOP */}
+                  <div className="flex h-7 w-7 flex-shrink-0 animate-pulse items-center justify-center bg-black/[0.05]" />
 
-                  <div className="hidden sm:flex sm:min-h-[8rem] sm:items-stretch">
+                  <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 animate-pulse bg-black/[0.07]" />
 
-                    <div className="flex w-12 flex-shrink-0 flex-col">
+                  <div className="min-w-0 flex-1 space-y-2">
 
-                      <div className="flex flex-1 animate-pulse items-center justify-center bg-black/[0.06]" />
+                    <div className="h-4 w-[85%] animate-pulse bg-black/[0.07]" />
 
-                      <div className="flex flex-1 animate-pulse items-center justify-center bg-[#0050FF]/20" />
+                    <div className="h-3 w-[60%] animate-pulse bg-black/[0.05]" />
+
+                  </div>
+
+                  <div className="h-7 w-6 flex-shrink-0 animate-pulse bg-black/[0.05]" />
+
+                </div>
+
+                {/* DESKTOP */}
+
+                <div className="hidden sm:flex sm:min-h-[8rem] sm:items-stretch">
+
+                  <div className="flex w-12 flex-shrink-0 flex-col">
+
+                    <div className="flex flex-1 animate-pulse items-center justify-center bg-black/[0.06]" />
+
+                    <div className="flex flex-1 animate-pulse items-center justify-center bg-[#0050FF]/20" />
+
+                  </div>
+
+                  <div className="flex w-24 flex-shrink-0 items-center justify-center">
+
+                    <div className="h-12 w-14 animate-pulse bg-black/[0.05]" />
+
+                  </div>
+
+                  <div className="flex flex-1 items-center gap-4">
+
+                    <div className="h-[7.8rem] w-[7.8rem] flex-shrink-0 animate-pulse bg-black/[0.07]" />
+
+                    <div className="flex-1 space-y-3">
+
+                      <div className="h-7 w-[65%] animate-pulse bg-black/[0.07]" />
+
+                      <div className="h-5 w-[40%] animate-pulse bg-black/[0.05]" />
 
                     </div>
 
-                    <div className="flex w-24 flex-shrink-0 items-center justify-center">
-
-                      <div className="h-12 w-14 animate-pulse bg-black/[0.05]" />
-
-                    </div>
-
-                    <div className="flex flex-1 items-center gap-4">
-
-                      <div className="h-[7.8rem] w-[7.8rem] flex-shrink-0 animate-pulse bg-black/[0.07]" />
-
-                      <div className="flex-1 space-y-3">
-
-                        <div className="h-7 w-[65%] animate-pulse bg-black/[0.07]" />
-
-                        <div className="h-5 w-[40%] animate-pulse bg-black/[0.05]" />
-
-                      </div>
-
-                      <div className="mr-4 h-10 w-10 animate-pulse bg-black/[0.05]" />
-
-                    </div>
+                    <div className="mr-4 h-10 w-10 animate-pulse bg-black/[0.05]" />
 
                   </div>
 
                 </div>
-              )
-            )}
 
-          </div>
+              </div>
+            )
+          )}
 
         </div>
+
       </div>
 
     </section>
@@ -216,24 +214,28 @@ export default function ArtistsPage() {
         {!chartLoading &&
           weeklyChart &&
           weeklyChart.entries.length > 0 && (
-            <WeeklyArtistChartDetail
-              title="ARTIST CHART"
-              weekLabel={
-                weeklyChart.displayWeek
-              }
-              week={
-                weeklyChart.week
-              }
-              availableWeeks={
-                weeklyChart.availableWeeks
-              }
-              entries={
-                weeklyChart.entries
-              }
-              entriesByWeek={
-                weeklyChart.entriesByWeek
-              }
-            />
+            <div className="pb-16 sm:pb-24">
+
+              <WeeklyArtistChartDetail
+                title="ARTIST CHART"
+                weekLabel={
+                  weeklyChart.displayWeek
+                }
+                week={
+                  weeklyChart.week
+                }
+                availableWeeks={
+                  weeklyChart.availableWeeks
+                }
+                entries={
+                  weeklyChart.entries
+                }
+                entriesByWeek={
+                  weeklyChart.entriesByWeek
+                }
+              />
+
+            </div>
           )}
 
         {/* =================================================
@@ -243,7 +245,7 @@ export default function ArtistsPage() {
         {!chartLoading &&
           weeklyChart &&
           weeklyChart.entries.length === 0 && (
-            <div className="mx-auto max-w-6xl px-3 sm:px-6">
+            <div className="mx-auto max-w-6xl px-3 pb-16 sm:px-6 sm:pb-24">
 
               <p className="py-8 text-center font-brown-regular text-xs uppercase tracking-[0.15em] text-black/50">
                 NO ARTIST CHART DATA
