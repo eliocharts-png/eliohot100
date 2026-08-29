@@ -338,6 +338,17 @@ export default function SiteHeader() {
           </a>
 
           {/* =================================================
+           * AWARDS
+           * ================================================= */}
+
+          <a
+            href="/awards"
+            className="font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+          >
+            AWARDS
+          </a>
+
+          {/* =================================================
            * DESKTOP SEARCH
            * ================================================= */}
 
@@ -521,9 +532,21 @@ export default function SiteHeader() {
               <a
                 href="/goat"
                 onClick={closeMobileMenu}
-                className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                className="border-b border-white/10 py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
               >
                 GREATEST OF ALL TIME
+              </a>
+
+              {/* =================================================
+               * MOBILE AWARDS
+               * ================================================= */}
+
+              <a
+                href="/awards"
+                onClick={closeMobileMenu}
+                className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+              >
+                AWARDS
               </a>
 
             </div>

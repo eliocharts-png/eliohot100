@@ -27,6 +27,17 @@ export type WeeklyArtistEntry = {
     | '▼'
     | '→';
 
+  /*
+   * TRUE when:
+   *
+   * - artist moved up
+   * - artist re-entered
+   * - artist debuted
+   * - OR artist's total points increased
+   *   compared with the previous week
+   */
+  showBullet: boolean;
+
   peakPosition: number;
   weeksOnChart: number;
   songsOnChart: number;
@@ -655,6 +666,62 @@ function getArrow(
 }
 
 /* =========================================================
+ * BULLET
+ *
+ * The blue bullet appears when ANY of these are true:
+ *
+ * 1. Artist moved UP
+ * 2. Artist RE-ENTERED
+ * 3. Artist DEBUTED
+ * 4. Artist's total points increased
+ *
+ * The points comparison is against the artist's
+ * total points from the previous week.
+ * ======================================================= */
+
+function getShowBullet(
+  movementIcon: WeeklyArtistEntry['movementIcon'],
+  currentPoints: number,
+  previousEntry:
+    | WeeklyArtistEntry
+    | undefined
+): boolean {
+  /*
+   * Re-entry and debut always get a bullet.
+   */
+  if (
+    movementIcon === 'reentry' ||
+    movementIcon === 'debut'
+  ) {
+    return true;
+  }
+
+  /*
+   * Moving up always gets a bullet.
+   */
+  if (
+    movementIcon === 'up'
+  ) {
+    return true;
+  }
+
+  /*
+   * If the artist was on the chart
+   * the previous week, compare total
+   * artist points.
+   */
+  if (
+    previousEntry &&
+    currentPoints >
+      previousEntry.points
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/* =========================================================
  * MAIN
  * ======================================================= */
 
@@ -732,11 +799,6 @@ export async function fetchWeeklyArtistData(
 
     /* =====================================================
      * OFFICIAL ARTIST MAP
-     *
-     * Used ONLY for:
-     *
-     * - official artist spelling
-     * - Column O artwork
      * =================================================== */
 
     const officialArtistMap =
@@ -766,12 +828,6 @@ export async function fetchWeeklyArtistData(
 
     /* =====================================================
      * SONG LOOKUP
-     *
-     * HOT 100 song
-     *       ↓
-     * SONGS sheet
-     *       ↓
-     * associated artists
      * =================================================== */
 
     const songMap =
@@ -861,22 +917,6 @@ export async function fetchWeeklyArtistData(
 
     /* =====================================================
      * BUILD ARTIST HISTORY
-     *
-     * THIS IS THE ACTUAL ARTIST CHART CALCULATION.
-     *
-     * HOT 100 gives us:
-     *
-     * - week
-     * - song
-     * - rank
-     * - points
-     *
-     * SONGS gives us:
-     *
-     * - which artists belong to each song
-     *
-     * We combine them to calculate
-     * each artist's weekly points.
      * =================================================== */
 
     const artistHistory:
@@ -1155,7 +1195,13 @@ export async function fetchWeeklyArtistData(
               );
 
             /*
-             * Find previous rank.
+             * Find previous week's
+             * entry for this artist.
+             *
+             * This gives us BOTH:
+             *
+             * - previous rank
+             * - previous total points
              */
             const previousEntry =
               previousEntries.find(
@@ -1239,6 +1285,29 @@ export async function fetchWeeklyArtistData(
                 key
               );
 
+            /*
+             * Movement icon.
+             */
+            const movementIcon =
+              getMovementIcon(
+                rank,
+                lastWeekRank,
+                hadPriorAppearance
+              );
+
+            /*
+             * Bullet.
+             *
+             * This now checks both
+             * movement AND total points.
+             */
+            const showBullet =
+              getShowBullet(
+                movementIcon,
+                artistRow.points,
+                previousEntry
+              );
+
             return {
               rank,
 
@@ -1270,12 +1339,7 @@ export async function fetchWeeklyArtistData(
               /*
                * Movement.
                */
-              movementIcon:
-                getMovementIcon(
-                  rank,
-                  lastWeekRank,
-                  hadPriorAppearance
-                ),
+              movementIcon,
 
               /*
                * Arrow.
@@ -1285,6 +1349,11 @@ export async function fetchWeeklyArtistData(
                   rank,
                   lastWeekRank
                 ),
+
+              /*
+               * Blue bullet.
+               */
+              showBullet,
 
               /*
                * Career statistics.

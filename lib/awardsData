@@ -1,0 +1,401 @@
+const NOMINEES_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1cIB9D2bPcJxyiw3yKNLJtfMLwuBx_ujLYEmfe-wUwcoUFZGZ2ukP34jtFt2J-TXh_VK__wE9XxjO/pub?gid=0&single=true&output=csv';
+
+const ARTIST_IMAGES_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1cIB9D2bPcJxyiw3yKNLJtfMLwuBx_ujLYEmfe-wUwcoUFZGZ2ukP34jtFt2J-TXh_VK__wE9XxjO/pub?gid=526167020&single=true&output=csv';
+
+export type AwardNominee = {
+  name: string;
+  image?: string;
+  winner: boolean;
+};
+
+export type AwardCategory = {
+  category: string;
+  nominees: AwardNominee[];
+};
+
+export type AwardsYear = {
+  year: string;
+  categories: AwardCategory[];
+};
+
+function parseCSV(csv: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let value = '';
+  let quoted = false;
+
+  for (let i = 0; i < csv.length; i += 1) {
+    const char = csv[i];
+
+    if (char === '"') {
+      if (quoted && csv[i + 1] === '"') {
+        value += '"';
+        i += 1;
+      } else {
+        quoted = !quoted;
+      }
+
+      continue;
+    }
+
+    if (char === ',' && !quoted) {
+      row.push(value.trim());
+      value = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && csv[i + 1] === '\n') {
+        i += 1;
+      }
+
+      row.push(value.trim());
+
+      if (row.some((cell) => cell.trim() !== '')) {
+        rows.push(row);
+      }
+
+      row = [];
+      value = '';
+
+      continue;
+    }
+
+    value += char;
+  }
+
+  if (value !== '' || row.length > 0) {
+    row.push(value.trim());
+
+    if (row.some((cell) => cell.trim() !== '')) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
+function normalize(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function cleanWinnerIndicator(value: string): {
+  name: string;
+  winner: boolean;
+} {
+  const trimmed = value.trim();
+
+  const winner =
+    /\s*\(winner\)\s*$/i.test(trimmed);
+
+  const name = trimmed
+    .replace(/\s*\(winner\)\s*$/i, '')
+    .trim();
+
+  return {
+    name,
+    winner,
+  };
+}
+
+function splitNominees(value: string): AwardNominee[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const cleaned = cleanWinnerIndicator(line);
+
+      return {
+        name: cleaned.name,
+        winner: cleaned.winner,
+      };
+    });
+}
+
+function parseArtistImages(
+  csv: string
+): Map<string, string> {
+  const rows = parseCSV(csv);
+
+  const images = new Map<string, string>();
+
+  for (const row of rows) {
+    const artist = row[0]?.trim() ?? '';
+    const image = row[1]?.trim() ?? '';
+
+    if (!artist) {
+      continue;
+    }
+
+    images.set(normalize(artist), image);
+  }
+
+  return images;
+}
+
+function attachArtistImage(
+  nominee: AwardNominee,
+  artistImages: Map<string, string>
+): AwardNominee {
+  const image = artistImages.get(
+    normalize(nominee.name)
+  );
+
+  return {
+    ...nominee,
+    image: image || undefined,
+  };
+}
+
+function isSongOrAlbumCategory(
+  category: string
+): boolean {
+  const normalized = normalize(category);
+
+  return (
+    normalized.includes('song of the year') ||
+    normalized.includes('record of the year') ||
+    normalized.includes('album of the year') ||
+    normalized.includes('collaboration of the year')
+  );
+}
+
+function attachImagesToNominee(
+  nominee: AwardNominee,
+  category: string,
+  artistImages: Map<string, string>
+): AwardNominee {
+  /*
+   * Artist-based categories:
+   *
+   * Taylor Swift
+   * Lady Gaga
+   *
+   * We look up the nominee directly.
+   */
+
+  if (!isSongOrAlbumCategory(category)) {
+    return attachArtistImage(
+      nominee,
+      artistImages
+    );
+  }
+
+  /*
+   * Song / album format:
+   *
+   * The Fame - Lady Gaga
+   * APT. - ROSÉ & Bruno Mars
+   *
+   * The portion after " - " contains
+   * the artist(s).
+   */
+
+  const separatorIndex =
+    nominee.name.lastIndexOf(' - ');
+
+  if (separatorIndex === -1) {
+    return nominee;
+  }
+
+  const artistCredit = nominee.name
+    .slice(separatorIndex + 3)
+    .trim();
+
+  const artistParts = artistCredit
+    .split(
+      /\s+(?:&|and|with|feat\.?|featuring|ft\.?)\s+|,\s*/i
+    )
+    .map((artist) => artist.trim())
+    .filter(Boolean);
+
+  const images = artistParts
+    .map((artist) =>
+      artistImages.get(normalize(artist))
+    )
+    .filter(
+      (image): image is string =>
+        Boolean(image)
+    );
+
+  /*
+   * The page can use this value to create
+   * a collage when multiple artist images exist.
+   *
+   * For missing artist images, the page will
+   * use its ECA WINNER placeholder.
+   */
+
+  return {
+    ...nominee,
+    image:
+      images.length > 0
+        ? images.join('|')
+        : undefined,
+  };
+}
+
+export async function fetchAwardsData(): Promise<
+  AwardsYear[]
+> {
+  const [nomineesResponse, imagesResponse] =
+    await Promise.all([
+      fetch(
+        `${NOMINEES_CSV_URL}&_=${Date.now()}`,
+        {
+          cache: 'no-store',
+        }
+      ),
+      fetch(
+        `${ARTIST_IMAGES_CSV_URL}&_=${Date.now()}`,
+        {
+          cache: 'no-store',
+        }
+      ),
+    ]);
+
+  if (!nomineesResponse.ok) {
+    throw new Error(
+      `Awards nominees request failed: ${nomineesResponse.status}`
+    );
+  }
+
+  if (!imagesResponse.ok) {
+    throw new Error(
+      `Artist images request failed: ${imagesResponse.status}`
+    );
+  }
+
+  const [
+    nomineesCSV,
+    imagesCSV,
+  ] = await Promise.all([
+    nomineesResponse.text(),
+    imagesResponse.text(),
+  ]);
+
+  const nomineeRows =
+    parseCSV(nomineesCSV);
+
+  const artistImages =
+    parseArtistImages(imagesCSV);
+
+  if (nomineeRows.length === 0) {
+    return [];
+  }
+
+  /*
+   * Spreadsheet structure:
+   *
+   * Column A = Category
+   * Column B onward = Year
+   *
+   * Example:
+   *
+   * Category              2025
+   * Artist of the Year    Taylor Swift
+   *                       Lady Gaga
+   */
+
+  const header = nomineeRows[0];
+
+  const yearColumns = header
+    .map((value, index) => ({
+      year: value.trim(),
+      index,
+    }))
+    .filter(
+      ({ year, index }) =>
+        index > 0 &&
+        /^\d{4}$/.test(year)
+    );
+
+  const awardsByYear =
+    new Map<string, AwardCategory[]>();
+
+  for (const { year } of yearColumns) {
+    awardsByYear.set(year, []);
+  }
+
+  for (
+    let rowIndex = 1;
+    rowIndex < nomineeRows.length;
+    rowIndex += 1
+  ) {
+    const row = nomineeRows[rowIndex];
+
+    const category =
+      row[0]?.trim() ?? '';
+
+    if (!category) {
+      continue;
+    }
+
+    for (const { year, index } of yearColumns) {
+      const cell = row[index] ?? '';
+
+      if (!cell.trim()) {
+        continue;
+      }
+
+      const nominees =
+        splitNominees(cell).map(
+          (nominee) =>
+            attachImagesToNominee(
+              nominee,
+              category,
+              artistImages
+            )
+        );
+
+      if (nominees.length === 0) {
+        continue;
+      }
+
+      const categories =
+        awardsByYear.get(year) ?? [];
+
+      const existingCategory =
+        categories.find(
+          (item) =>
+            normalize(item.category) ===
+            normalize(category)
+        );
+
+      if (existingCategory) {
+        existingCategory.nominees.push(
+          ...nominees
+        );
+      } else {
+        categories.push({
+          category,
+          nominees,
+        });
+      }
+
+      awardsByYear.set(
+        year,
+        categories
+      );
+    }
+  }
+
+  return Array.from(
+    awardsByYear.entries()
+  )
+    .map(([year, categories]) => ({
+      year,
+      categories,
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.year) -
+        Number(a.year)
+    );
+}

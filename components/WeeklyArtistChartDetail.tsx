@@ -49,25 +49,6 @@ function getIconFilename(
   }
 }
 
-function shouldShowBullet(
-  entry: WeeklyArtistEntry
-): boolean {
-  const movement =
-    normalizeMovementIcon(
-      entry.movementIcon
-    );
-
-  if (
-    movement === 'reentry' ||
-    movement === 'reenter' ||
-    movement === 'debut'
-  ) {
-    return true;
-  }
-
-  return movement === 'up';
-}
-
 function normalizeArtist(
   value: string
 ): string {
@@ -371,11 +352,6 @@ export default function WeeklyArtistChartDetail({
                   expandedRank ===
                   entry.rank;
 
-                const showBullet =
-                  shouldShowBullet(
-                    entry
-                  );
-
                 const artistImage =
                   getArtistImage(
                     entry
@@ -481,7 +457,7 @@ export default function WeeklyArtistChartDetail({
 
                           <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
 
-                            {showBullet && (
+                            {entry.showBullet && (
                               <img
                                 src="/icons/bullet.PNG"
                                 alt="positive movement"
@@ -762,7 +738,7 @@ export default function WeeklyArtistChartDetail({
 
                           <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
 
-                            {showBullet && (
+                            {entry.showBullet && (
                               <img
                                 src="/icons/bullet.PNG"
                                 alt="positive movement"
