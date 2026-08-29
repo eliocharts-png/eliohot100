@@ -1038,7 +1038,11 @@ export default function WeeklyChartDetail({
           </div>
         </div>
       </div>
+	{/* =========================================
+          BOTTOM SPACING
+      ========================================== */}
 
+      <div className="h-20" />
     </section>
   );
 }

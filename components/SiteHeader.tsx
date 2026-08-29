@@ -176,7 +176,7 @@ export default function SiteHeader() {
   }, []);
 
   /* =======================================================
-   * FILTER SEARCH RESULTS
+   * FILTER + ALPHABETIZE SEARCH RESULTS
    * ===================================================== */
 
   const filteredArtists =
@@ -193,6 +193,15 @@ export default function SiteHeader() {
           normalizeArtist(
             artist
           ).includes(query)
+        )
+        .sort((a, b) =>
+          a.localeCompare(
+            b,
+            undefined,
+            {
+              sensitivity: 'base',
+            }
+          )
         )
         .slice(0, 20);
     }, [
@@ -226,7 +235,7 @@ export default function SiteHeader() {
 
   /* =======================================================
    * RENDER
-   * ===================================================== */
+   * ======================================================= */
 
   return (
     <nav className="fixed left-0 right-0 top-0 z-[100] bg-black">

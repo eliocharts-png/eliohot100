@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 /* =========================================================
@@ -17,22 +18,13 @@ const ARTISTS_CSV_URL =
  * TYPES
  * ======================================================= */
 
-type Nominee = {
-  name: string;
-  winner: boolean;
-};
-
-type AwardCategory = {
-  category: string;
-  nominees: Nominee[];
-};
-
 type ArtistImage = {
   artist: string;
   image: string;
 };
 
 type AwardHistoryEntry = {
+  id: string;
   year: string;
   category: string;
   nominee: string;
@@ -54,6 +46,7 @@ const ARTIST_BASED_CATEGORIES = [
 
 function parseCSV(csv: string): string[][] {
   const rows: string[][] = [];
+
   let row: string[] = [];
   let value = '';
   let quoted = false;
@@ -78,14 +71,24 @@ function parseCSV(csv: string): string[][] {
       continue;
     }
 
-    if ((char === '\n' || char === '\r') && !quoted) {
-      if (char === '\r' && csv[i + 1] === '\n') {
+    if (
+      (char === '\n' || char === '\r') &&
+      !quoted
+    ) {
+      if (
+        char === '\r' &&
+        csv[i + 1] === '\n'
+      ) {
         i += 1;
       }
 
       row.push(value.trim());
 
-      if (row.some((cell) => cell.trim() !== '')) {
+      if (
+        row.some(
+          (cell) => cell.trim() !== ''
+        )
+      ) {
         rows.push(row);
       }
 
@@ -101,7 +104,11 @@ function parseCSV(csv: string): string[][] {
   if (value !== '' || row.length > 0) {
     row.push(value.trim());
 
-    if (row.some((cell) => cell.trim() !== '')) {
+    if (
+      row.some(
+        (cell) => cell.trim() !== ''
+      )
+    ) {
       rows.push(row);
     }
   }
@@ -117,21 +124,48 @@ function normalize(value: string): string {
   return value
     .trim()
     .toLowerCase()
+    .replace(/&amp;/gi, '&')
+    .replace(/\u00a0/g, ' ')
     .replace(/\s+/g, ' ');
 }
 
 /* =========================================================
- * CLEAN WINNER MARKER
+ * CLEAN HTML
  * ======================================================= */
 
-function cleanWinnerMarker(value: string): {
+function cleanHtml(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p>/gi, '\n')
+    .replace(/<p>/gi, '')
+    .replace(/<\/p>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .trim();
+}
+
+/* =========================================================
+ * WINNER MARKER
+ * ======================================================= */
+
+function parseWinner(
+  value: string
+): {
   name: string;
   winner: boolean;
 } {
-  const winner = /\(winner\)/i.test(value);
+  const cleaned = cleanHtml(value).trim();
 
-  const name = value
-    .replace(/\s*\(winner\)\s*/gi, '')
+  const winner =
+    /\(\s*winner\s*\)\s*$/i.test(
+      cleaned
+    );
+
+  const name = cleaned
+    .replace(
+      /\s*\(\s*winner\s*\)\s*$/i,
+      ''
+    )
     .trim();
 
   return {
@@ -141,23 +175,347 @@ function cleanWinnerMarker(value: string): {
 }
 
 /* =========================================================
+ * SPLIT NOMINATION CELL
+ * ======================================================= */
+
+function splitNominationLines(
+  value: string
+): string[] {
+  const cleaned = cleanHtml(value);
+
+  if (!cleaned) {
+    return [];
+  }
+
+  return cleaned
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+/* =========================================================
+ * ARTIST-BASED CATEGORY
+ * ======================================================= */
+
+function isArtistBasedCategory(
+  category: string
+): boolean {
+  const target = normalize(category);
+
+  return ARTIST_BASED_CATEGORIES.some(
+    (item) =>
+      normalize(item) === target
+  );
+}
+
+/* =========================================================
+ * GET NOMINEE TITLE
+ * ======================================================= */
+
+function getNomineeTitle(
+  nominee: string
+): string {
+  const cleaned = cleanHtml(nominee);
+
+  const separatorIndex =
+    cleaned.indexOf(' - ');
+
+  if (separatorIndex === -1) {
+    return cleaned;
+  }
+
+  return cleaned
+    .slice(0, separatorIndex)
+    .trim();
+}
+
+/* =========================================================
+ * GET NOMINEE ARTIST CREDIT
+ * ======================================================= */
+
+function getNomineeArtists(
+  nominee: string
+): string {
+  const cleaned = cleanHtml(nominee);
+
+  const separatorIndex =
+    cleaned.indexOf(' - ');
+
+  if (separatorIndex === -1) {
+    return cleaned;
+  }
+
+  return cleaned
+    .slice(separatorIndex + 3)
+    .trim();
+}
+
+/* =========================================================
+ * ARTIST CREDIT TOKENIZER
+ * ======================================================= */
+
+function tokenizeArtistCredit(
+  credit: string
+): string[] {
+  let cleaned =
+    cleanHtml(credit).trim();
+
+  if (!cleaned) {
+    return [];
+  }
+
+  /*
+   * Remove surrounding parentheses/brackets only
+   * when they are part of a stored collaboration
+   * credit.
+   *
+   * IMPORTANT:
+   * Silk Sonic is now handled separately as an
+   * artist alias in creditBelongsToArtist().
+   */
+  cleaned = cleaned
+    .replace(/[()[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  /*
+   * Normalize collaboration separators.
+   *
+   * These separators mean multiple credited artists:
+   *
+   * &
+   * and
+   * featuring
+   * feat.
+   * ft.
+   * with
+   * /
+   * +
+   * ×
+   * x
+   * ,
+   * ;
+   */
+  cleaned = cleaned
+    .replace(
+      /\s+(?:&|and|featuring|feat\.?|ft\.?|with|\/|\+|×|x)\s+/gi,
+      '|||'
+    )
+    .replace(
+      /\s*[,;]\s*/g,
+      '|||'
+    );
+
+  return cleaned
+    .split('|||')
+    .map((artist) =>
+      artist.trim()
+    )
+    .filter(Boolean);
+}
+
+/* =========================================================
+ * SILK SONIC MATCHING
+ * ======================================================= */
+
+function isSilkSonic(
+  value: string
+): boolean {
+  return (
+    normalize(value) ===
+    'silk sonic'
+  );
+}
+
+/* =========================================================
+ * ARTIST CREDIT MATCHING
+ * ======================================================= */
+
+function creditBelongsToArtist(
+  credit: string,
+  requestedArtist: string
+): boolean {
+  const target =
+    normalize(requestedArtist);
+
+  if (!target) {
+    return false;
+  }
+
+  /*
+   * =======================================================
+   * SILK SONIC
+   *
+   * The spreadsheet now credits Silk Sonic simply as:
+   *
+   * Silk Sonic
+   *
+   * However, Silk Sonic nominations should appear on:
+   *
+   * 1. Silk Sonic
+   * 2. Bruno Mars
+   * 3. Anderson .Paak
+   *
+   * This is ONLY a matching rule for the artist pages.
+   *
+   * The displayed credit remains exactly:
+   *
+   * Silk Sonic
+   * =======================================================
+   */
+
+  if (isSilkSonic(credit)) {
+    return (
+      target === 'silk sonic' ||
+      target === 'bruno mars' ||
+      target === 'anderson .paak'
+    );
+  }
+
+  /*
+   * =======================================================
+   * NORMAL COLLABORATIONS
+   * =======================================================
+   */
+
+  const artists =
+    tokenizeArtistCredit(
+      credit
+    );
+
+  return artists.some(
+    (artist) =>
+      normalize(artist) ===
+      target
+  );
+}
+
+/* =========================================================
+ * NOMINEE MATCHING
+ * ======================================================= */
+
+function nomineeBelongsToArtist(
+  nominee: string,
+  category: string,
+  artistName: string
+): boolean {
+  const target =
+    normalize(artistName);
+
+  /*
+   * ARTIST-BASED CATEGORIES
+   */
+  if (
+    isArtistBasedCategory(
+      category
+    )
+  ) {
+    return (
+      normalize(nominee) ===
+      target
+    );
+  }
+
+  /*
+   * SONG / ALBUM / OTHER CATEGORIES
+   */
+  const artistCredit =
+    getNomineeArtists(
+      nominee
+    );
+
+  if (!artistCredit) {
+    return false;
+  }
+
+  return creditBelongsToArtist(
+    artistCredit,
+    artistName
+  );
+}
+
+/* =========================================================
+ * PARSE ARTIST LIST
+ * ======================================================= */
+
+function parseArtistList(
+  csv: string
+): string[] {
+  const rows = parseCSV(csv);
+
+  if (rows.length <= 1) {
+    return [];
+  }
+
+  const artists = new Map<
+    string,
+    string
+  >();
+
+  for (
+    let i = 1;
+    i < rows.length;
+    i += 1
+  ) {
+    const artist =
+      rows[i]?.[0]?.trim() ??
+      '';
+
+    if (!artist) {
+      continue;
+    }
+
+    const key =
+      normalize(artist);
+
+    if (!artists.has(key)) {
+      artists.set(
+        key,
+        artist
+      );
+    }
+  }
+
+  return Array.from(
+    artists.values()
+  ).sort(
+    (a, b) =>
+      a.localeCompare(
+        b,
+        undefined,
+        {
+          sensitivity:
+            'base',
+        }
+      )
+  );
+}
+
+/* =========================================================
  * PARSE ARTIST IMAGES
  * ======================================================= */
 
-function parseArtistImages(csv: string): ArtistImage[] {
+function parseArtistImages(
+  csv: string
+): ArtistImage[] {
   const rows = parseCSV(csv);
 
-  if (rows.length === 0) {
+  if (rows.length <= 1) {
     return [];
   }
 
   return rows
     .slice(1)
     .map((row) => ({
-      artist: row[0]?.trim() ?? '',
-      image: row[1]?.trim() ?? '',
+      artist:
+        row[0]?.trim() ?? '',
+      image:
+        row[1]?.trim() ?? '',
     }))
-    .filter((entry) => entry.artist.length > 0);
+    .filter(
+      (entry) =>
+        entry.artist.length > 0
+    );
 }
 
 /* =========================================================
@@ -168,187 +526,19 @@ function findArtistImage(
   artistName: string,
   artistImages: ArtistImage[]
 ): string | undefined {
-  const target = normalize(artistName);
+  const target =
+    normalize(artistName);
 
-  const match = artistImages.find(
-    (entry) => normalize(entry.artist) === target
-  );
-
-  return match?.image || undefined;
+  return artistImages.find(
+    (entry) =>
+      normalize(
+        entry.artist
+      ) === target
+  )?.image;
 }
 
 /* =========================================================
- * EXTRACT ARTISTS
- * ======================================================= */
-
-function extractArtists(credit: string): string[] {
-  return credit
-    .split(
-      /\s+(?:&|and|featuring|feat\.?|ft\.?|with)\s+|,\s*/i
-    )
-    .map((artist) => artist.trim())
-    .filter(Boolean);
-}
-
-/* =========================================================
- * GET NOMINEE ARTISTS
- * ======================================================= */
-
-function getNomineeArtists(nominee: string): string {
-  if (!nominee.includes(' - ')) {
-    return nominee;
-  }
-
-  const parts = nominee.split(' - ');
-
-  return parts
-    .slice(1)
-    .join(' - ')
-    .trim();
-}
-
-/* =========================================================
- * GET NOMINEE TITLE
- * ======================================================= */
-
-function getNomineeTitle(nominee: string): string {
-  if (!nominee.includes(' - ')) {
-    return nominee;
-  }
-
-  return nominee.split(' - ')[0].trim();
-}
-
-/* =========================================================
- * ARTIST-BASED CATEGORY
- * ======================================================= */
-
-function isArtistBasedCategory(
-  categoryName: string
-): boolean {
-  return ARTIST_BASED_CATEGORIES.some(
-    (category) =>
-      normalize(category) === normalize(categoryName)
-  );
-}
-
-/* =========================================================
- * CHECK IF NOMINEE BELONGS TO ARTIST
- * ======================================================= */
-
-function nomineeBelongsToArtist(
-  nominee: string,
-  category: string,
-  artistName: string
-): boolean {
-  const target = normalize(artistName);
-
-  if (isArtistBasedCategory(category)) {
-    return normalize(nominee) === target;
-  }
-
-  if (!nominee.includes(' - ')) {
-    return false;
-  }
-
-  const artistCredit = getNomineeArtists(nominee);
-
-  const creditedArtists = extractArtists(artistCredit);
-
-  return creditedArtists.some(
-    (artist) => normalize(artist) === target
-  );
-}
-
-/* =========================================================
- * GET ALL AWARD ARTISTS
- * ======================================================= */
-
-function getAllAwardArtists(csv: string): string[] {
-  const rows = parseCSV(csv);
-
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const headers = rows[0];
-
-  const artistSet = new Map<string, string>();
-
-  for (let i = 1; i < rows.length; i += 1) {
-    const row = rows[i];
-
-    const category = row[0]?.trim() ?? '';
-
-    if (!category) {
-      continue;
-    }
-
-    for (
-      let columnIndex = 1;
-      columnIndex < headers.length;
-      columnIndex += 1
-    ) {
-      const nomineeCell =
-        row[columnIndex]?.trim() ?? '';
-
-      if (!nomineeCell) {
-        continue;
-      }
-
-      const nominees = nomineeCell
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-      for (const nomineeLine of nominees) {
-        const { name: nominee } =
-          cleanWinnerMarker(nomineeLine);
-
-        if (isArtistBasedCategory(category)) {
-          if (nominee) {
-            const key = normalize(nominee);
-
-            if (!artistSet.has(key)) {
-              artistSet.set(key, nominee);
-            }
-          }
-
-          continue;
-        }
-
-        if (!nominee.includes(' - ')) {
-          continue;
-        }
-
-        const artistCredit =
-          getNomineeArtists(nominee);
-
-        const artists =
-          extractArtists(artistCredit);
-
-        for (const artist of artists) {
-          if (!artist) {
-            continue;
-          }
-
-          const key = normalize(artist);
-
-          if (!artistSet.has(key)) {
-            artistSet.set(key, artist);
-          }
-        }
-      }
-    }
-  }
-
-  return Array.from(artistSet.values()).sort((a, b) =>
-    a.localeCompare(b)
-  );
-}
-
-/* =========================================================
- * ARTIST HISTORY
+ * BUILD ARTIST HISTORY
  * ======================================================= */
 
 function buildArtistHistory(
@@ -357,21 +547,29 @@ function buildArtistHistory(
 ): AwardHistoryEntry[] {
   const rows = parseCSV(csv);
 
-  if (rows.length === 0) {
+  if (rows.length <= 1) {
     return [];
   }
 
   const headers = rows[0];
 
-  const history: AwardHistoryEntry[] = [];
+  const history: AwardHistoryEntry[] =
+    [];
 
+  /*
+   * Column A = category
+   *
+   * Columns B onward = years
+   */
   for (
     let yearIndex = 1;
     yearIndex < headers.length;
     yearIndex += 1
   ) {
     const year =
-      headers[yearIndex]?.trim() ?? '';
+      headers[
+        yearIndex
+      ]?.trim() ?? '';
 
     if (!year) {
       continue;
@@ -382,63 +580,129 @@ function buildArtistHistory(
       rowIndex < rows.length;
       rowIndex += 1
     ) {
-      const row = rows[rowIndex];
+      const row =
+        rows[rowIndex];
 
       const category =
-        row[0]?.trim() ?? '';
+        cleanHtml(
+          row?.[0]?.trim() ??
+            ''
+        );
 
-      const nomineeCell =
-        row[yearIndex]?.trim() ?? '';
-
-      if (!category || !nomineeCell) {
+      if (!category) {
         continue;
       }
 
-      const nomineeLines = nomineeCell
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
+      const nomineeCell =
+        row?.[yearIndex] ??
+        '';
 
-      for (const nomineeLine of nomineeLines) {
-        const {
-          name: nominee,
-          winner,
-        } = cleanWinnerMarker(nomineeLine);
+      if (
+        !nomineeCell.trim()
+      ) {
+        continue;
+      }
 
-        if (
+      /*
+       * Each line here is one
+       * physical nominee entry.
+       */
+      const nomineeLines =
+        splitNominationLines(
+          nomineeCell
+        );
+
+      for (
+        let nomineeIndex = 0;
+        nomineeIndex <
+        nomineeLines.length;
+        nomineeIndex += 1
+      ) {
+        const rawNominee =
+          nomineeLines[
+            nomineeIndex
+          ];
+
+        if (!rawNominee) {
+          continue;
+        }
+
+        const parsed =
+          parseWinner(
+            rawNominee
+          );
+
+        if (!parsed.name) {
+          continue;
+        }
+
+        const belongs =
           nomineeBelongsToArtist(
-            nominee,
+            parsed.name,
             category,
             artistName
-          )
-        ) {
-          history.push({
-            year,
-            category,
-            nominee,
-            winner,
-          });
+          );
+
+        if (!belongs) {
+          continue;
         }
+
+        /*
+         * ONE AND ONLY ONE
+         * HISTORY ENTRY.
+         */
+        history.push({
+          id:
+            `${year}|${category}|${nomineeIndex}|${parsed.name}`,
+          year,
+          category,
+          nominee:
+            parsed.name,
+          winner:
+            parsed.winner,
+        });
       }
     }
   }
 
-  history.sort((a, b) => {
-    const yearDifference =
-      Number(b.year) - Number(a.year);
+  /*
+   * Sort newest year first.
+   *
+   * Within the same year:
+   * winners first.
+   *
+   * Then category.
+   */
+  history.sort(
+    (a, b) => {
+      const yearDifference =
+        Number(b.year) -
+        Number(a.year);
 
-    if (yearDifference !== 0) {
-      return yearDifference;
+      if (
+        yearDifference !== 0
+      ) {
+        return yearDifference;
+      }
+
+      if (
+        a.winner !== b.winner
+      ) {
+        return a.winner
+          ? -1
+          : 1;
+      }
+
+      return a.category.localeCompare(
+        b.category,
+        undefined,
+        {
+          sensitivity:
+            'base',
+        }
+      );
     }
-
-    if (a.winner !== b.winner) {
-      return a.winner ? -1 : 1;
-    }
-
-    return a.category.localeCompare(
-      b.category
-    );
-  });
+  );
 
   return history;
 }
@@ -450,207 +714,253 @@ function buildArtistHistory(
 function getDominantColor(
   imageUrl: string
 ): Promise<string> {
-  return new Promise((resolve) => {
-    const image = new Image();
+  return new Promise(
+    (resolve) => {
+      const image =
+        new Image();
 
-    image.crossOrigin = 'anonymous';
+      image.crossOrigin =
+        'anonymous';
 
-    image.onload = () => {
-      try {
-        const canvas =
-          document.createElement('canvas');
+      image.onload = () => {
+        try {
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
 
-        const context =
-          canvas.getContext('2d', {
-            willReadFrequently: true,
-          });
+          const context =
+            canvas.getContext(
+              '2d',
+              {
+                willReadFrequently:
+                  true,
+              }
+            );
 
-        if (!context) {
-          resolve('#0050FF');
-          return;
-        }
+          if (!context) {
+            resolve(
+              '#0050FF'
+            );
+            return;
+          }
 
-        const size = 60;
+          const size = 60;
 
-        canvas.width = size;
-        canvas.height = size;
+          canvas.width = size;
+          canvas.height = size;
 
-        context.drawImage(
-          image,
-          0,
-          0,
-          size,
-          size
-        );
-
-        const imageData =
-          context.getImageData(
+          context.drawImage(
+            image,
             0,
             0,
             size,
             size
-          ).data;
+          );
 
-        const colorMap =
-          new Map<
-            string,
-            {
-              count: number;
-              r: number;
-              g: number;
-              b: number;
-            }
-          >();
+          const imageData =
+            context.getImageData(
+              0,
+              0,
+              size,
+              size
+            ).data;
 
-        for (
-          let i = 0;
-          i < imageData.length;
-          i += 4
-        ) {
-          const r = imageData[i];
-          const g = imageData[i + 1];
-          const b = imageData[i + 2];
-          const alpha = imageData[i + 3];
+          const colorMap =
+            new Map<
+              string,
+              {
+                count: number;
+                r: number;
+                g: number;
+                b: number;
+              }
+            >();
 
-          if (alpha < 100) {
-            continue;
-          }
-
-          const brightness =
-            (r + g + b) / 3;
-
-          if (
-            brightness < 20 ||
-            brightness > 245
+          for (
+            let i = 0;
+            i < imageData.length;
+            i += 4
           ) {
-            continue;
-          }
+            const r =
+              imageData[i];
 
-          const qr =
-            Math.round(r / 24) * 24;
+            const g =
+              imageData[i + 1];
 
-          const qg =
-            Math.round(g / 24) * 24;
+            const b =
+              imageData[i + 2];
 
-          const qb =
-            Math.round(b / 24) * 24;
+            const alpha =
+              imageData[i + 3];
 
-          const key =
-            `${qr},${qg},${qb}`;
-
-          const existing =
-            colorMap.get(key);
-
-          if (existing) {
-            existing.count += 1;
-          } else {
-            colorMap.set(key, {
-              count: 1,
-              r: qr,
-              g: qg,
-              b: qb,
-            });
-          }
-        }
-
-        let dominant:
-          | {
-              count: number;
-              r: number;
-              g: number;
-              b: number;
+            if (alpha < 100) {
+              continue;
             }
-          | undefined;
 
-        for (
-          const color of colorMap.values()
-        ) {
-          if (
-            !dominant ||
-            color.count >
-              dominant.count
-          ) {
-            dominant = color;
+            const brightness =
+              (r + g + b) / 3;
+
+            if (
+              brightness < 20 ||
+              brightness > 245
+            ) {
+              continue;
+            }
+
+            const qr =
+              Math.round(
+                r / 24
+              ) * 24;
+
+            const qg =
+              Math.round(
+                g / 24
+              ) * 24;
+
+            const qb =
+              Math.round(
+                b / 24
+              ) * 24;
+
+            const key =
+              `${qr},${qg},${qb}`;
+
+            const existing =
+              colorMap.get(key);
+
+            if (existing) {
+              existing.count +=
+                1;
+            } else {
+              colorMap.set(
+                key,
+                {
+                  count: 1,
+                  r: qr,
+                  g: qg,
+                  b: qb,
+                }
+              );
+            }
           }
+
+          let dominant:
+            | {
+                count: number;
+                r: number;
+                g: number;
+                b: number;
+              }
+            | undefined;
+
+          for (
+            const color of
+              colorMap.values()
+          ) {
+            if (
+              !dominant ||
+              color.count >
+                dominant.count
+            ) {
+              dominant =
+                color;
+            }
+          }
+
+          if (!dominant) {
+            resolve(
+              '#0050FF'
+            );
+            return;
+          }
+
+          const factor = 0.82;
+
+          const r =
+            Math.max(
+              0,
+              Math.min(
+                255,
+                Math.round(
+                  dominant.r *
+                    factor
+                )
+              )
+            );
+
+          const g =
+            Math.max(
+              0,
+              Math.min(
+                255,
+                Math.round(
+                  dominant.g *
+                    factor
+                )
+              )
+            );
+
+          const b =
+            Math.max(
+              0,
+              Math.min(
+                255,
+                Math.round(
+                  dominant.b *
+                    factor
+                )
+              )
+            );
+
+          resolve(
+            `rgb(${r}, ${g}, ${b})`
+          );
+        } catch {
+          resolve(
+            '#0050FF'
+          );
         }
+      };
 
-        if (!dominant) {
-          resolve('#0050FF');
-          return;
-        }
-
-        const factor = 0.82;
-
-        const r = Math.max(
-          0,
-          Math.min(
-            255,
-            Math.round(
-              dominant.r * factor
-            )
-          )
-        );
-
-        const g = Math.max(
-          0,
-          Math.min(
-            255,
-            Math.round(
-              dominant.g * factor
-            )
-          )
-        );
-
-        const b = Math.max(
-          0,
-          Math.min(
-            255,
-            Math.round(
-              dominant.b * factor
-            )
-          )
-        );
-
+      image.onerror = () => {
         resolve(
-          `rgb(${r}, ${g}, ${b})`
+          '#0050FF'
         );
-      } catch {
-        resolve('#0050FF');
-      }
-    };
+      };
 
-    image.onerror = () => {
-      resolve('#0050FF');
-    };
-
-    image.src = imageUrl;
-  });
+      image.src = imageUrl;
+    }
+  );
 }
 
 /* =========================================================
- * DETERMINE HERO TEXT COLOR
+ * HERO TEXT COLOR
  * ======================================================= */
 
 function getHeroTextColor(
   color: string
 ): '#000000' | '#FFFFFF' {
-  const rgbMatch =
+  const match =
     color.match(
       /rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/
     );
 
-  if (!rgbMatch) {
+  if (!match) {
     return '#FFFFFF';
   }
 
-  const r = Number(rgbMatch[1]);
-  const g = Number(rgbMatch[2]);
-  const b = Number(rgbMatch[3]);
+  const r = Number(
+    match[1]
+  );
 
-  /*
-   * Perceived luminance.
-   * Higher = lighter background.
-   */
+  const g = Number(
+    match[2]
+  );
+
+  const b = Number(
+    match[3]
+  );
 
   const luminance =
     (0.299 * r +
@@ -672,12 +982,16 @@ function formatNomineeArtists(
   category: string
 ): string {
   if (
-    isArtistBasedCategory(category)
+    isArtistBasedCategory(
+      category
+    )
   ) {
     return nominee;
   }
 
-  return getNomineeArtists(nominee);
+  return getNomineeArtists(
+    nominee
+  );
 }
 
 /* =========================================================
@@ -689,12 +1003,38 @@ function formatNomineeTitle(
   category: string
 ): string {
   if (
-    isArtistBasedCategory(category)
+    isArtistBasedCategory(
+      category
+    )
   ) {
     return '—';
   }
 
-  return getNomineeTitle(nominee);
+  return getNomineeTitle(
+    nominee
+  );
+}
+
+/* =========================================================
+ * NOMINATION URL
+ *
+ * ALL NOMINEES now goes back to:
+ *
+ * /awards?year=2025&category=Song%20of%20the%20Year
+ *
+ * This allows awards/page.tsx to display
+ * the correct year + category.
+ * ======================================================= */
+
+function getNominationUrl(
+  year: string,
+  category: string
+): string {
+  return `/awards?year=${encodeURIComponent(
+    year
+  )}&category=${encodeURIComponent(
+    category
+  )}`;
 }
 
 /* =========================================================
@@ -705,7 +1045,8 @@ export default function AwardsArtistPage() {
   const params = useParams();
   const router = useRouter();
 
-  const rawArtist = params?.artist;
+  const rawArtist =
+    params?.artist;
 
   const artistName =
     decodeURIComponent(
@@ -714,30 +1055,45 @@ export default function AwardsArtistPage() {
         : rawArtist ?? ''
     );
 
-  const [history, setHistory] =
-    useState<AwardHistoryEntry[]>([]);
+  const [
+    history,
+    setHistory,
+  ] =
+    useState<AwardHistoryEntry[]>(
+      []
+    );
 
   const [
     artistImages,
     setArtistImages,
-  ] = useState<ArtistImage[]>([]);
+  ] =
+    useState<ArtistImage[]>([]);
 
   const [
     allArtists,
     setAllArtists,
-  ] = useState<string[]>([]);
+  ] =
+    useState<string[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [error, setError] =
-    useState(false);
+  const [
+    error,
+    setError,
+  ] = useState(false);
 
-  const [searchOpen, setSearchOpen] =
-    useState(false);
+  const [
+    searchOpen,
+    setSearchOpen,
+  ] = useState(false);
 
-  const [searchQuery, setSearchQuery] =
-    useState('');
+  const [
+    searchQuery,
+    setSearchQuery,
+  ] = useState('');
 
   const [
     recognitionIndex,
@@ -769,7 +1125,9 @@ export default function AwardsArtistPage() {
             }
           );
 
-        if (!nomineesResponse.ok) {
+        if (
+          !nomineesResponse.ok
+        ) {
           throw new Error(
             `Awards CSV failed: ${nomineesResponse.status}`
           );
@@ -784,13 +1142,11 @@ export default function AwardsArtistPage() {
             artistName
           );
 
-        const awardArtists =
-          getAllAwardArtists(
-            nomineesCSV
-          );
-
         let parsedArtistImages:
           ArtistImage[] = [];
+
+        let parsedArtistList:
+          string[] = [];
 
         try {
           const artistsResponse =
@@ -801,20 +1157,35 @@ export default function AwardsArtistPage() {
               }
             );
 
-          if (artistsResponse.ok) {
-            const artistsCSV =
-              await artistsResponse.text();
-
-            if (artistsCSV.trim()) {
-              parsedArtistImages =
-                parseArtistImages(
-                  artistsCSV
-                );
-            }
+          if (
+            !artistsResponse.ok
+          ) {
+            throw new Error(
+              `Artists CSV failed: ${artistsResponse.status}`
+            );
           }
-        } catch (imageError) {
+
+          const artistsCSV =
+            await artistsResponse.text();
+
+          if (
+            artistsCSV.trim()
+          ) {
+            parsedArtistList =
+              parseArtistList(
+                artistsCSV
+              );
+
+            parsedArtistImages =
+              parseArtistImages(
+                artistsCSV
+              );
+          }
+        } catch (
+          imageError
+        ) {
           console.warn(
-            '[AWARDS] Artist image CSV failed:',
+            '[AWARDS] Artist CSV failed:',
             imageError
           );
         }
@@ -825,16 +1196,20 @@ export default function AwardsArtistPage() {
           );
 
           setAllArtists(
-            awardArtists
+            parsedArtistList
           );
 
           setArtistImages(
             parsedArtistImages
           );
 
-          setRecognitionIndex(0);
+          setRecognitionIndex(
+            0
+          );
         }
-      } catch (loadError) {
+      } catch (
+        loadError
+      ) {
         console.error(
           '[AWARDS] Failed to load artist history:',
           loadError
@@ -842,6 +1217,8 @@ export default function AwardsArtistPage() {
 
         if (!cancelled) {
           setHistory([]);
+          setAllArtists([]);
+          setArtistImages([]);
           setError(true);
         }
       } finally {
@@ -864,25 +1241,29 @@ export default function AwardsArtistPage() {
    * ARTIST IMAGE
    * ===================================================== */
 
-  const artistImage = useMemo(
-    () =>
-      findArtistImage(
+  const artistImage =
+    useMemo(
+      () =>
+        findArtistImage(
+          artistName,
+          artistImages
+        ),
+      [
         artistName,
-        artistImages
-      ),
-    [
-      artistName,
-      artistImages,
-    ]
-  );
+        artistImages,
+      ]
+    );
 
   /* =======================================================
-   * GET DOMINANT COLOR
+   * DOMINANT COLOR
    * ===================================================== */
 
   useEffect(() => {
     if (!artistImage) {
-      setDominantColor('#0050FF');
+      setDominantColor(
+        '#0050FF'
+      );
+
       return;
     }
 
@@ -892,7 +1273,9 @@ export default function AwardsArtistPage() {
       artistImage
     ).then((color) => {
       if (!cancelled) {
-        setDominantColor(color);
+        setDominantColor(
+          color
+        );
       }
     });
 
@@ -915,13 +1298,15 @@ export default function AwardsArtistPage() {
     );
 
   /* =======================================================
-   * FILTER SEARCH RESULTS
+   * SEARCH
    * ===================================================== */
 
   const filteredArtists =
     useMemo(() => {
       const query =
-        normalize(searchQuery);
+        normalize(
+          searchQuery
+        );
 
       if (!query) {
         return [];
@@ -929,12 +1314,18 @@ export default function AwardsArtistPage() {
 
       return allArtists
         .filter((artist) =>
-          normalize(artist).includes(query)
+          normalize(
+            artist
+          ).includes(query)
         )
         .filter(
           (artist) =>
-            normalize(artist) !==
-            normalize(artistName)
+            normalize(
+              artist
+            ) !==
+            normalize(
+              artistName
+            )
         )
         .slice(0, 8);
     }, [
@@ -952,7 +1343,8 @@ export default function AwardsArtistPage() {
 
   const totalWins =
     history.filter(
-      (entry) => entry.winner
+      (entry) =>
+        entry.winner
     ).length;
 
   /* =======================================================
@@ -960,10 +1352,12 @@ export default function AwardsArtistPage() {
    * ===================================================== */
 
   const currentRecognition =
-    history[recognitionIndex];
+    history[
+      recognitionIndex
+    ];
 
   /* =======================================================
-   * NAVIGATE TO ARTIST
+   * NAVIGATION
    * ===================================================== */
 
   function goToArtist(
@@ -973,54 +1367,36 @@ export default function AwardsArtistPage() {
     setSearchQuery('');
 
     router.push(
-      `/awards/${encodeURIComponent(
+      `/awards/artists/${encodeURIComponent(
         artist
       )}`
     );
   }
 
-  /* =======================================================
-   * NAVIGATE TO NOMINATION
-   * ===================================================== */
-
   function goToNomination(
     year: string,
     category: string
   ) {
-    /*
-     * IMPORTANT:
-     * Replace this URL with the exact route
-     * used by your nomination page.
-     *
-     * Example possibilities:
-     *
-     * /awards/2025/artist-of-the-year
-     * /awards/2025/Artist%20of%20the%20Year
-     * /awards/2025/artist-of-the-year/page
-     */
-
-    router.push(
-      `/awards/${encodeURIComponent(
-        year
-      )}/${encodeURIComponent(
+    const url =
+      getNominationUrl(
+        year,
         category
-      )}`
-    );
-  }
+      );
 
-  /* =======================================================
-   * BACK TO AWARDS
-   * ===================================================== */
+    router.push(url);
+  }
 
   function goBackToAwards() {
     router.push('/awards');
   }
 
-  /* =======================================================
-   * PREVIOUS RECOGNITION
-   * ===================================================== */
-
   function previousRecognition() {
+    if (
+      history.length === 0
+    ) {
+      return;
+    }
+
     setRecognitionIndex(
       (current) =>
         current === 0
@@ -1029,11 +1405,13 @@ export default function AwardsArtistPage() {
     );
   }
 
-  /* =======================================================
-   * NEXT RECOGNITION
-   * ===================================================== */
-
   function nextRecognition() {
+    if (
+      history.length === 0
+    ) {
+      return;
+    }
+
     setRecognitionIndex(
       (current) =>
         current ===
@@ -1052,160 +1430,7 @@ export default function AwardsArtistPage() {
       <div className="pt-[3.8rem]">
 
         {/* =================================================
-         * TOP NAVIGATION
-         * ================================================= */}
-
-        <header className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-10 lg:px-8">
-
-          <div className="flex items-center justify-between">
-
-            <button
-              type="button"
-              onClick={goBackToAwards}
-              className="
-                font-brown-bold
-                text-xs
-                uppercase
-                tracking-[0.08em]
-                text-[#0050FF]
-                transition-opacity
-                hover:opacity-60
-              "
-            >
-              ← Awards
-            </button>
-
-            <button
-              type="button"
-              aria-label="Search Awards artists"
-              onClick={() =>
-                setSearchOpen(
-                  (current) => !current
-                )
-              }
-              className="
-                flex
-                h-11
-                w-11
-                shrink-0
-                items-center
-                justify-center
-                border
-                border-black/15
-                text-black
-                transition-all
-                duration-150
-                hover:border-[#0050FF]
-                hover:text-[#0050FF]
-                sm:h-12
-                sm:w-12
-              "
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="11"
-                  cy="11"
-                  r="6.5"
-                />
-
-                <path
-                  d="M16 16L21 21"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {searchOpen && (
-            <div className="mt-7 py-5">
-              <input
-                autoFocus
-                type="text"
-                value={searchQuery}
-                onChange={(event) =>
-                  setSearchQuery(
-                    event.target.value
-                  )
-                }
-                placeholder="SEARCH AWARDS ARTISTS"
-                className="
-                  w-full
-                  border-b
-                  border-black/20
-                  bg-transparent
-                  px-0
-                  py-3
-                  font-brown-regular
-                  text-sm
-                  uppercase
-                  tracking-[0.08em]
-                  outline-none
-                  placeholder:text-black/30
-                  focus:border-[#0050FF]
-                "
-              />
-
-              {searchQuery &&
-                filteredArtists.length > 0 && (
-                  <div className="mt-3">
-                    {filteredArtists.map(
-                      (artist) => (
-                        <button
-                          key={artist}
-                          type="button"
-                          onClick={() =>
-                            goToArtist(
-                              artist
-                            )
-                          }
-                          className="
-                            block
-                            w-full
-                            py-3
-                            text-left
-                            font-brown-bold
-                            text-sm
-                            uppercase
-                            transition-colors
-                            hover:bg-[#0050FF]/10
-                            hover:text-[#0050FF]
-                          "
-                        >
-                          {artist}
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
-
-              {searchQuery &&
-                filteredArtists.length === 0 && (
-                  <p
-                    className="
-                      py-4
-                      font-brown-regular
-                      text-xs
-                      uppercase
-                      tracking-[0.08em]
-                      text-black/40
-                    "
-                  >
-                    No Awards artists found
-                  </p>
-                )}
-            </div>
-          )}
-        </header>
-
-        {/* =================================================
-         * ARTIST HERO
+         * HERO
          * ================================================= */}
 
         {!loading &&
@@ -1213,10 +1438,10 @@ export default function AwardsArtistPage() {
           history.length > 0 && (
             <section
               className="
-                mt-8
+                relative
+                mt-0
                 w-full
                 overflow-hidden
-                sm:mt-10
               "
               style={{
                 backgroundColor:
@@ -1225,17 +1450,273 @@ export default function AwardsArtistPage() {
             >
               <div
                 className="
+                  absolute
+                  inset-x-0
+                  top-0
+                  z-30
+                  px-4
+                  pt-6
+                  sm:px-6
+                  sm:pt-8
+                  lg:px-8
+                  lg:pt-8
+                "
+                style={{
+                  color:
+                    heroTextColor,
+                }}
+              >
+                <div className="flex items-start justify-between">
+
+                  <button
+                    type="button"
+                    onClick={
+                      goBackToAwards
+                    }
+                    className="
+                      font-brown-bold
+                      text-xs
+                      uppercase
+                      tracking-[0.08em]
+                      transition-opacity
+                      hover:opacity-60
+                    "
+                    style={{
+                      color:
+                        heroTextColor,
+                    }}
+                  >
+                    ← Awards
+                  </button>
+
+                  <div className="relative flex flex-col items-end">
+
+                    <button
+                      type="button"
+                      aria-label="Search Awards artists"
+                      onClick={() =>
+                        setSearchOpen(
+                          (current) =>
+                            !current
+                        )
+                      }
+                      className="
+                        flex
+                        h-11
+                        w-11
+                        shrink-0
+                        items-center
+                        justify-center
+                        border
+                        transition-all
+                        duration-150
+                        sm:h-12
+                        sm:w-12
+                      "
+                      style={{
+                        color:
+                          heroTextColor,
+                        borderColor:
+                          `${heroTextColor}40`,
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="h-5 w-5"
+                        aria-hidden="true"
+                      >
+                        <circle
+                          cx="11"
+                          cy="11"
+                          r="6.5"
+                        />
+
+                        <path
+                          d="M16 16L21 21"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {searchOpen && (
+                      <div
+                        className="
+                          absolute
+                          right-0
+                          top-[3.5rem]
+                          z-50
+                          w-[min(78vw,340px)]
+                          sm:top-[3.75rem]
+                          sm:w-[340px]
+                        "
+                      >
+                        <div
+                          className="
+                            rounded-none
+                            border
+                            backdrop-blur-xl
+                          "
+                          style={{
+                            backgroundColor:
+                              heroTextColor ===
+                              '#FFFFFF'
+                                ? 'rgba(0,0,0,0.35)'
+                                : 'rgba(255,255,255,0.35)',
+                            borderColor:
+                              `${heroTextColor}35`,
+                          }}
+                        >
+                          <input
+                            autoFocus
+                            type="text"
+                            value={
+                              searchQuery
+                            }
+                            onChange={(
+                              event
+                            ) =>
+                              setSearchQuery(
+                                event
+                                  .target
+                                  .value
+                              )
+                            }
+                            placeholder="SEARCH AWARDS ARTISTS"
+                            className="
+                              w-full
+                              bg-transparent
+                              px-4
+                              py-3
+                              font-brown-regular
+                              text-sm
+                              uppercase
+                              tracking-[0.08em]
+                              outline-none
+                              placeholder:opacity-50
+                            "
+                            style={{
+                              color:
+                                heroTextColor,
+                            }}
+                          />
+                        </div>
+
+                        {searchQuery &&
+                          filteredArtists.length >
+                            0 && (
+                            <div
+                              className="
+                                mt-1
+                                overflow-hidden
+                                border
+                                backdrop-blur-2xl
+                              "
+                              style={{
+                                backgroundColor:
+                                  heroTextColor ===
+                                  '#FFFFFF'
+                                    ? 'rgba(0,0,0,0.55)'
+                                    : 'rgba(255,255,255,0.55)',
+                                borderColor:
+                                  `${heroTextColor}30`,
+                              }}
+                            >
+                              {filteredArtists.map(
+                                (
+                                  artist
+                                ) => (
+                                  <button
+                                    key={
+                                      artist
+                                    }
+                                    type="button"
+                                    onClick={() =>
+                                      goToArtist(
+                                        artist
+                                      )
+                                    }
+                                    className="
+                                      block
+                                      w-full
+                                      px-4
+                                      py-3
+                                      text-right
+                                      font-brown-bold
+                                      text-sm
+                                      uppercase
+                                      transition-colors
+                                      hover:bg-black/10
+                                    "
+                                    style={{
+                                      color:
+                                        heroTextColor,
+                                    }}
+                                  >
+                                    {
+                                      artist
+                                    }
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          )}
+
+                        {searchQuery &&
+                          filteredArtists.length ===
+                            0 && (
+                            <div
+                              className="
+                                mt-1
+                                border
+                                px-4
+                                py-4
+                                text-right
+                                backdrop-blur-2xl
+                              "
+                              style={{
+                                backgroundColor:
+                                  heroTextColor ===
+                                  '#FFFFFF'
+                                    ? 'rgba(0,0,0,0.55)'
+                                    : 'rgba(255,255,255,0.55)',
+                                borderColor:
+                                  `${heroTextColor}30`,
+                              }}
+                            >
+                              <p
+                                className="
+                                  font-brown-regular
+                                  text-xs
+                                  uppercase
+                                  tracking-[0.08em]
+                                "
+                                style={{
+                                  color:
+                                    heroTextColor,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                No Awards artists found
+                              </p>
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="
                   grid
                   w-full
                   grid-cols-1
                   lg:grid-cols-[50%_50%]
                 "
               >
-
-                {/* =================================================
-                 * IMAGE — FULL BLEED
-                 * ================================================= */}
-
                 <div
                   className="
                     relative
@@ -1286,7 +1767,6 @@ export default function AwardsArtistPage() {
                     </div>
                   )}
 
-                  {/* IMAGE → COLOR */}
                   <div
                     className="
                       absolute
@@ -1297,15 +1777,15 @@ export default function AwardsArtistPage() {
                       lg:block
                     "
                     style={{
-                      background: `linear-gradient(
-                        to right,
-                        transparent 0%,
-                        ${dominantColor} 100%
-                      )`,
+                      background:
+                        `linear-gradient(
+                          to right,
+                          transparent 0%,
+                          ${dominantColor} 100%
+                        )`,
                     }}
                   />
 
-                  {/* MOBILE FADE */}
                   <div
                     className="
                       absolute
@@ -1315,18 +1795,15 @@ export default function AwardsArtistPage() {
                       lg:hidden
                     "
                     style={{
-                      background: `linear-gradient(
-                        to top,
-                        ${dominantColor} 0%,
-                        transparent 100%
-                      )`,
+                      background:
+                        `linear-gradient(
+                          to top,
+                          ${dominantColor} 0%,
+                          transparent 100%
+                        )`,
                     }}
                   />
                 </div>
-
-                {/* =================================================
-                 * ARTIST INFORMATION
-                 * ================================================= */}
 
                 <div
                   className="
@@ -1346,12 +1823,10 @@ export default function AwardsArtistPage() {
                     lg:pt-12
                   "
                   style={{
-                    color: heroTextColor,
+                    color:
+                      heroTextColor,
                   }}
                 >
-
-                  {/* ARTIST NAME */}
-
                   <div>
                     <p
                       className="
@@ -1372,20 +1847,18 @@ export default function AwardsArtistPage() {
                         max-w-3xl
                         break-words
                         font-brown-bold
-                        text-[3.3rem]
+                        text-[2.8rem]
                         uppercase
                         leading-[0.86]
                         tracking-[-0.07em]
-                        sm:text-[5rem]
-                        lg:text-[6.5rem]
-                        xl:text-[7.5rem]
+                        sm:text-[4.4rem]
+                        lg:text-[5.2rem]
+                        xl:text-[5.8rem]
                       "
                     >
                       {artistName}
                     </h1>
                   </div>
-
-                  {/* STATS */}
 
                   <div className="mt-10">
 
@@ -1395,9 +1868,6 @@ export default function AwardsArtistPage() {
                         grid-cols-2
                       "
                     >
-
-                      {/* WINS */}
-
                       <div
                         className="
                           py-5
@@ -1432,8 +1902,6 @@ export default function AwardsArtistPage() {
                         </p>
                       </div>
 
-                      {/* NOMINATIONS */}
-
                       <div
                         className="
                           py-5
@@ -1450,7 +1918,9 @@ export default function AwardsArtistPage() {
                             sm:text-6xl
                           "
                         >
-                          {totalNominations}
+                          {
+                            totalNominations
+                          }
                         </p>
 
                         <p
@@ -1469,8 +1939,6 @@ export default function AwardsArtistPage() {
                       </div>
                     </div>
 
-                    {/* MOST RECENT RECOGNITION */}
-
                     {currentRecognition && (
                       <div
                         className="
@@ -1488,11 +1956,9 @@ export default function AwardsArtistPage() {
                             gap-5
                           "
                         >
-
                           <div className="min-w-0">
 
                             <div className="flex items-center gap-3">
-
                               <span
                                 className="
                                   font-brown-bold
@@ -1516,9 +1982,11 @@ export default function AwardsArtistPage() {
                                   tracking-[0.08em]
                                 "
                               >
-                                {currentRecognition.winner
-                                  ? 'Winner'
-                                  : 'Nominee'}
+                                {
+                                  currentRecognition.winner
+                                    ? 'Winner'
+                                    : 'Nominee'
+                                }
                               </span>
                             </div>
 
@@ -1555,8 +2023,6 @@ export default function AwardsArtistPage() {
                               }
                             </p>
                           </div>
-
-                          {/* ARROWS */}
 
                           <div
                             className="
@@ -1624,8 +2090,10 @@ export default function AwardsArtistPage() {
                           "
                         >
                           Recognition{' '}
-                          {recognitionIndex + 1}{' '}
-                          of {history.length}
+                          {recognitionIndex +
+                            1}{' '}
+                          of{' '}
+                          {history.length}
                         </p>
                       </div>
                     )}
@@ -1655,39 +2123,40 @@ export default function AwardsArtistPage() {
          * ERROR
          * ================================================= */}
 
-        {!loading && error && (
-          <div className="py-24 text-center">
-            <p
-              className="
-                font-brown-regular
-                text-xs
-                uppercase
-                tracking-[0.15em]
-                text-black/40
-              "
-            >
-              Failed to load Awards history
-            </p>
+        {!loading &&
+          error && (
+            <div className="py-24 text-center">
+              <p
+                className="
+                  font-brown-regular
+                  text-xs
+                  uppercase
+                  tracking-[0.15em]
+                  text-black/40
+                "
+              >
+                Failed to load Awards history
+              </p>
 
-            <button
-              type="button"
-              onClick={() =>
-                window.location.reload()
-              }
-              className="
-                mt-4
-                font-brown-bold
-                text-xs
-                uppercase
-                tracking-[0.1em]
-                text-[#0050FF]
-                hover:opacity-60
-              "
-            >
-              Try Again
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={() =>
+                  window.location.reload()
+                }
+                className="
+                  mt-4
+                  font-brown-bold
+                  text-xs
+                  uppercase
+                  tracking-[0.1em]
+                  text-[#0050FF]
+                  hover:opacity-60
+                "
+              >
+                Try Again
+              </button>
+            </div>
+          )}
 
         {/* =================================================
          * NO HISTORY
@@ -1712,7 +2181,7 @@ export default function AwardsArtistPage() {
           )}
 
         {/* =================================================
-         * ALL AWARDS AND NOMINATIONS
+         * ALL AWARDS
          * ================================================= */}
 
         {!loading &&
@@ -1730,11 +2199,7 @@ export default function AwardsArtistPage() {
                 lg:px-8
               "
             >
-
-              {/* SECTION TITLE */}
-
               <div className="mb-8 text-center sm:mb-12">
-
                 <p
                   className="
                     font-brown-regular
@@ -1762,12 +2227,14 @@ export default function AwardsArtistPage() {
                 </h2>
               </div>
 
-              {/* TABLE HEADER */}
+              {/* =================================================
+               * DESKTOP HEADER
+               * ================================================= */}
 
               <div
                 className="
                   hidden
-                  grid-cols-[90px_minmax(190px,1.2fr)_minmax(180px,1fr)_minmax(160px,1fr)]
+                  grid-cols-[90px_minmax(190px,1.2fr)_minmax(180px,1fr)_minmax(160px,1fr)_auto]
                   gap-5
                   px-4
                   py-4
@@ -1789,17 +2256,15 @@ export default function AwardsArtistPage() {
                 <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-black/40">
                   Title
                 </p>
-              </div>
 
-              {/* TABLE ROWS */}
+                <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-black/40">
+                  All Nominees
+                </p>
+              </div>
 
               <div>
                 {history.map(
-                  (
-                    entry,
-                    index
-                  ) => {
-
+                  (entry) => {
                     const title =
                       formatNomineeTitle(
                         entry.nominee,
@@ -1812,20 +2277,45 @@ export default function AwardsArtistPage() {
                         entry.category
                       );
 
+                    const nominationUrl =
+                      getNominationUrl(
+                        entry.year,
+                        entry.category
+                      );
+
                     return (
-                      <button
-                        key={`${entry.year}-${entry.category}-${entry.nominee}-${index}`}
-                        type="button"
+                      <div
+                        key={entry.id}
                         onClick={() =>
                           goToNomination(
                             entry.year,
                             entry.category
                           )
                         }
+                        role="link"
+                        tabIndex={0}
+                        onKeyDown={(
+                          event
+                        ) => {
+                          if (
+                            event.key ===
+                              'Enter' ||
+                            event.key ===
+                              ' '
+                          ) {
+                            event.preventDefault();
+
+                            goToNomination(
+                              entry.year,
+                              entry.category
+                            );
+                          }
+                        }}
                         className={`
                           group
                           block
                           w-full
+                          cursor-pointer
                           px-4
                           py-5
                           text-left
@@ -1837,23 +2327,23 @@ export default function AwardsArtistPage() {
                               : 'bg-white'
                           }
                           hover:bg-[#0050FF]/[0.06]
+                          focus:outline-none
                         `}
                       >
 
-                        {/* DESKTOP ROW */}
+                        {/* =================================================
+                         * DESKTOP ROW
+                         * ================================================= */}
 
                         <div
                           className="
                             hidden
-                            grid-cols-[90px_minmax(190px,1.2fr)_minmax(180px,1fr)_minmax(160px,1fr)]
-                            items-start
+                            grid-cols-[90px_minmax(190px,1.2fr)_minmax(180px,1fr)_minmax(160px,1fr)_auto]
+                            items-center
                             gap-5
                             md:grid
                           "
                         >
-
-                          {/* YEAR */}
-
                           <p
                             className="
                               font-brown-bold
@@ -1861,10 +2351,10 @@ export default function AwardsArtistPage() {
                               leading-tight
                             "
                           >
-                            {entry.year}
+                            {
+                              entry.year
+                            }
                           </p>
-
-                          {/* CATEGORY */}
 
                           <div>
                             <p
@@ -1902,8 +2392,6 @@ export default function AwardsArtistPage() {
                             </p>
                           </div>
 
-                          {/* ARTISTS */}
-
                           <p
                             className="
                               font-brown-regular
@@ -1912,10 +2400,10 @@ export default function AwardsArtistPage() {
                               text-black/65
                             "
                           >
-                            {artists}
+                            {
+                              artists
+                            }
                           </p>
-
-                          {/* TITLE */}
 
                           <p
                             className="
@@ -1926,14 +2414,52 @@ export default function AwardsArtistPage() {
                           >
                             {title}
                           </p>
+
+                          {/* =================================================
+                           * ALL NOMINEES
+                           * ================================================= */}
+
+                          <div className="flex items-center justify-end">
+                            <Link
+                              href={
+                                nominationUrl
+                              }
+                              onClick={(
+                                event
+                              ) => {
+                                event.stopPropagation();
+                              }}
+                              className="
+                                inline-flex
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-[#0050FF]
+                                px-3
+                                py-1.5
+                                font-brown-bold
+                                text-[9px]
+                                uppercase
+                                tracking-[0.08em]
+                                text-white
+                                transition-all
+                                duration-150
+                                hover:bg-black
+                              "
+                            >
+                              All Nominees
+                            </Link>
+                          </div>
                         </div>
 
-                        {/* MOBILE ROW */}
+                        {/* =================================================
+                         * MOBILE ROW
+                         * ================================================= */}
 
                         <div className="md:hidden">
 
                           <div className="flex items-start justify-between gap-4">
-
                             <div>
                               <p
                                 className="
@@ -1942,7 +2468,9 @@ export default function AwardsArtistPage() {
                                   leading-none
                                 "
                               >
-                                {entry.year}
+                                {
+                                  entry.year
+                                }
                               </p>
 
                               <p
@@ -1989,7 +2517,6 @@ export default function AwardsArtistPage() {
                               gap-5
                             "
                           >
-
                             <div>
                               <p
                                 className="
@@ -2011,7 +2538,9 @@ export default function AwardsArtistPage() {
                                   leading-tight
                                 "
                               >
-                                {artists}
+                                {
+                                  artists
+                                }
                               </p>
                             </div>
 
@@ -2041,25 +2570,59 @@ export default function AwardsArtistPage() {
                             </div>
                           </div>
 
-                          {/* CLICK INDICATOR */}
+                          {/* =================================================
+                           * MOBILE ALL NOMINEES
+                           * ================================================= */}
 
-                          <p
-                            className="
-                              mt-5
-                              font-brown-bold
-                              text-[9px]
-                              uppercase
-                              tracking-[0.1em]
-                              text-[#0050FF]
-                              opacity-0
-                              transition-opacity
-                              group-hover:opacity-100
-                            "
-                          >
-                            View nomination →
-                          </p>
+                          <div className="mt-5 flex items-center justify-between gap-4">
+                            <Link
+                              href={
+                                nominationUrl
+                              }
+                              onClick={(
+                                event
+                              ) => {
+                                event.stopPropagation();
+                              }}
+                              className="
+                                inline-flex
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-[#0050FF]
+                                px-3
+                                py-1.5
+                                font-brown-bold
+                                text-[9px]
+                                uppercase
+                                tracking-[0.08em]
+                                text-white
+                                transition-all
+                                duration-150
+                                hover:bg-black
+                              "
+                            >
+                              All Nominees
+                            </Link>
+
+                            <p
+                              className="
+                                font-brown-bold
+                                text-[9px]
+                                uppercase
+                                tracking-[0.1em]
+                                text-[#0050FF]
+                                opacity-0
+                                transition-opacity
+                                group-hover:opacity-100
+                              "
+                            >
+                              View nomination →
+                            </p>
+                          </div>
                         </div>
-                      </button>
+                      </div>
                     );
                   }
                 )}

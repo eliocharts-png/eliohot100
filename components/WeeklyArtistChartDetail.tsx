@@ -826,15 +826,15 @@ export default function WeeklyArtistChartDetail({
               }
             )}
 
-            {/* =========================================
-                SPACE AFTER #20
-            ========================================== */}
-
-            <div className="h-12 border-t border-black/10 bg-white sm:h-20" />
-
           </div>
 
         </div>
+
+        {/* =========================================
+            BREATHING SPACE AFTER #20
+        ========================================== */}
+
+        <div className="h-12 sm:h-20" />
 
       </div>
 

@@ -1,8 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-
-import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 /* =========================================================
  * CSV URLS
@@ -40,9 +39,24 @@ type ArtistImage = {
 const ARTIST_BASED_CATEGORIES = [
   'Artist of the Year',
   'Best New Artist',
+  'Best Duo/Group',
+  'Best Female Artist',
+  'Best Male Artist',
 ];
 
 const SOUNDTRACK_CATEGORY = 'Soundtrack of the Year';
+
+/* =========================================================
+ * SPECIAL ARTIST ACTS
+ *
+ * These must remain ONE artist/act rather than being split.
+ * ======================================================= */
+
+const SPECIAL_ARTIST_ACTS = [
+  'Mumford & Sons',
+  'Macklemore & Ryan Lewis',
+  'Nico & Vinz',
+];
 
 /* =========================================================
  * CSV PARSER
@@ -64,6 +78,7 @@ function parseCSV(csv: string): string[][] {
       } else {
         quoted = !quoted;
       }
+
       continue;
     }
 
@@ -96,6 +111,7 @@ function parseCSV(csv: string): string[][] {
 
       row = [];
       value = '';
+
       continue;
     }
 
@@ -129,6 +145,48 @@ function normalize(value: string): string {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
+}
+
+/* =========================================================
+ * REMOVE WINNER INDICATOR
+ *
+ * (Winner), (winner), ( WINNER ), etc.
+ *
+ * Winner is metadata only and must NEVER be displayed,
+ * linked, used for image lookup, or included in parsing.
+ * ======================================================= */
+
+function removeWinnerIndicator(value: string): string {
+  return value
+    .replace(
+      /\s*\(\s*winner\s*\)\s*/gi,
+      ' '
+    )
+    .replace(
+      /\s*\[\s*winner\s*\]\s*/gi,
+      ' '
+    )
+    .replace(
+      /\s*\*+\s*\(?\s*winner\s*\)?\s*\*+\s*/gi,
+      ' '
+    )
+    .replace(
+      /\s+winner\s*$/i,
+      ''
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* =========================================================
+ * CLEAN WINNER MARKER
+ *
+ * Kept as a shared function for compatibility with all
+ * parsing logic.
+ * ======================================================= */
+
+function cleanWinnerMarker(value: string): string {
+  return removeWinnerIndicator(value);
 }
 
 /* =========================================================
@@ -194,15 +252,13 @@ function parseNominees(
     const nominees: Nominee[] =
       nomineeLines.map((line) => {
         const winner =
-          /\*\*(winner)\*\*/i.test(line);
+          /\(\s*winner\s*\)/i.test(line) ||
+          /\[\s*winner\s*\]/i.test(line) ||
+          /\*+\s*\(?\s*winner\s*\)?\s*\*+/i.test(line) ||
+          /\s+winner\s*$/i.test(line);
 
         const cleanName =
-          line
-            .replace(
-              /\s*\*\*(winner)\*\*\s*/i,
-              ''
-            )
-            .trim();
+          cleanWinnerMarker(line);
 
         return {
           name: cleanName,
@@ -259,13 +315,19 @@ function findArtistImage(
   artistImages: ArtistImage[]
 ): string | undefined {
   const target =
-    normalize(artistName);
+    normalize(
+      cleanWinnerMarker(
+        artistName
+      )
+    );
 
   const match =
     artistImages.find(
       (entry) =>
         normalize(
-          entry.artist
+          cleanWinnerMarker(
+            entry.artist
+          )
         ) === target
     );
 
@@ -276,20 +338,144 @@ function findArtistImage(
 }
 
 /* =========================================================
+ * CHECK SPECIAL ACT
+ * ======================================================= */
+
+function isSpecialArtistAct(
+  artist: string
+): boolean {
+  const target =
+    normalize(
+      cleanWinnerMarker(
+        artist
+      )
+    );
+
+  return SPECIAL_ARTIST_ACTS.some(
+    (specialAct) =>
+      normalize(
+        specialAct
+      ) === target
+  );
+}
+
+/* =========================================================
  * EXTRACT ARTISTS
+ *
+ * Normal collaborations:
+ *
+ * Taylor Swift & Ice Spice
+ * Taylor Swift feat. Ice Spice
+ * Taylor Swift ft. Ice Spice
+ * Taylor Swift featuring Ice Spice
+ * Taylor Swift with Ice Spice
+ *
+ * become:
+ *
+ * Taylor Swift
+ * Ice Spice
+ *
+ * HOWEVER:
+ *
+ * Mumford & Sons
+ * Macklemore & Ryan Lewis
+ * Nico & Vinz
+ *
+ * remain intact.
  * ======================================================= */
 
 function extractArtists(
   credit: string
 ): string[] {
-  return credit
-    .split(
-      /\s+(?:&|and|featuring|feat\.?|ft\.?|with)\s+|,\s*/i
-    )
-    .map((artist) =>
-      artist.trim()
-    )
-    .filter(Boolean);
+  const cleaned =
+    cleanWinnerMarker(
+      credit
+    );
+
+  /* =======================================================
+   * First protect the three special acts.
+   * ===================================================== */
+
+  const protectedActs: {
+    token: string;
+    artist: string;
+  }[] = [];
+
+  let protectedCredit =
+    cleaned;
+
+  SPECIAL_ARTIST_ACTS.forEach(
+    (artist, index) => {
+      const token =
+        `___SPECIAL_ACT_${index}___`;
+
+      const regex =
+        new RegExp(
+          artist.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&'
+          ),
+          'gi'
+        );
+
+      if (
+        regex.test(
+          protectedCredit
+        )
+      ) {
+        protectedActs.push({
+          token,
+          artist,
+        });
+
+        protectedCredit =
+          protectedCredit.replace(
+            regex,
+            token
+          );
+      }
+    }
+  );
+
+  /* =======================================================
+   * Split all normal credits.
+   * ===================================================== */
+
+  const artists =
+    protectedCredit
+      .split(
+        /\s+(?:&|and|featuring|feat\.?|ft\.?|with)\s+|,\s*/i
+      )
+      .map((artist) =>
+        artist
+          .trim()
+          .replace(
+            /^___SPECIAL_ACT_(\d+)___$/i,
+            (_, index) => {
+              const match =
+                protectedActs.find(
+                  (
+                    item
+                  ) =>
+                    item.token ===
+                    `___SPECIAL_ACT_${index}___`
+                );
+
+              return (
+                match?.artist ??
+                ''
+              );
+            }
+          )
+      )
+      .map((artist) =>
+        cleanWinnerMarker(
+          artist
+        )
+      )
+      .filter(Boolean);
+
+  return artists;
 }
 
 /* =========================================================
@@ -299,14 +485,19 @@ function extractArtists(
 function getNomineeArtists(
   nominee: string
 ): string {
+  const cleaned =
+    cleanWinnerMarker(
+      nominee
+    );
+
   if (
-    !nominee.includes(' - ')
+    !cleaned.includes(' - ')
   ) {
-    return nominee;
+    return cleaned;
   }
 
   const parts =
-    nominee.split(' - ');
+    cleaned.split(' - ');
 
   return parts
     .slice(1)
@@ -321,36 +512,70 @@ function getNomineeArtists(
 function getNomineeTitle(
   nominee: string
 ): string {
+  const cleaned =
+    cleanWinnerMarker(
+      nominee
+    );
+
   if (
-    !nominee.includes(' - ')
+    !cleaned.includes(' - ')
   ) {
-    return nominee;
+    return cleaned;
   }
 
-  return nominee
+  return cleaned
     .split(' - ')[0]
     .trim();
 }
 
 /* =========================================================
+ * QUOTED TITLE
+ *
+ * Songs and albums are displayed as:
+ *
+ * "Karma"
+ *
+ * Artist-based categories are NOT quoted.
+ * ======================================================= */
+
+function formatTitle(
+  title: string
+): string {
+  const cleaned =
+    cleanWinnerMarker(
+      title
+    );
+
+  return `"${cleaned}"`;
+}
+
+/* =========================================================
  * GET NOMINEE IMAGES
+ *
+ * Supports up to FOUR artist images.
  * ======================================================= */
 
 function getNomineeImages(
   nominee: string,
   artistImages: ArtistImage[]
 ): string[] {
+  const cleaned =
+    cleanWinnerMarker(
+      nominee
+    );
+
   /*
    * Artist-based categories:
-   * nominee itself is the artist.
+   *
+   * Kendrick Lamar
    */
 
   if (
-    !nominee.includes(' - ')
+    !cleaned.includes(' - ')
   ) {
     const directImage =
       findArtistImage(
-        nominee,
+        cleaned,
         artistImages
       );
 
@@ -361,11 +586,12 @@ function getNomineeImages(
 
   /*
    * Song / album categories:
-   * title - artist
+   *
+   * TITLE - ARTIST
    */
 
   const parts =
-    nominee.split(' - ');
+    cleaned.split(' - ');
 
   const artistCredit =
     parts[
@@ -378,6 +604,7 @@ function getNomineeImages(
     );
 
   return artists
+    .slice(0, 4)
     .map((artist) =>
       findArtistImage(
         artist,
@@ -408,10 +635,6 @@ function isArtistBasedCategory(
 
 /* =========================================================
  * ARTIST LINK
- *
- * IMPORTANT:
- * This deliberately goes to the separate awards artist
- * page instead of the existing chart history page.
  * ======================================================= */
 
 function ArtistLink({
@@ -421,10 +644,15 @@ function ArtistLink({
 }) {
   const router = useRouter();
 
+  const cleanArtist =
+    cleanWinnerMarker(
+      artist
+    );
+
   function openArtist() {
     router.push(
       `/awards/artists/${encodeURIComponent(
-        artist
+        cleanArtist
       )}`
     );
   }
@@ -435,7 +663,7 @@ function ArtistLink({
       onClick={openArtist}
       className="text-left transition-opacity hover:opacity-60"
     >
-      {artist}
+      {cleanArtist}
     </button>
   );
 }
@@ -443,8 +671,17 @@ function ArtistLink({
 /* =========================================================
  * ARTIST CREDIT
  *
- * Makes each artist in a credit clickable while keeping
- * the original text appearance.
+ * Displays normal collaborations with commas:
+ *
+ * Taylor Swift, Ice Spice
+ *
+ * Special acts stay intact:
+ *
+ * Mumford & Sons
+ * Macklemore & Ryan Lewis
+ * Nico & Vinz
+ *
+ * Each normal artist remains independently clickable.
  * ======================================================= */
 
 function ArtistCredit({
@@ -452,15 +689,25 @@ function ArtistCredit({
 }: {
   artistCredit: string;
 }) {
-  const artists =
-    extractArtists(
+  const cleaned =
+    cleanWinnerMarker(
       artistCredit
     );
 
-  if (artists.length <= 1) {
+  const artists =
+    extractArtists(
+      cleaned
+    );
+
+  if (
+    artists.length <= 1
+  ) {
     return (
       <ArtistLink
-        artist={artistCredit}
+        artist={
+          artists[0] ??
+          cleaned
+        }
       />
     );
   }
@@ -468,18 +715,161 @@ function ArtistCredit({
   return (
     <>
       {artists.map(
-        (artist, index) => (
-          <span key={`${artist}-${index}`}>
+        (
+          artist,
+          index
+        ) => (
+          <span
+            key={`${artist}-${index}`}
+          >
             <ArtistLink
               artist={artist}
             />
+
             {index <
               artists.length - 1 &&
-              ' & '}
+              ', '}
           </span>
         )
       )}
     </>
+  );
+}
+
+/* =========================================================
+ * COLLAGE
+ *
+ * 1 image  = full image
+ * 2 images = 2 columns
+ * 3 images = 3 columns
+ * 4 images = 2 x 2 grid
+ * ======================================================= */
+
+function NomineeImageCollage({
+  images,
+}: {
+  images: string[];
+}) {
+  if (
+    images.length === 0
+  ) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#0050FF] px-4 text-center">
+        <span className="font-brown-bold text-sm uppercase leading-tight text-white sm:text-base">
+          ECA
+          <br />
+          NOMINEE
+        </span>
+      </div>
+    );
+  }
+
+  if (
+    images.length === 1
+  ) {
+    return (
+      <img
+        src={images[0]}
+        alt=""
+        className="
+          h-full
+          w-full
+          object-cover
+          transition-transform
+          duration-300
+          group-hover:scale-[1.02]
+        "
+      />
+    );
+  }
+
+  if (
+    images.length === 2
+  ) {
+    return (
+      <div className="grid h-full w-full grid-cols-2">
+        {images.map(
+          (
+            image,
+            index
+          ) => (
+            <img
+              key={`${image}-${index}`}
+              src={image}
+              alt=""
+              className="
+                h-full
+                min-w-0
+                w-full
+                object-cover
+                transition-transform
+                duration-300
+                group-hover:scale-[1.02]
+              "
+            />
+          )
+        )}
+      </div>
+    );
+  }
+
+  if (
+    images.length === 3
+  ) {
+    return (
+      <div className="grid h-full w-full grid-cols-3">
+        {images.map(
+          (
+            image,
+            index
+          ) => (
+            <img
+              key={`${image}-${index}`}
+              src={image}
+              alt=""
+              className="
+                h-full
+                min-w-0
+                w-full
+                object-cover
+                transition-transform
+                duration-300
+                group-hover:scale-[1.02]
+              "
+            />
+          )
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid h-full w-full grid-cols-2 grid-rows-2">
+      {images
+        .slice(0, 4)
+        .map(
+          (
+            image,
+            index
+          ) => (
+            <img
+              key={`${image}-${index}`}
+              src={image}
+              alt=""
+              className="
+                h-full
+                min-h-0
+                min-w-0
+                w-full
+                object-cover
+                transition-transform
+                duration-300
+                group-hover:scale-[1.02]
+              "
+            />
+          )
+        )}
+    </div>
   );
 }
 
@@ -501,114 +891,47 @@ function NomineeCard({
       category
     );
 
+  const cleanNominee =
+    cleanWinnerMarker(
+      nominee.name
+    );
+
   const images =
     getNomineeImages(
-      nominee.name,
+      cleanNominee,
       artistImages
     );
 
-  /*
-   * Artist-based categories:
-   *
-   * Artist of the Year
-   * Kendrick Lamar
-   *
-   * We only display the artist name.
-   */
-
   const title =
     artistBased
-      ? nominee.name
+      ? cleanNominee
       : getNomineeTitle(
-          nominee.name
+          cleanNominee
         );
-
-  /*
-   * Song / album categories:
-   *
-   * TITLE
-   * ARTIST
-   */
 
   const artist =
     artistBased
       ? ''
-      : nominee.name.includes(
+      : cleanNominee.includes(
           ' - '
         )
         ? getNomineeArtists(
-            nominee.name
+            cleanNominee
           )
         : '';
 
   return (
     <div className="group min-w-0 cursor-pointer">
-      <div
-        className="
-          relative
-          overflow-hidden
-          bg-white
-        "
-      >
-        {/* =================================================
-         * IMAGE
-         * ================================================= */}
+      <div className="overflow-hidden bg-white">
+
+        {/* IMAGE */}
 
         <div className="relative aspect-square w-full overflow-hidden bg-white">
-          {images.length === 0 ? (
-            <div className="flex h-full w-full items-center justify-center bg-[#0050FF] px-4 text-center">
-              <span className="font-brown-bold text-sm uppercase leading-tight text-white sm:text-base">
-                ECA
-                <br />
-                {nominee.winner
-                  ? 'WINNER'
-                  : 'NOMINEE'}
-              </span>
-            </div>
-          ) : images.length === 1 ? (
-            <img
-              src={images[0]}
-              alt=""
-              className="
-                h-full
-                w-full
-                object-cover
-                transition-transform
-                duration-300
-                group-hover:scale-[1.02]
-              "
-            />
-          ) : (
-            <div className="flex h-full w-full">
-              {images
-                .slice(0, 2)
-                .map(
-                  (
-                    image,
-                    index
-                  ) => (
-                    <img
-                      key={`${image}-${index}`}
-                      src={image}
-                      alt=""
-                      className="
-                        h-full
-                        min-w-0
-                        flex-1
-                        object-cover
-                        transition-transform
-                        duration-300
-                        group-hover:scale-[1.02]
-                      "
-                    />
-                  )
-                )}
-            </div>
-          )}
+          <NomineeImageCollage
+            images={images}
+          />
 
-          {/* =================================================
-           * BLUE IMAGE HOVER
-           * ================================================= */}
+          {/* BLUE HOVER */}
 
           <div
             className="
@@ -622,12 +945,22 @@ function NomineeCard({
             "
           />
 
-          {/* =================================================
-           * WINNER LABEL
-           * ================================================= */}
+          {/* WINNER */}
 
           {nominee.winner && (
-            <div className="absolute bottom-0 left-0 right-0 bg-[#0050FF] px-2 py-2 text-center">
+            <div
+              className="
+                absolute
+                bottom-0
+                left-0
+                right-0
+                z-10
+                bg-[#0050FF]
+                px-2
+                py-2
+                text-center
+              "
+            >
               <span className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-white sm:text-xs">
                 Winner
               </span>
@@ -635,11 +968,7 @@ function NomineeCard({
           )}
         </div>
 
-        {/* =================================================
-         * INFORMATION
-         *
-         * BLUE TRANSLUCENT BACKGROUND ONLY ON HOVER
-         * ================================================= */}
+        {/* INFORMATION */}
 
         <div
           className="
@@ -659,7 +988,7 @@ function NomineeCard({
                 artist={title}
               />
             ) : (
-              title
+              formatTitle(title)
             )}
           </p>
 
@@ -683,12 +1012,17 @@ function NomineeCard({
 function AwardCategorySection({
   category,
   artistImages,
+  categoryRef,
 }: {
   category: AwardCategory;
   artistImages: ArtistImage[];
+  categoryRef?: (
+    element: HTMLElement | null
+  ) => void;
 }) {
   return (
     <section
+      ref={categoryRef}
       id={`award-${normalize(
         category.category
       ).replace(/\s+/g, '-')}`}
@@ -731,35 +1065,41 @@ function AwardCategorySection({
 
 function WinnersSection({
   categories,
+  selectedYear,
 }: {
   categories: AwardCategory[];
+  selectedYear: string;
 }) {
+  const router = useRouter();
+
   function goToCategory(
     categoryName: string
   ) {
-    const id =
-      `award-${normalize(
-        categoryName
-      ).replace(/\s+/g, '-')}`;
+    const params =
+      new URLSearchParams();
 
-    const element =
-      document.getElementById(
-        id
-      );
+    params.set(
+      'year',
+      selectedYear
+    );
 
-    if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }
+    params.set(
+      'category',
+      categoryName
+    );
+
+    router.push(
+      `/awards?${params.toString()}`,
+      {
+        scroll: false,
+      }
+    );
   }
 
   return (
     <section className="mt-16 sm:mt-20">
-      {/* =================================================
-       * WINNERS HEADER
-       * ================================================= */}
+
+      {/* WINNERS HEADER */}
 
       <div className="border-y border-black/10 py-6 text-center sm:py-8">
         <h2 className="font-brown-bold text-3xl uppercase leading-none tracking-[-0.04em] sm:text-5xl">
@@ -767,9 +1107,7 @@ function WinnersSection({
         </h2>
       </div>
 
-      {/* =================================================
-       * WINNERS
-       * ================================================= */}
+      {/* WINNERS LIST */}
 
       <div>
         {categories.map(
@@ -791,14 +1129,18 @@ function WinnersSection({
 
             const winnerArtist =
               artistBased
-                ? winner.name
+                ? cleanWinnerMarker(
+                    winner.name
+                  )
                 : getNomineeArtists(
                     winner.name
                   );
 
             const winnerTitle =
               artistBased
-                ? winner.name
+                ? cleanWinnerMarker(
+                    winner.name
+                  )
                 : getNomineeTitle(
                     winner.name
                   );
@@ -822,13 +1164,14 @@ function WinnersSection({
                   sm:py-6
                 "
               >
+
                 {/* CATEGORY */}
 
                 <p className="font-brown-bold text-xs uppercase leading-tight sm:text-base">
                   {category.category}
                 </p>
 
-                {/* WINNER */}
+                {/* WINNER ARTIST */}
 
                 <p className="font-brown-regular text-sm leading-tight text-black sm:text-base">
                   <ArtistCredit
@@ -838,7 +1181,7 @@ function WinnersSection({
                   />
                 </p>
 
-                {/* TITLE */}
+                {/* WINNER TITLE */}
 
                 <p className="font-brown-bold text-sm leading-tight sm:text-base">
                   {artistBased ? (
@@ -848,7 +1191,9 @@ function WinnersSection({
                       }
                     />
                   ) : (
-                    winnerTitle
+                    formatTitle(
+                      winnerTitle
+                    )
                   )}
                 </p>
 
@@ -923,20 +1268,69 @@ function getOrdinal(
  * ======================================================= */
 
 export default function AwardsPage() {
-  const [selectedYear, setSelectedYear] =
-    useState('2025');
+  const router = useRouter();
+  const searchParams =
+    useSearchParams();
 
-  const [categories, setCategories] =
-    useState<AwardCategory[]>([]);
+  /*
+   * Read the requested year/category from the URL.
+   */
 
-  const [artistImages, setArtistImages] =
-    useState<ArtistImage[]>([]);
+  const urlYear =
+    searchParams.get(
+      'year'
+    );
 
-  const [loading, setLoading] =
-    useState(true);
+  const urlCategory =
+    searchParams.get(
+      'category'
+    );
 
-  const [error, setError] =
-    useState(false);
+  const [
+    selectedYear,
+    setSelectedYear,
+  ] = useState(
+    urlYear ?? '2025'
+  );
+
+  const [
+    categories,
+    setCategories,
+  ] = useState<AwardCategory[]>(
+    []
+  );
+
+  const [
+    artistImages,
+    setArtistImages,
+  ] = useState<ArtistImage[]>(
+    []
+  );
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState(false);
+
+  const [
+    showBackToTop,
+    setShowBackToTop,
+  ] = useState(false);
+
+  /*
+   * Used to prevent automatic category scroll from
+   * happening before categories have finished loading.
+   */
+
+  const categoryScrollPending =
+    useRef(
+      Boolean(urlCategory)
+    );
 
   /* =======================================================
    * YEARS
@@ -966,12 +1360,56 @@ export default function AwardsPage() {
   );
 
   /* =======================================================
+   * SYNC URL YEAR
+   * ===================================================== */
+
+  useEffect(() => {
+    if (
+      urlYear &&
+      years.includes(urlYear)
+    ) {
+      setSelectedYear(
+        urlYear
+      );
+
+      categoryScrollPending.current =
+        Boolean(urlCategory);
+    }
+  }, [
+    urlYear,
+    urlCategory,
+    years,
+  ]);
+
+  /* =======================================================
+   * BACK TO TOP VISIBILITY
+   * ===================================================== */
+
+  useEffect(() => {
+    function handleScroll() {
+      setShowBackToTop(
+        window.scrollY > 400
+      );
+    }
+
+    handleScroll();
+
+    window.addEventListener(
+      'scroll',
+      handleScroll,
+      { passive: true }
+    );
+
+    return () => {
+      window.removeEventListener(
+        'scroll',
+        handleScroll
+      );
+    };
+  }, []);
+
+  /* =======================================================
    * YEAR SELECTOR
-   *
-   * FIVE YEARS VISIBLE
-   *
-   * The selector moves continuously one year at a time.
-   * It does NOT depend on the selected year.
    * ===================================================== */
 
   const [
@@ -1026,6 +1464,15 @@ export default function AwardsPage() {
     year: string
   ) {
     setSelectedYear(year);
+
+    router.push(
+      `/awards?year=${encodeURIComponent(
+        year
+      )}`,
+      {
+        scroll: false,
+      }
+    );
   }
 
   /* =======================================================
@@ -1085,8 +1532,6 @@ export default function AwardsPage() {
 
         /* =================================================
          * LOAD ARTIST IMAGES
-         *
-         * OPTIONAL
          * ================================================= */
 
         let parsedArtistImages:
@@ -1230,12 +1675,78 @@ export default function AwardsPage() {
   ]);
 
   /* =======================================================
+   * SCROLL TO SELECTED CATEGORY
+   * ===================================================== */
+
+  useEffect(() => {
+    if (
+      loading ||
+      error ||
+      categories.length === 0 ||
+      !urlCategory ||
+      !categoryScrollPending.current
+    ) {
+      return;
+    }
+
+    const targetCategory =
+      categories.find(
+        (category) =>
+          normalize(
+            category.category
+          ) ===
+          normalize(
+            urlCategory
+          )
+      );
+
+    if (!targetCategory) {
+      categoryScrollPending.current =
+        false;
+
+      return;
+    }
+
+    const timeout =
+      window.setTimeout(() => {
+        const id =
+          `award-${normalize(
+            targetCategory.category
+          ).replace(
+            /\s+/g,
+            '-'
+          )}`;
+
+        const element =
+          document.getElementById(
+            id
+          );
+
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }
+
+        categoryScrollPending.current =
+          false;
+      }, 100);
+
+    return () => {
+      window.clearTimeout(
+        timeout
+      );
+    };
+  }, [
+    loading,
+    error,
+    categories,
+    urlCategory,
+  ]);
+
+  /* =======================================================
    * ANNUAL NUMBER
-   *
-   * 2009 = 1st
-   * 2010 = 2nd
-   * ...
-   * 2025 = 17th
    * ===================================================== */
 
   const annualNumber =
@@ -1265,6 +1776,7 @@ export default function AwardsPage() {
   return (
     <main className="min-h-screen bg-white text-black">
       <div className="pt-[3.8rem]">
+
         {/* =================================================
          * TITLE
          * ================================================= */}
@@ -1281,14 +1793,12 @@ export default function AwardsPage() {
 
         {/* =================================================
          * YEAR SELECTOR
-         *
-         * FIVE YEARS VISIBLE
-         * ARROWS ARE KEPT CLOSE TO THE YEARS
          * ================================================= */}
 
         <section className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="border-y border-black/10">
             <div className="flex items-center justify-center py-1">
+
               {/* LEFT ARROW */}
 
               <button
@@ -1368,8 +1878,6 @@ export default function AwardsPage() {
                       >
                         {year}
 
-                        {/* ACTIVE UNDERLINE */}
-
                         <span
                           className={`
                             absolute
@@ -1435,6 +1943,7 @@ export default function AwardsPage() {
          * ================================================= */}
 
         <section className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
+
           {/* LOADING */}
 
           {loading && (
@@ -1489,13 +1998,17 @@ export default function AwardsPage() {
               </div>
             )}
 
-          {/* AWARDS */}
+          {/* =================================================
+           * AWARDS
+           * ================================================= */}
 
           {!loading &&
             !error &&
             categories.length >
               0 && (
               <>
+                {/* NOMINEE CATEGORIES */}
+
                 <div className="border-t border-black/10">
                   {categories.map(
                     (
@@ -1516,9 +2029,14 @@ export default function AwardsPage() {
                   )}
                 </div>
 
+                {/* WINNERS */}
+
                 <WinnersSection
                   categories={
                     categories
+                  }
+                  selectedYear={
+                    selectedYear
                   }
                 />
               </>
@@ -1529,40 +2047,42 @@ export default function AwardsPage() {
          * BACK TO TOP
          * ================================================= */}
 
-        <button
-          type="button"
-          aria-label="Back to top"
-          onClick={
-            backToTop
-          }
-          className="
-            fixed
-            bottom-5
-            right-5
-            z-50
-            flex
-            h-11
-            w-11
-            items-center
-            justify-center
-            rounded-full
-            bg-[#0050FF]
-            font-brown-bold
-            text-lg
-            leading-none
-            text-white
-            shadow-lg
-            transition-transform
-            duration-150
-            hover:scale-105
-            sm:bottom-7
-            sm:right-7
-            sm:h-12
-            sm:w-12
-          "
-        >
-          ↑
-        </button>
+        {showBackToTop && (
+          <button
+            type="button"
+            aria-label="Back to top"
+            onClick={
+              backToTop
+            }
+            className="
+              fixed
+              bottom-5
+              right-5
+              z-50
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-full
+              bg-[#0050FF]
+              font-brown-bold
+              text-lg
+              leading-none
+              text-white
+              shadow-lg
+              transition-transform
+              duration-150
+              hover:scale-105
+              sm:bottom-7
+              sm:right-7
+              sm:h-12
+              sm:w-12
+            "
+          >
+            ↑
+          </button>
+        )}
 
         <div className="h-20 sm:h-28" />
       </div>

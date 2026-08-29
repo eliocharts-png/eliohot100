@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
+import SiteFooter from '@/components/SiteFooter';
 
 const brownBold = localFont({
   src: '../fonts/Brown-Bold.ttf',
@@ -33,6 +34,8 @@ export default function RootLayout({
         <SiteHeader />
 
         {children}
+
+        <SiteFooter />
       </body>
     </html>
   );
