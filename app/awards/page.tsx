@@ -1,7 +1,13 @@
 'use client';
 
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
 
 /* =========================================================
  * CSV URLS
@@ -1264,11 +1270,12 @@ function getOrdinal(
 }
 
 /* =========================================================
- * PAGE
+ * PAGE CONTENT
  * ======================================================= */
 
-export default function AwardsPage() {
+function AwardsContent() {
   const router = useRouter();
+
   const searchParams =
     useSearchParams();
 
@@ -1636,7 +1643,7 @@ export default function AwardsPage() {
 
   /* =======================================================
    * KEEP SELECTED YEAR VISIBLE
-   * ===================================================== */
+   * ======================================================= */
 
   useEffect(() => {
     const selectedIndex =
@@ -1676,7 +1683,7 @@ export default function AwardsPage() {
 
   /* =======================================================
    * SCROLL TO SELECTED CATEGORY
-   * ===================================================== */
+   * ======================================================= */
 
   useEffect(() => {
     if (
@@ -1747,7 +1754,7 @@ export default function AwardsPage() {
 
   /* =======================================================
    * ANNUAL NUMBER
-   * ===================================================== */
+   * ======================================================= */
 
   const annualNumber =
     Number(selectedYear) -
@@ -1760,7 +1767,7 @@ export default function AwardsPage() {
 
   /* =======================================================
    * BACK TO TOP
-   * ===================================================== */
+   * ======================================================= */
 
   function backToTop() {
     window.scrollTo({
@@ -1771,7 +1778,7 @@ export default function AwardsPage() {
 
   /* =======================================================
    * RENDER
-   * ===================================================== */
+   * ======================================================= */
 
   return (
     <main className="min-h-screen bg-white text-black">
@@ -2087,5 +2094,27 @@ export default function AwardsPage() {
         <div className="h-20 sm:h-28" />
       </div>
     </main>
+  );
+}
+
+/* =========================================================
+ * PAGE
+ * ======================================================= */
+
+export default function AwardsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-white text-black">
+          <div className="pt-[3.8rem]">
+            <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+              <div className="h-16 animate-pulse bg-black/[0.05]" />
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <AwardsContent />
+    </Suspense>
   );
 }
