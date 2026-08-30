@@ -12,70 +12,9 @@ import type {
 
 /*
  * =========================================================
- * INTERNAL TYPES
+ * BASIC HELPERS
  * =========================================================
  */
-
-interface SongHistoryRow {
-  week: string;
-  rank: number;
-  points?: number;
-}
-
-/*
- * =========================================================
- * HELPERS
- * =========================================================
- */
-
-function normalize(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function songKey(
-  title: string,
-  artist: string
-): string {
-  return `${normalize(title)}|||${normalize(artist)}`;
-}
-
-function parseChartDate(
-  value: string
-): number {
-  const parts = value
-    .split('/')
-    .map(Number);
-
-  if (parts.length < 3) {
-    return 0;
-  }
-
-  const month = parts[0];
-  const day = parts[1];
-  const year = parts[2];
-
-  if (
-    !month ||
-    !day ||
-    year === undefined ||
-    !Number.isFinite(month) ||
-    !Number.isFinite(day) ||
-    !Number.isFinite(year)
-  ) {
-    return 0;
-  }
-
-  const fullYear =
-    year < 50
-      ? 2000 + year
-      : 1900 + year;
-
-  return new Date(
-    fullYear,
-    month - 1,
-    day
-  ).getTime();
-}
 
 function getRankMovement(
   entry: WeeklyChartEntry
@@ -120,590 +59,75 @@ function getPointChangePercent(
   }
 
   return (
-    ((entry.points -
-      entry.lastWeekPoints) /
-      entry.lastWeekPoints) *
+    (
+      (entry.points -
+        entry.lastWeekPoints) /
+      entry.lastWeekPoints
+    ) *
     100
   );
 }
 
 /*
  * =========================================================
- * HISTORY COLLECTION
- * =========================================================
- */
-
-function getAllEntries(
-  payload: WeeklyChartPayload
-): WeeklyChartEntry[] {
-  const map =
-    new Map<
-      string,
-      WeeklyChartEntry
-    >();
-
-  for (const entries of Object.values(
-    payload.entriesByWeek
-  )) {
-    for (const entry of entries) {
-      const key =
-        `${entry.week}|||${songKey(
-          entry.title,
-          entry.artist
-        )}`;
-
-      map.set(
-        key,
-        entry
-      );
-    }
-  }
-
-  return Array.from(
-    map.values()
-  );
-}
-
-function getSongHistory(
-  payload: WeeklyChartPayload,
-  title: string,
-  artist: string
-): SongHistoryRow[] {
-  const key =
-    songKey(
-      title,
-      artist
-    );
-
-  const history: SongHistoryRow[] =
-    [];
-
-  for (const entries of Object.values(
-    payload.entriesByWeek
-  )) {
-    for (const entry of entries) {
-      if (
-        songKey(
-          entry.title,
-          entry.artist
-        ) !== key
-      ) {
-        continue;
-      }
-
-      history.push({
-        week: entry.week,
-        rank: entry.rank,
-        points: entry.points,
-      });
-    }
-  }
-
-  return history.sort(
-    (a, b) =>
-      parseChartDate(a.week) -
-      parseChartDate(b.week)
-  );
-}
-
-/*
- * =========================================================
- * CONSECUTIVE RUN CALCULATIONS
- * =========================================================
- */
-
-function calculateLongestRun(
-  history: SongHistoryRow[],
-  condition: (
-    rank: number
-  ) => boolean
-): number {
-  if (
-    history.length === 0
-  ) {
-    return 0;
-  }
-
-  const sorted =
-    [...history].sort(
-      (a, b) =>
-        parseChartDate(a.week) -
-        parseChartDate(b.week)
-    );
-
-  let longest = 0;
-  let current = 0;
-
-  let previousWeekDate:
-    number | null = null;
-
-  for (const row of sorted) {
-    const date =
-      parseChartDate(
-        row.week
-      );
-
-    const isLaterWeek =
-      previousWeekDate === null ||
-      date >
-        previousWeekDate;
-
-    if (
-      condition(row.rank)
-    ) {
-      if (
-        isLaterWeek
-      ) {
-        current += 1;
-      } else {
-        current = 1;
-      }
-    } else {
-      current = 0;
-    }
-
-    longest =
-      Math.max(
-        longest,
-        current
-      );
-
-    previousWeekDate =
-      date;
-  }
-
-  return longest;
-}
-
-function calculateCurrentRun(
-  history: SongHistoryRow[],
-  condition: (
-    rank: number
-  ) => boolean
-): number {
-  if (
-    history.length === 0
-  ) {
-    return 0;
-  }
-
-  const sorted =
-    [...history].sort(
-      (a, b) =>
-        parseChartDate(b.week) -
-        parseChartDate(a.week)
-    );
-
-  let streak = 0;
-
-  for (const row of sorted) {
-    if (
-      !condition(row.rank)
-    ) {
-      break;
-    }
-
-    streak += 1;
-  }
-
-  return streak;
-}
-
-/*
- * =========================================================
- * SONG HISTORY STATS
- * =========================================================
- */
-
-function buildSongHistoryStats(
-  payload: WeeklyChartPayload,
-  title: string,
-  artist: string
-): SongHistoryStats {
-  const history =
-    getSongHistory(
-      payload,
-      title,
-      artist
-    );
-
-  const sorted =
-    [...history].sort(
-      (a, b) =>
-        parseChartDate(a.week) -
-        parseChartDate(b.week)
-    );
-
-  const top10 =
-    sorted.filter(
-      (row) =>
-        row.rank <= 10
-    );
-
-  const top5 =
-    sorted.filter(
-      (row) =>
-        row.rank <= 5
-    );
-
-  const numberOnes =
-    sorted.filter(
-      (row) =>
-        row.rank === 1
-    );
-
-  const peakPosition =
-    sorted.reduce(
-      (
-        peak,
-        row
-      ) =>
-        Math.min(
-          peak,
-          row.rank
-        ),
-      Infinity
-    );
-
-  return {
-    title,
-    artist,
-
-    totalWeeks:
-      sorted.length,
-
-    totalTop10Weeks:
-      top10.length,
-
-    totalTop5Weeks:
-      top5.length,
-
-    totalNumberOneWeeks:
-      numberOnes.length,
-
-    peakPosition:
-      peakPosition === Infinity
-        ? 0
-        : peakPosition,
-
-    numberOneCount:
-      numberOnes.length,
-
-    firstWeek:
-      sorted[0]?.week ?? '',
-
-    firstNumberOneWeek:
-      numberOnes[0]?.week ??
-      null,
-
-    firstTop10Week:
-      top10[0]?.week ??
-      null,
-
-    currentTop10Streak:
-      calculateCurrentRun(
-        sorted,
-        (rank) =>
-          rank <= 10
-      ),
-
-    longestTop10Streak:
-      calculateLongestRun(
-        sorted,
-        (rank) =>
-          rank <= 10
-      ),
-  };
-}
-
-/*
- * =========================================================
- * ARTIST HISTORY STATS
- * =========================================================
- */
-
-function buildArtistHistoryStats(
-  payload: WeeklyChartPayload,
-  artist: string
-): ArtistHistoryStats {
-  const normalizedArtist =
-    normalize(artist);
-
-  const songs =
-    new Map<
-      string,
-      SongHistoryRow[]
-    >();
-
-  for (const entry of getAllEntries(
-    payload
-  )) {
-    if (
-      normalize(
-        entry.artist
-      ) !==
-      normalizedArtist
-    ) {
-      continue;
-    }
-
-    const key =
-      songKey(
-        entry.title,
-        entry.artist
-      );
-
-    if (!songs.has(key)) {
-      songs.set(
-        key,
-        []
-      );
-    }
-
-    songs.get(key)!.push({
-      week: entry.week,
-      rank: entry.rank,
-      points: entry.points,
-    });
-  }
-
-  const songHistories =
-    Array.from(
-      songs.values()
-    ).map(
-      (history) =>
-        [...history].sort(
-          (a, b) =>
-            parseChartDate(
-              a.week
-            ) -
-            parseChartDate(
-              b.week
-            )
-        )
-    );
-
-  const top10Songs =
-    songHistories.filter(
-      (history) =>
-        history.some(
-          (row) =>
-            row.rank <= 10
-        )
-    );
-
-  const top5Songs =
-    songHistories.filter(
-      (history) =>
-        history.some(
-          (row) =>
-            row.rank <= 5
-        )
-    );
-
-  const numberOneSongs =
-    songHistories.filter(
-      (history) =>
-        history.some(
-          (row) =>
-            row.rank === 1
-        )
-    );
-
-  const allArtistWeeks =
-    songHistories.flat();
-
-  const firstNumberOne =
-    numberOneSongs
-      .flat()
-      .filter(
-        (row) =>
-          row.rank === 1
-      )
-      .sort(
-        (a, b) =>
-          parseChartDate(
-            a.week
-          ) -
-          parseChartDate(
-            b.week
-          )
-      )[0];
-
-  let longestNumberOneReign =
-    0;
-
-  for (const history of numberOneSongs) {
-    longestNumberOneReign =
-      Math.max(
-        longestNumberOneReign,
-        calculateLongestRun(
-          history,
-          (rank) =>
-            rank === 1
-        )
-      );
-  }
-
-  let longestTop10Run =
-    0;
-
-  for (const history of top10Songs) {
-    longestTop10Run =
-      Math.max(
-        longestTop10Run,
-        calculateLongestRun(
-          history,
-          (rank) =>
-            rank <= 10
-        )
-      );
-  }
-
-  return {
-    artist,
-
-    chartEntries:
-      songHistories.length,
-
-    top10Hits:
-      top10Songs.length,
-
-    top5Hits:
-      top5Songs.length,
-
-    numberOneHits:
-      numberOneSongs.length,
-
-    totalNumberOneWeeks:
-      allArtistWeeks.filter(
-        (row) =>
-          row.rank === 1
-      ).length,
-
-    firstNumberOneWeek:
-      firstNumberOne?.week ??
-      null,
-
-    longestNumberOneReign,
-
-    longestTop10Run,
-  };
-}
-
-/*
- * =========================================================
- * TOP 10 STORIES
+ * TOP 10
  * =========================================================
  */
 
 function buildTop10Stories(
-  payload: WeeklyChartPayload,
   entries: WeeklyChartEntry[]
 ): Top10Story[] {
-  const top10 =
-    [...entries]
-      .filter(
-        (entry) =>
-          entry.rank <= 10
-      )
-      .sort(
-        (a, b) =>
-          a.rank - b.rank
-      );
-
-  return top10.map(
-    (entry) => {
-      const movement =
-        getRankMovement(
-          entry
-        );
-
-      const pointChange =
-        getPointChange(
-          entry
-        );
-
-      const pointChangePercent =
-        getPointChangePercent(
-          entry
-        );
-
-      const songStats =
-        buildSongHistoryStats(
-          payload,
-          entry.title,
-          entry.artist
-        );
-
-      const artistStats =
-        [
-          buildArtistHistoryStats(
-            payload,
-            entry.artist
-          ),
-        ];
-
-      const isFirstNumberOne =
-        entry.rank === 1 &&
-        songStats.totalNumberOneWeeks ===
-          1;
-
-      const isFirstTop10 =
-        entry.rank <= 10 &&
-        songStats.totalTop10Weeks ===
-          1;
-
-      const isFirstTop5 =
-        entry.rank <= 5 &&
-        songStats.totalTop5Weeks ===
-          1;
-
-      const previousPeak =
-        entry.chartHistory
-          .filter(
-            (history) =>
-              history.week !==
-              entry.week
-          )
-          .reduce(
-            (
-              peak,
-              history
-            ) =>
-              Math.min(
-                peak,
-                history.rank
-              ),
-            Infinity
-          );
-
-      const isNewCareerPeak =
-        previousPeak !==
-          Infinity &&
-        entry.rank <
-          previousPeak;
-
-      return {
+  return entries
+    .filter(
+      (entry) =>
+        entry.rank <= 10
+    )
+    .sort(
+      (a, b) =>
+        a.rank -
+        b.rank
+    )
+    .map(
+      (entry): Top10Story => ({
         entry,
 
-        movement,
+        movement:
+          getRankMovement(entry),
 
-        pointChange,
+        pointChange:
+          getPointChange(entry),
 
-        pointChangePercent,
+        pointChangePercent:
+          getPointChangePercent(entry),
 
-        songStats,
+        /*
+         * Historical information is intentionally
+         * no longer calculated.
+         *
+         * These lightweight placeholder values are
+         * kept only because the existing TypeScript
+         * interface still expects them.
+         */
+        songStats:
+          createEmptySongStats(entry),
 
-        artistStats,
+        artistStats: [],
 
-        isFirstNumberOne,
+        isFirstNumberOne:
+          false,
 
-        isFirstTop10,
+        isFirstTop10:
+          false,
 
-        isFirstTop5,
+        isFirstTop5:
+          false,
 
-        isNewCareerPeak,
+        /*
+         * New peak is determined directly from the
+         * chartHistory already attached to the entry.
+         */
+        isNewCareerPeak:
+          isNewCareerPeak(entry),
 
         numberOneRank:
           entry.rank === 1
@@ -714,9 +138,200 @@ function buildTop10Stories(
           entry.rank <= 10
             ? entry.rank
             : 0,
-      };
-    }
+      })
+    );
+}
+
+/*
+ * =========================================================
+ * LIGHTWEIGHT SONG STATS
+ * =========================================================
+ *
+ * We do NOT scan entriesByWeek anymore.
+ *
+ * chartHistory already exists on each entry, so if we need
+ * basic information about the song's history, we can use
+ * that directly.
+ * =========================================================
+ */
+
+function createEmptySongStats(
+  entry: WeeklyChartEntry
+): SongHistoryStats {
+  const history =
+    entry.chartHistory ?? [];
+
+  const top10Weeks =
+    history.filter(
+      (item) =>
+        item.rank <= 10
+    ).length;
+
+  const top5Weeks =
+    history.filter(
+      (item) =>
+        item.rank <= 5
+    ).length;
+
+  const numberOneWeeks =
+    history.filter(
+      (item) =>
+        item.rank === 1
+    ).length;
+
+  const peak =
+    history.reduce(
+      (
+        currentPeak,
+        item
+      ) =>
+        Math.min(
+          currentPeak,
+          item.rank
+        ),
+      entry.rank
+    );
+
+  return {
+    title:
+      entry.title,
+
+    artist:
+      entry.artist,
+
+    totalWeeks:
+      entry.weeksOnChart,
+
+    totalTop10Weeks:
+      top10Weeks,
+
+    totalTop5Weeks:
+      top5Weeks,
+
+    totalNumberOneWeeks:
+      numberOneWeeks,
+
+    peakPosition:
+      peak,
+
+    numberOneCount:
+      numberOneWeeks,
+
+    firstWeek:
+      history[0]?.week ??
+      entry.week,
+
+    firstNumberOneWeek:
+      history.find(
+        (item) =>
+          item.rank === 1
+      )?.week ??
+      null,
+
+    firstTop10Week:
+      history.find(
+        (item) =>
+          item.rank <= 10
+      )?.week ??
+      null,
+
+    currentTop10Streak:
+      0,
+
+    longestTop10Streak:
+      0,
+  };
+}
+
+/*
+ * =========================================================
+ * NEW PEAKS
+ * =========================================================
+ */
+
+function isNewCareerPeak(
+  entry: WeeklyChartEntry
+): boolean {
+  const history =
+    entry.chartHistory ?? [];
+
+  const previousHistory =
+    history.filter(
+      (item) =>
+        item.week !== entry.week
+    );
+
+  if (
+    previousHistory.length === 0
+  ) {
+    return false;
+  }
+
+  const previousPeak =
+    previousHistory.reduce(
+      (
+        peak,
+        item
+      ) =>
+        Math.min(
+          peak,
+          item.rank
+        ),
+      Infinity
+    );
+
+  return (
+    entry.rank <
+    previousPeak
   );
+}
+
+function findNewPeaks(
+  entries: WeeklyChartEntry[]
+): NewPeak[] {
+  return entries
+    .filter(
+      (entry) =>
+        isNewCareerPeak(entry)
+    )
+    .map(
+      (
+        entry
+      ): NewPeak => {
+        const previousHistory =
+          entry.chartHistory.filter(
+            (item) =>
+              item.week !==
+              entry.week
+          );
+
+        const previousPeak =
+          previousHistory.reduce(
+            (
+              peak,
+              item
+            ) =>
+              Math.min(
+                peak,
+                item.rank
+              ),
+            Infinity
+          );
+
+        return {
+          entry,
+          previousPeak:
+            previousPeak === Infinity
+              ? null
+              : previousPeak,
+        };
+      }
+    )
+    .sort(
+      (a, b) =>
+        a.entry.rank -
+        b.entry.rank
+    );
 }
 
 /*
@@ -784,78 +399,6 @@ function findReentries(
 
 /*
  * =========================================================
- * NEW PEAKS
- * =========================================================
- */
-
-function findNewPeaks(
-  entries: WeeklyChartEntry[]
-): NewPeak[] {
-  return entries
-    .filter(
-      (entry) =>
-        entry.chartHistory.length >
-        0
-    )
-    .map(
-      (
-        entry
-      ): NewPeak | null => {
-        const previousHistory =
-          entry.chartHistory.filter(
-            (history) =>
-              history.week !==
-              entry.week
-          );
-
-        if (
-          previousHistory.length ===
-          0
-        ) {
-          return null;
-        }
-
-        const previousPeak =
-          previousHistory.reduce(
-            (
-              peak,
-              history
-            ) =>
-              Math.min(
-                peak,
-                history.rank
-              ),
-            Infinity
-          );
-
-        if (
-          entry.rank <
-          previousPeak
-        ) {
-          return {
-            entry,
-            previousPeak,
-          };
-        }
-
-        return null;
-      }
-    )
-    .filter(
-      (
-        item
-      ): item is NewPeak =>
-        item !== null
-    )
-    .sort(
-      (a, b) =>
-        a.entry.rank -
-        b.entry.rank
-    );
-}
-
-/*
- * =========================================================
  * BIGGEST CLIMBER
  * =========================================================
  */
@@ -863,34 +406,33 @@ function findNewPeaks(
 function findBiggestClimber(
   entries: WeeklyChartEntry[]
 ): ChartMover | null {
-  const movers =
-    entries
-      .filter(
-        (entry) =>
-          entry.lastWeekRank !==
-            null &&
-          entry.lastWeekRank >
-            entry.rank
-      )
-      .map(
-        (entry) => ({
-          entry,
-          movement:
-            getRankMovement(
-              entry
-            ),
-        })
-      )
-      .sort(
-        (a, b) =>
-          b.movement -
-          a.movement
-      );
+  let biggest:
+    ChartMover | null =
+    null;
 
-  return (
-    movers[0] ??
-    null
-  );
+  for (const entry of entries) {
+    const movement =
+      getRankMovement(entry);
+
+    if (
+      movement <= 0
+    ) {
+      continue;
+    }
+
+    if (
+      biggest === null ||
+      movement >
+        biggest.movement
+    ) {
+      biggest = {
+        entry,
+        movement,
+      };
+    }
+  }
+
+  return biggest;
 }
 
 /*
@@ -902,35 +444,39 @@ function findBiggestClimber(
 function findBiggestTop10Climber(
   entries: WeeklyChartEntry[]
 ): ChartMover | null {
-  const movers =
-    entries
-      .filter(
-        (entry) =>
-          entry.rank <= 10 &&
-          entry.lastWeekRank !==
-            null &&
-          entry.lastWeekRank >
-            entry.rank
-      )
-      .map(
-        (entry) => ({
-          entry,
-          movement:
-            getRankMovement(
-              entry
-            ),
-        })
-      )
-      .sort(
-        (a, b) =>
-          b.movement -
-          a.movement
-      );
+  let biggest:
+    ChartMover | null =
+    null;
 
-  return (
-    movers[0] ??
-    null
-  );
+  for (const entry of entries) {
+    if (
+      entry.rank > 10
+    ) {
+      continue;
+    }
+
+    const movement =
+      getRankMovement(entry);
+
+    if (
+      movement <= 0
+    ) {
+      continue;
+    }
+
+    if (
+      biggest === null ||
+      movement >
+        biggest.movement
+    ) {
+      biggest = {
+        entry,
+        movement,
+      };
+    }
+  }
+
+  return biggest;
 }
 
 /*
@@ -942,38 +488,33 @@ function findBiggestTop10Climber(
 function findBiggestPointGainer(
   entries: WeeklyChartEntry[]
 ): PointMover | null {
-  const gainers =
-    entries
-      .filter(
-        (entry) =>
-          entry.points !==
-            undefined &&
-          entry.lastWeekPoints !==
-            undefined
-      )
-      .map(
-        (entry) => ({
-          entry,
-          pointChange:
-            getPointChange(
-              entry
-            ),
-        })
-      )
-      .filter(
-        (item) =>
-          item.pointChange > 0
-      )
-      .sort(
-        (a, b) =>
-          b.pointChange -
-          a.pointChange
-      );
+  let biggest:
+    PointMover | null =
+    null;
 
-  return (
-    gainers[0] ??
-    null
-  );
+  for (const entry of entries) {
+    const pointChange =
+      getPointChange(entry);
+
+    if (
+      pointChange <= 0
+    ) {
+      continue;
+    }
+
+    if (
+      biggest === null ||
+      pointChange >
+        biggest.pointChange
+    ) {
+      biggest = {
+        entry,
+        pointChange,
+      };
+    }
+  }
+
+  return biggest;
 }
 
 /*
@@ -989,8 +530,7 @@ function findMomentumSongs(
     .filter(
       (entry) =>
         entry.rank > 10 &&
-        entry.lastWeekRank !==
-          null &&
+        entry.lastWeekRank !== null &&
         entry.lastWeekRank >
           entry.rank &&
         entry.weeksOnChart >= 2
@@ -999,9 +539,7 @@ function findMomentumSongs(
       (entry) => ({
         entry,
         movement:
-          getRankMovement(
-            entry
-          ),
+          getRankMovement(entry),
       })
     )
     .sort(
@@ -1024,8 +562,7 @@ function findMajorDrops(
   return entries
     .filter(
       (entry) =>
-        entry.lastWeekRank !==
-          null &&
+        entry.lastWeekRank !== null &&
         entry.rank >
           entry.lastWeekRank
     )
@@ -1066,38 +603,48 @@ function findNotableSongs(
       WeeklyChartEntry
     >();
 
-  const add = (
-    entry: WeeklyChartEntry
-  ) => {
-    const key =
-      songKey(
-        entry.title,
-        entry.artist
+  const add =
+    (
+      entry: WeeklyChartEntry
+    ) => {
+      const key =
+        `${entry.title}|||${entry.artist}`
+          .trim()
+          .toLowerCase();
+
+      notable.set(
+        key,
+        entry
       );
+    };
 
-    notable.set(
-      key,
-      entry
-    );
-  };
-
-  for (const entry of top10Entries) {
+  for (
+    const entry of top10Entries
+  ) {
     add(entry);
   }
 
-  for (const entry of debuts) {
+  for (
+    const entry of debuts
+  ) {
     add(entry);
   }
 
-  for (const entry of reentries) {
+  for (
+    const entry of reentries
+  ) {
     add(entry);
   }
 
-  for (const item of newPeaks) {
+  for (
+    const item of newPeaks
+  ) {
     add(item.entry);
   }
 
-  for (const item of momentumSongs) {
+  for (
+    const item of momentumSongs
+  ) {
     add(item.entry);
   }
 
@@ -1112,342 +659,45 @@ function findNotableSongs(
 
 /*
  * =========================================================
- * UNIQUE NO. 1 SONGS
+ * LIGHTWEIGHT ARTIST STATS
+ * =========================================================
+ *
+ * Artist history is no longer scanned.
+ *
+ * The old version searched every week in entriesByWeek for
+ * every Top 10 artist. That was one of the major sources of
+ * unnecessary work.
+ *
+ * We keep an empty array for compatibility with the existing
+ * WeeklyHot100Analysis type.
  * =========================================================
  */
 
-function getUniqueNumberOneSongs(
-  payload: WeeklyChartPayload
-): Set<string> {
-  const songs =
-    new Set<string>();
-
-  for (const entries of Object.values(
-    payload.entriesByWeek
-  )) {
-    for (const entry of entries) {
-      if (
-        entry.rank !== 1
-      ) {
-        continue;
-      }
-
-      songs.add(
-        songKey(
-          entry.title,
-          entry.artist
-        )
-      );
-    }
-  }
-
-  return songs;
+function getNumberOneArtistStats():
+  ArtistHistoryStats[] {
+  return [];
 }
 
 /*
  * =========================================================
- * NO. 1 SONGS THIS YEAR
+ * HISTORICAL PLACEHOLDERS
+ * =========================================================
+ *
+ * These remain only because the current WeeklyHot100Analysis
+ * interface still contains these fields.
+ *
+ * They are deliberately NOT calculated.
  * =========================================================
  */
 
-function getNumberOneSongsThisYear(
-  payload: WeeklyChartPayload,
-  currentYear: number
-): number {
-  const songs =
-    new Set<string>();
-
-  for (const entries of Object.values(
-    payload.entriesByWeek
-  )) {
-    for (const entry of entries) {
-      if (
-        entry.rank !== 1
-      ) {
-        continue;
-      }
-
-      const timestamp =
-        parseChartDate(
-          entry.week
-        );
-
-      if (
-        timestamp === 0
-      ) {
-        continue;
-      }
-
-      const date =
-        new Date(
-          timestamp
-        );
-
-      if (
-        date.getFullYear() !==
-        currentYear
-      ) {
-        continue;
-      }
-
-      songs.add(
-        songKey(
-          entry.title,
-          entry.artist
-        )
-      );
-    }
-  }
-
-  return songs.size;
+function getUniqueNumberOneSongs():
+  number {
+  return 0;
 }
 
-/*
- * =========================================================
- * TOP 10 REFERENCE SONGS
- * =========================================================
- */
-
-function getTop10ReferenceSongs(
-  payload: WeeklyChartPayload
-): SongHistoryStats[] {
-  const songs =
-    new Map<
-      string,
-      {
-        title: string;
-        artist: string;
-      }
-    >();
-
-  for (const entries of Object.values(
-    payload.entriesByWeek
-  )) {
-    for (const entry of entries) {
-      if (
-        entry.rank > 10
-      ) {
-        continue;
-      }
-
-      const key =
-        songKey(
-          entry.title,
-          entry.artist
-        );
-
-      songs.set(
-        key,
-        {
-          title:
-            entry.title,
-          artist:
-            entry.artist,
-        }
-      );
-    }
-  }
-
-  return Array.from(
-    songs.values()
-  )
-    .map(
-      (song) =>
-        buildSongHistoryStats(
-          payload,
-          song.title,
-          song.artist
-        )
-    )
-    .sort(
-      (a, b) =>
-        b.totalTop10Weeks -
-        a.totalTop10Weeks
-    );
-}
-
-/*
- * =========================================================
- * HISTORICAL MILESTONES
- * =========================================================
- */
-
-function buildMilestones(
-  analysis: {
-    numberOne: WeeklyChartEntry | null;
-    numberOneSongStats: SongHistoryStats | null;
-    numberOneArtistStats: ArtistHistoryStats[];
-    uniqueNumberOneSongs: number;
-    numberOneSongsThisYear: number;
-    currentYear: number;
-  }
-): WeeklyHot100Analysis['milestones'] {
-  const milestones: WeeklyHot100Analysis['milestones'] =
-    [];
-
-  const numberOne =
-    analysis.numberOne;
-
-  if (!numberOne) {
-    return milestones;
-  }
-
-  const songStats =
-    analysis.numberOneSongStats;
-
-  /*
-   * First career No. 1.
-   */
-
-  for (const artist of analysis.numberOneArtistStats) {
-    if (
-      artist.numberOneHits ===
-      1
-    ) {
-      milestones.push({
-        type:
-          'firstNumberOne',
-        text:
-          `${artist.artist} earns a first career No. 1.`,
-      });
-    }
-  }
-
-  /*
-   * Artist No. 1 count.
-   */
-
-  for (const artist of analysis.numberOneArtistStats) {
-    milestones.push({
-      type:
-        'artistNumberOne',
-      text:
-        `${artist.artist} now has ${artist.numberOneHits} No. 1 hit${
-          artist.numberOneHits ===
-          1
-            ? ''
-            : 's'
-        }.`,
-    });
-  }
-
-  /*
-   * Song No. 1 count.
-   */
-
-  if (
-    songStats &&
-    songStats.totalNumberOneWeeks >
-      0
-  ) {
-    milestones.push({
-      type:
-        'songNumberOne',
-      text:
-        `"${songStats.title}" now has ${songStats.totalNumberOneWeeks} week${
-          songStats.totalNumberOneWeeks ===
-          1
-            ? ''
-            : 's'
-        } at No. 1.`,
-    });
-  }
-
-  /*
-   * Longest No. 1 reign.
-   *
-   * This is based on the song's own historical
-   * No. 1 weeks. We do not reference properties
-   * that are not part of SongHistoryStats.
-   */
-
-  if (
-    songStats &&
-    songStats.totalNumberOneWeeks >
-      1
-  ) {
-    milestones.push({
-      type:
-        'longestNumberOneReign',
-      text:
-        `"${songStats.title}" has ${songStats.totalNumberOneWeeks} weeks at No. 1.`,
-    });
-  }
-
-  /*
-   * Year No. 1 count.
-   */
-
-  if (
-    analysis.numberOneSongsThisYear >
-    0
-  ) {
-    milestones.push({
-      type:
-        'yearNumberOne',
-      text:
-        `This becomes the ${analysis.numberOneSongsThisYear}${getOrdinalSuffix(
-          analysis.numberOneSongsThisYear
-        )} unique No. 1 hit of ${analysis.currentYear}.`,
-    });
-  }
-
-  /*
-   * All-time unique No. 1 count.
-   */
-
-  if (
-    songStats &&
-    songStats.totalNumberOneWeeks ===
-      1
-  ) {
-    milestones.push({
-      type:
-        'allTimeNumberOne',
-      text:
-        `This is the ${analysis.uniqueNumberOneSongs}${getOrdinalSuffix(
-          analysis.uniqueNumberOneSongs
-        )} unique song to reach No. 1 in Elio Hot 100 history.`,
-    });
-  }
-
-  return milestones;
-}
-
-/*
- * =========================================================
- * ORDINALS
- * =========================================================
- */
-
-function getOrdinalSuffix(
-  value: number
-): string {
-  const mod100 =
-    value % 100;
-
-  if (
-    mod100 >= 11 &&
-    mod100 <= 13
-  ) {
-    return 'th';
-  }
-
-  switch (
-    value % 10
-  ) {
-    case 1:
-      return 'st';
-
-    case 2:
-      return 'nd';
-
-    case 3:
-      return 'rd';
-
-    default:
-      return 'th';
-  }
+function getNumberOneSongsThisYear():
+  number {
+  return 0;
 }
 
 /*
@@ -1459,6 +709,17 @@ function getOrdinalSuffix(
 export function analyzeWeeklyHot100(
   payload: WeeklyChartPayload
 ): WeeklyHot100Analysis {
+  /*
+   * Current week's entries only.
+   *
+   * We intentionally do not scan:
+   *
+   * payload.entriesByWeek
+   *
+   * except where the data has already been attached to
+   * each entry through chartHistory.
+   */
+
   const entries =
     payload.entries ?? [];
 
@@ -1469,11 +730,19 @@ export function analyzeWeeklyHot100(
         b.rank
     );
 
+  /*
+   * No. 1.
+   */
+
   const numberOne =
     sortedEntries.find(
       (entry) =>
         entry.rank === 1
     ) ?? null;
+
+  /*
+   * Top 10.
+   */
 
   const top10 =
     sortedEntries
@@ -1482,6 +751,10 @@ export function analyzeWeeklyHot100(
           entry.rank <= 10
       )
       .slice(0, 10);
+
+  /*
+   * Top 5.
+   */
 
   const top5 =
     sortedEntries
@@ -1492,17 +765,16 @@ export function analyzeWeeklyHot100(
       .slice(0, 5);
 
   /*
-   * Current Top 10 story data.
+   * Basic Top 10 stories.
    */
 
   const top10Stories =
     buildTop10Stories(
-      payload,
-      sortedEntries
+      top10
     );
 
   /*
-   * Other chart movement.
+   * Basic movements.
    */
 
   const biggestClimber =
@@ -1520,25 +792,45 @@ export function analyzeWeeklyHot100(
       sortedEntries
     );
 
+  /*
+   * Top 10 entries.
+   */
+
   const top10Entries =
     findTop10Entries(
       sortedEntries
     );
+
+  /*
+   * Debuts.
+   */
 
   const debuts =
     findDebuts(
       sortedEntries
     );
 
+  /*
+   * Re-entries.
+   */
+
   const reentries =
     findReentries(
       sortedEntries
     );
 
+  /*
+   * New peaks.
+   */
+
   const newPeaks =
     findNewPeaks(
       sortedEntries
     );
+
+  /*
+   * Other simple movement categories.
+   */
 
   const momentumSongs =
     findMomentumSongs(
@@ -1549,6 +841,10 @@ export function analyzeWeeklyHot100(
     findMajorDrops(
       sortedEntries
     );
+
+  /*
+   * Notable songs.
+   */
 
   const notableSongs =
     findNotableSongs(
@@ -1561,81 +857,53 @@ export function analyzeWeeklyHot100(
     );
 
   /*
-   * Historical No. 1 information.
+   * We keep these values for compatibility with the existing
+   * interface, but no historical scans are performed.
    */
-
-  const uniqueNumberOneSongSet =
-    getUniqueNumberOneSongs(
-      payload
-    );
-
-  const uniqueNumberOneSongs =
-    uniqueNumberOneSongSet.size;
 
   const currentYear =
     numberOne
-      ? new Date(
-          parseChartDate(
-            numberOne.week
-          )
-        ).getFullYear()
-      : new Date().getFullYear();
-
-  const numberOneSongsThisYear =
-    getNumberOneSongsThisYear(
-      payload,
-      currentYear
-    );
-
-  /*
-   * Current No. 1 song stats.
-   */
+      ? Number(
+          numberOne.week
+            .split('/')[2]
+        )
+      : new Date()
+          .getFullYear();
 
   const numberOneSongStats =
     numberOne
-      ? buildSongHistoryStats(
-          payload,
-          numberOne.title,
-          numberOne.artist
+      ? createEmptySongStats(
+          numberOne
         )
       : null;
 
-  /*
-   * Current No. 1 artist stats.
-   */
-
   const numberOneArtistStats =
-    numberOne
-      ? [
-          buildArtistHistoryStats(
-            payload,
-            numberOne.artist
-          ),
-        ]
-      : [];
+    getNumberOneArtistStats();
+
+  const uniqueNumberOneSongs =
+    getUniqueNumberOneSongs();
+
+  const numberOneSongsThisYear =
+    getNumberOneSongsThisYear();
 
   /*
-   * Reference songs for Top 10 longevity.
+   * No historical reference songs.
    */
 
-  const top10ReferenceSongs =
-    getTop10ReferenceSongs(
-      payload
-    );
+  const top10ReferenceSongs:
+    SongHistoryStats[] = [];
 
   /*
-   * Milestones.
+   * No historical milestones.
    */
 
-  const milestones =
-    buildMilestones({
-      numberOne,
-      numberOneSongStats,
-      numberOneArtistStats,
-      uniqueNumberOneSongs,
-      numberOneSongsThisYear,
-      currentYear,
-    });
+  const milestones:
+    WeeklyHot100Analysis['milestones'] =
+    [];
+
+  /*
+   * Return lightweight analysis.
+   */
 
   return {
     week:

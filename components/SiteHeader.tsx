@@ -99,6 +99,9 @@ export default function SiteHeader() {
   const [search, setSearch] =
     useState('');
 
+  const [searchOpen, setSearchOpen] =
+    useState(false);
+
   const [artistsLoading, setArtistsLoading] =
     useState(true);
 
@@ -210,6 +213,7 @@ export default function SiteHeader() {
     ]);
 
   const showResults =
+    searchOpen &&
     search.trim().length > 0 &&
     !artistsLoading;
 
@@ -234,8 +238,45 @@ export default function SiteHeader() {
   }
 
   /* =======================================================
+   * CLOSE SEARCH
+   * ===================================================== */
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setSearch('');
+  }
+
+  /* =======================================================
+   * SEARCH ICON
+   * ===================================================== */
+
+  function SearchIcon() {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        className="h-4 w-4 sm:h-[18px] sm:w-[18px]"
+        aria-hidden="true"
+      >
+        <circle
+          cx="11"
+          cy="11"
+          r="6.5"
+        />
+
+        <path
+          d="M16 16L21 21"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  /* =======================================================
    * RENDER
-   * ======================================================= */
+   * ===================================================== */
 
   return (
     <nav className="fixed left-0 right-0 top-0 z-[100] bg-black">
@@ -292,7 +333,10 @@ export default function SiteHeader() {
 
         <a
           href="/"
-          onClick={closeMobileMenu}
+          onClick={() => {
+            closeMobileMenu();
+            closeSearch();
+          }}
           className="flex-shrink-0 font-brown-bold text-sm uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF] sm:text-base"
         >
           ELIO CHARTS
@@ -329,7 +373,7 @@ export default function SiteHeader() {
             href="/year-end"
             className="font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
           >
-            YEAR-END CHARTS
+            YEAR-END
           </a>
 
           <a
@@ -358,57 +402,82 @@ export default function SiteHeader() {
           </a>
 
           {/* =================================================
-           * DESKTOP SEARCH
+           * RECORDS
            * ================================================= */}
 
-          <div className="relative ml-1 w-44">
+          <a
+            href="/records"
+            className="font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+          >
+            RECORDS
+          </a>
 
-            <label
-              htmlFor="site-header-search"
-              className="sr-only"
-            >
-              Search artists
-            </label>
+          {/* =================================================
+           * DESKTOP SEARCH BUTTON
+           * ================================================= */}
 
-            <input
-              id="site-header-search"
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
+          <div className="relative ml-1">
+
+            <button
+              type="button"
+              aria-label="Search artists"
+              aria-expanded={searchOpen}
+              onClick={() =>
+                setSearchOpen(
+                  (open) => !open
                 )
               }
-              placeholder="SEARCH ARTIST"
-              autoComplete="off"
-              className="h-8 w-full border border-white/60 bg-black px-3 font-brown-regular text-[0.65rem] uppercase tracking-[0.08em] text-white outline-none transition-colors duration-150 placeholder:text-white/50 hover:border-[#0050FF] focus:border-[#0050FF] focus:text-[#0050FF] focus:placeholder:text-[#0050FF]/60"
-            />
+              className="flex h-8 w-8 items-center justify-center border border-white/60 bg-black text-white transition-colors duration-150 hover:border-[#0050FF] hover:text-[#0050FF] active:border-[#0050FF] active:text-[#0050FF]"
+            >
+              <SearchIcon />
+            </button>
 
-            {/* DESKTOP SEARCH RESULTS */}
+            {searchOpen && (
+              <div className="absolute right-0 top-full z-[110] mt-1 w-52">
 
-            {showResults && (
-              <div className="absolute left-0 right-0 top-full z-[110] mt-1 max-h-80 overflow-y-auto border border-black/10 bg-white shadow-lg">
-
-                {filteredArtists.length > 0 ? (
-                  filteredArtists.map(
-                    (artist) => (
-                      <a
-                        key={artist}
-                        href={artistHref(
-                          artist
-                        )}
-                        className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
-                      >
-                        {artist}
-                      </a>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
                     )
-                  )
-                ) : (
-                  <div className="px-3 py-3">
+                  }
+                  placeholder="SEARCH ARTIST"
+                  autoComplete="off"
+                  autoFocus
+                  className="h-8 w-full border border-black/20 bg-white px-3 font-brown-regular text-[0.65rem] uppercase tracking-[0.08em] text-black outline-none placeholder:text-black/40 focus:border-[#0050FF]"
+                />
 
-                    <p className="font-brown-regular text-xs uppercase tracking-[0.12em] text-black/50">
-                      NO ARTISTS FOUND
-                    </p>
+                {showResults && (
+                  <div className="mt-1 max-h-80 overflow-y-auto border border-black/10 bg-white shadow-lg">
+
+                    {filteredArtists.length > 0 ? (
+                      filteredArtists.map(
+                        (artist) => (
+                          <a
+                            key={artist}
+                            href={artistHref(
+                              artist
+                            )}
+                            onClick={() => {
+                              closeSearch();
+                            }}
+                            className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
+                          >
+                            {artist}
+                          </a>
+                        )
+                      )
+                    ) : (
+                      <div className="px-3 py-3">
+
+                        <p className="font-brown-regular text-xs uppercase tracking-[0.12em] text-black/50">
+                          NO ARTISTS FOUND
+                        </p>
+
+                      </div>
+                    )}
 
                   </div>
                 )}
@@ -421,67 +490,77 @@ export default function SiteHeader() {
         </div>
 
         {/* =================================================
-         * MOBILE SEARCH
+         * MOBILE SEARCH BUTTON
          * ================================================= */}
 
-        <div className="ml-auto lg:hidden">
+        <div className="relative ml-auto lg:hidden">
 
-          <div className="relative w-36 sm:w-48">
+          <button
+            type="button"
+            aria-label="Search artists"
+            aria-expanded={searchOpen}
+            onClick={() =>
+              setSearchOpen(
+                (open) => !open
+              )
+            }
+            className="flex h-8 w-8 items-center justify-center border border-white/60 bg-black text-white transition-colors duration-150 hover:border-[#0050FF] hover:text-[#0050FF] active:border-[#0050FF] active:text-[#0050FF] sm:h-9 sm:w-9"
+          >
+            <SearchIcon />
+          </button>
 
-            <label
-              htmlFor="site-header-search-mobile"
-              className="sr-only"
-            >
-              Search artists
-            </label>
+          {searchOpen && (
+            <div className="absolute right-0 top-full z-[110] mt-1 w-52 sm:w-60">
 
-            <input
-              id="site-header-search-mobile"
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-              placeholder="SEARCH ARTIST"
-              autoComplete="off"
-              className="h-8 w-full border border-white/60 bg-black px-2.5 font-brown-regular text-[0.6rem] uppercase tracking-[0.06em] text-white outline-none transition-colors duration-150 placeholder:text-white/50 hover:border-[#0050FF] focus:border-[#0050FF] focus:text-[#0050FF] focus:placeholder:text-[#0050FF]/60 sm:h-9 sm:text-xs"
-            />
-
-            {/* MOBILE SEARCH RESULTS */}
-
-            {showResults && (
-              <div className="absolute right-0 top-full z-[110] mt-1 max-h-72 w-full overflow-y-auto border border-black/10 bg-white shadow-lg">
-
-                {filteredArtists.length > 0 ? (
-                  filteredArtists.map(
-                    (artist) => (
-                      <a
-                        key={artist}
-                        href={artistHref(
-                          artist
-                        )}
-                        className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
-                      >
-                        {artist}
-                      </a>
-                    )
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
                   )
-                ) : (
-                  <div className="px-3 py-3">
+                }
+                placeholder="SEARCH ARTIST"
+                autoComplete="off"
+                autoFocus
+                className="h-8 w-full border border-black/20 bg-white px-3 font-brown-regular text-[0.65rem] uppercase tracking-[0.08em] text-black outline-none placeholder:text-black/40 focus:border-[#0050FF] sm:h-9 sm:text-xs"
+              />
 
-                    <p className="font-brown-regular text-xs uppercase tracking-[0.12em] text-black/50">
-                      NO ARTISTS FOUND
-                    </p>
+              {showResults && (
+                <div className="mt-1 max-h-72 overflow-y-auto border border-black/10 bg-white shadow-lg">
 
-                  </div>
-                )}
+                  {filteredArtists.length > 0 ? (
+                    filteredArtists.map(
+                      (artist) => (
+                        <a
+                          key={artist}
+                          href={artistHref(
+                            artist
+                          )}
+                          onClick={() => {
+                            closeSearch();
+                          }}
+                          className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
+                        >
+                          {artist}
+                        </a>
+                      )
+                    )
+                  ) : (
+                    <div className="px-3 py-3">
 
-              </div>
-            )}
+                      <p className="font-brown-regular text-xs uppercase tracking-[0.12em] text-black/50">
+                        NO ARTISTS FOUND
+                      </p>
 
-          </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+            </div>
+          )}
 
         </div>
 
@@ -527,7 +606,7 @@ export default function SiteHeader() {
                 onClick={closeMobileMenu}
                 className="border-b border-white/10 py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
               >
-                YEAR-END CHARTS
+                YEAR-END
               </a>
 
               <a
@@ -553,9 +632,21 @@ export default function SiteHeader() {
               <a
                 href="/awards"
                 onClick={closeMobileMenu}
-                className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                className="border-b border-white/10 py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
               >
                 AWARDS
+              </a>
+
+              {/* =================================================
+               * MOBILE RECORDS
+               * ================================================= */}
+
+              <a
+                href="/records"
+                onClick={closeMobileMenu}
+                className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+              >
+                RECORDS
               </a>
 
             </div>
