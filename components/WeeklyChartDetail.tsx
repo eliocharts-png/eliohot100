@@ -175,6 +175,56 @@ export default function WeeklyChartDetail({
       )})`;
 
     try {
+      const imageUrl =
+        `${window.location.origin}/api/weekly-share?week=${encodeURIComponent(
+          selectedWeek
+        )}`;
+
+      const response =
+        await fetch(imageUrl);
+
+      if (
+        response.ok &&
+        typeof File !== 'undefined' &&
+        typeof navigator !== 'undefined' &&
+        navigator.share
+      ) {
+        const imageBlob =
+          await response.blob();
+
+        const imageFile =
+          new File(
+            [imageBlob],
+            `elio-hot-100-${selectedWeek.replace(
+              /\//g,
+              '-'
+            )}.png`,
+            {
+              type:
+                imageBlob.type ||
+                'image/png',
+            }
+          );
+
+        const canShareFiles =
+          typeof navigator.canShare ===
+            'function'
+            ? navigator.canShare({
+                files: [imageFile],
+              })
+            : true;
+
+        if (canShareFiles) {
+          await navigator.share({
+            title: shareTitle,
+            text: `${shareText}\n${shareUrl}`,
+            files: [imageFile],
+          });
+
+          return;
+        }
+      }
+
       if (
         typeof navigator !== 'undefined' &&
         navigator.share
@@ -184,6 +234,7 @@ export default function WeeklyChartDetail({
           text: shareText,
           url: shareUrl,
         });
+
         return;
       }
 
