@@ -23,8 +23,7 @@ export async function generateMetadata({
     ? `Elio Hot 100 Top 10 (chart dated ${dateLabel})`
     : 'Elio Hot 100 Top 10';
 
-  const baseUrl =
-    'https://eliocharts.vercel.app';
+  const baseUrl = 'https://eliocharts.vercel.app';
 
   const imagePath = week
     ? `${baseUrl}/api/weekly-share?week=${encodeURIComponent(week)}`
@@ -35,16 +34,19 @@ export async function generateMetadata({
     : `${baseUrl}/weekly/share`;
 
   return {
+    metadataBase: new URL(baseUrl),
+
     title,
     description,
 
-    metadataBase: new URL(baseUrl),
-
     openGraph: {
+      type: 'article',
       title,
       description,
       url: pageUrl,
-      type: 'article',
+      siteName: 'Elio Charts',
+      locale: 'en_US',
+
       images: [
         {
           url: imagePath,
@@ -59,6 +61,8 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title,
       description,
+      site: '@eliocharts',
+
       images: [
         {
           url: imagePath,
