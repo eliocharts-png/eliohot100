@@ -5,7 +5,6 @@ import path from 'node:path';
 import {
   fetchWeeklyChartData,
   sheetSources,
-  formatDateLabel,
 } from '@/lib/chartData';
 
 export const runtime = 'nodejs';
@@ -13,6 +12,26 @@ export const dynamic = 'force-dynamic';
 
 const WIDTH = 1637;
 const HEIGHT = 2048;
+
+const LAYOUT = {
+  firstLineY: 816,
+  rowHeight: 122.3,
+
+  titleX: 205,
+  artistX: 960,
+  lastWeekX: 1510,
+
+  titleFontSize: 48,
+  artistFontSize: 46,
+  lastWeekFontSize: 46,
+
+  textOffsetY: 12,
+
+  weeksNo1X: 205,
+  weeksNo1Y: 620,
+  weeksNo1Height: 52,
+  weeksNo1PaddingX: 24,
+};
 
 function bufferToArrayBuffer(
   buffer: Buffer
@@ -32,52 +51,39 @@ function bufferToDataUri(
   )}`;
 }
 
-function shortenText(
-  value: string,
-  maxLength: number
-): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return `${value.slice(0, maxLength - 1)}…`;
-}
-
-function getRowLineY(
-  rank: number
-): number {
-  /*
-   * These coordinates follow the blue divider
-   * lines in the supplied 1637 × 2048 template.
-   */
-  const firstLine = 816;
-  const rowHeight = 122.3;
-
-  return Math.round(
-    firstLine + (rank - 1) * rowHeight
-  );
-}
-
-function getRowTextY(
-  rank: number
-): number {
-  /*
-   * The text sits above each divider line,
-   * matching the layout of the template.
-   */
-  return getRowLineY(rank) - 82;
-}
-
-function getRowArtistY(
-  rank: number
-): number {
-  return getRowLineY(rank) - 43;
-}
-
 function getRowCenterY(
   rank: number
 ): number {
-  return getRowLineY(rank) - 61;
+  return (
+    LAYOUT.firstLineY +
+    (rank - 1) * LAYOUT.rowHeight -
+    LAYOUT.rowHeight / 2
+  );
+}
+
+/*
+ * Reduce the title font size for longer titles.
+ *
+ * The title itself is NEVER shortened or truncated.
+ */
+function getTitleFontSize(
+  title: string
+): number {
+  const length = title.length;
+
+  if (length <= 24) return 48;
+  if (length <= 30) return 44;
+  if (length <= 36) return 40;
+  if (length <= 42) return 37;
+  if (length <= 48) return 34;
+  if (length <= 55) return 31;
+  if (length <= 65) return 28;
+  if (length <= 75) return 25;
+  if (length <= 90) return 22;
+  if (length <= 105) return 19;
+  if (length <= 120) return 17;
+
+  return 15;
 }
 
 export async function GET(
@@ -121,11 +127,15 @@ export async function GET(
         .slice(0, 10);
 
     /*
-     * =========================================
-     * LOAD TEMPLATE
-     * =========================================
+     * Finished share-image template.
+     *
+     * This already contains:
+     * - rank numbers
+     * - LAST WEEK label
+     * - ELIOCHARTS branding
+     * - blue divider lines
+     * - overall design
      */
-
     const templatePath =
       path.join(
         process.cwd(),
@@ -146,51 +156,48 @@ export async function GET(
       );
 
     /*
-     * =========================================
-     * LOAD GOTHAM FONTS
-     * =========================================
+     * Load the two actual Gotham files.
+     *
+     * GothamBlack is used ONLY for:
+     * - song titles
+     * - Weeks At No. 1
+     *
+     * GothamRegular is used ONLY for:
+     * - artist names
+     * - Last Week ranks
      */
-
-    const gothamBoldPath =
+    const gothamBlackPath =
       path.join(
         process.cwd(),
         'fonts',
-        'Gotham Bold.otf'
+        'Gotham Black.otf'
       );
 
-    const gothamMediumPath =
+    const gothamRegularPath =
       path.join(
         process.cwd(),
         'fonts',
-        'Gotham Medium.otf'
+        'Gotham Regular.otf'
       );
 
-    const gothamBold =
+    const gothamBlack =
       fs.readFileSync(
-        gothamBoldPath
+        gothamBlackPath
       );
 
-    const gothamMedium =
+    const gothamRegular =
       fs.readFileSync(
-        gothamMediumPath
+        gothamRegularPath
       );
 
-    /*
-     * =========================================
-     * DATE
-     * =========================================
-     */
+    const numberOne =
+      topTen.find(
+        (entry) =>
+          entry.rank === 1
+      );
 
-    const chartDate =
-      formatDateLabel(
-        chart.week
-      ).toUpperCase();
-
-    /*
-     * =========================================
-     * IMAGE
-     * =========================================
-     */
+    const weeksAtNumberOne =
+      chart.weeksAtNumberOne ?? 0;
 
     return new ImageResponse(
       (
@@ -201,14 +208,10 @@ export async function GET(
             display: 'flex',
             position: 'relative',
             overflow: 'hidden',
-            background: '#000',
+            background: '#000000',
           }}
         >
-
-          {/* =================================
-              ORIGINAL TEMPLATE
-          ================================= */}
-
+          {/* TEMPLATE */}
           <img
             src={templateDataUri}
             alt=""
@@ -223,191 +226,174 @@ export async function GET(
             }}
           />
 
-          {/* =================================
-              CHART DATE
-          ================================= */}
-
-          <div
-            style={{
-              position: 'absolute',
-              left: '108px',
-              top: '622px',
-              display: 'flex',
-              fontFamily:
-                'Gotham Medium',
-              fontSize: '27px',
-              lineHeight: 1,
-              letterSpacing:
-                '0.08em',
-              color: '#ffffff',
-              textTransform:
-                'uppercase',
-            }}
-          >
-            {chartDate}
-          </div>
-
-          {/* =================================
-              WEEKS AT NO. 1
-          ================================= */}
-
-          <div
-            style={{
-              position: 'absolute',
-              right: '108px',
-              top: '622px',
-              display: 'flex',
-              fontFamily:
-                'Gotham Medium',
-              fontSize: '27px',
-              lineHeight: 1,
-              letterSpacing:
-                '0.08em',
-              color: '#ffffff',
-              textTransform:
-                'uppercase',
-            }}
-          >
-            {chart.weeksAtNumberOne}{' '}
-            {chart.weeksAtNumberOne === 1
-              ? 'WEEK'
-              : 'WEEKS'}{' '}
-            AT NO. 1
-          </div>
-
-          {/* =================================
-              TOP 10
-          ================================= */}
-
+          {/* TOP 10 */}
           {topTen.map(
             (entry) => {
               const rank =
                 entry.rank;
 
+              /*
+               * NEVER truncate the song title.
+               */
               const title =
-                shortenText(
-                  entry.title,
-                  48
-                );
+                String(
+                  entry.title || ''
+                ).toUpperCase();
 
               const artist =
-                shortenText(
-                  entry.artist,
-                  48
+                String(
+                  entry.artist || ''
                 );
 
               const lastWeek =
                 entry.lastWeekRank ??
                 '—';
 
+              const titleFontSize =
+                getTitleFontSize(
+                  title
+                );
+
+              const centerY =
+                getRowCenterY(rank) +
+                LAYOUT.textOffsetY;
+
               return (
                 <div
                   key={`${rank}-${entry.title}-${entry.artist}`}
                   style={{
                     position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    width: WIDTH,
-                    height: HEIGHT,
+                    inset: 0,
                     display: 'flex',
                   }}
                 >
-
-                  {/* =================================
-                      SONG TITLE
-                  ================================= */}
-
+                  {/* SONG TITLE — GOTHAM BLACK */}
                   <div
                     style={{
                       position: 'absolute',
-                      left: '205px',
-                      top: `${getRowTextY(
-                        rank
-                      )}px`,
-                      width: '1150px',
-                      height: '42px',
+                      left: `${LAYOUT.titleX}px`,
+                      top: `${centerY - 27}px`,
+                      width: '730px',
+                      height: '54px',
+
                       display: 'flex',
-                      alignItems:
-                        'center',
-                      overflow: 'hidden',
-                      whiteSpace:
-                        'nowrap',
+                      alignItems: 'center',
+
+                      overflow: 'visible',
+                      whiteSpace: 'nowrap',
+
                       fontFamily:
-                        'Gotham Bold',
-                      fontSize: '32px',
+                        'GothamBlack',
+
+                      fontSize: `${titleFontSize}px`,
                       lineHeight: 1,
                       letterSpacing:
-                        '-0.015em',
+                        '-0.02em',
+
                       color: '#ffffff',
                     }}
                   >
                     {title}
                   </div>
 
-                  {/* =================================
-                      ARTIST
-                  ================================= */}
-
+                  {/* ARTIST — GOTHAM REGULAR */}
                   <div
                     style={{
                       position: 'absolute',
-                      left: '205px',
-                      top: `${getRowArtistY(
-                        rank
-                      )}px`,
-                      width: '1150px',
-                      height: '32px',
+                      left: `${LAYOUT.artistX}px`,
+                      top: `${centerY - 26}px`,
+                      width: '472px',
+                      height: '52px',
+
                       display: 'flex',
-                      alignItems:
-                        'center',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+
                       overflow: 'hidden',
-                      whiteSpace:
-                        'nowrap',
+                      whiteSpace: 'nowrap',
+
                       fontFamily:
-                        'Gotham Medium',
-                      fontSize: '22px',
+                        'GothamRegular',
+
+                      fontSize: `${LAYOUT.artistFontSize}px`,
                       lineHeight: 1,
                       letterSpacing:
-                        '0.01em',
+                        '-0.015em',
+
                       color: '#ffffff',
                     }}
                   >
                     {artist}
                   </div>
 
-                  {/* =================================
-                      LAST WEEK POSITION
-                  ================================= */}
-
+                  {/* LAST WEEK — GOTHAM REGULAR */}
                   <div
                     style={{
                       position: 'absolute',
-                      left: '1475px',
-                      top: `${getRowCenterY(
-                        rank
-                      ) - 20}px`,
-                      width: '80px',
-                      height: '40px',
+                      left: `${LAYOUT.lastWeekX}px`,
+                      top: `${centerY - 26}px`,
+                      width: '70px',
+                      height: '52px',
+
                       display: 'flex',
-                      alignItems:
-                        'center',
-                      justifyContent:
-                        'center',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+
                       fontFamily:
-                        'Gotham Medium',
-                      fontSize: '30px',
+                        'GothamRegular',
+
+                      fontSize: `${LAYOUT.lastWeekFontSize}px`,
                       lineHeight: 1,
-                      color: '#ffffff',
+
+                      color: '#296af7',
                     }}
                   >
                     {lastWeek}
                   </div>
-
                 </div>
               );
             }
           )}
 
+          {/* WEEKS AT NO. 1 — GOTHAM BLACK */}
+          {numberOne && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${LAYOUT.weeksNo1X}px`,
+                top: `${LAYOUT.weeksNo1Y}px`,
+                height: `${LAYOUT.weeksNo1Height}px`,
+
+                display: 'flex',
+                alignItems: 'center',
+
+                paddingLeft:
+                  `${LAYOUT.weeksNo1PaddingX}px`,
+                paddingRight:
+                  `${LAYOUT.weeksNo1PaddingX}px`,
+
+                borderRadius: '999px',
+                background: '#296af7',
+
+                fontFamily:
+                  'GothamBlack',
+
+                fontSize: '34px',
+                lineHeight: 1,
+                letterSpacing:
+                  '-0.01em',
+
+                color: '#ffffff',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {weeksAtNumberOne}{' '}
+              {weeksAtNumberOne === 1
+                ? 'WEEK'
+                : 'WEEKS'}{' '}
+              AT NO. 1
+            </div>
+          )}
         </div>
       ),
       {
@@ -416,27 +402,29 @@ export async function GET(
 
         fonts: [
           {
-            name: 'Gotham Bold',
+            name: 'GothamBlack',
             data:
               bufferToArrayBuffer(
-                gothamBold
+                gothamBlack
               ),
-            weight: 700,
             style: 'normal',
           },
           {
-            name: 'Gotham Medium',
+            name: 'GothamRegular',
             data:
               bufferToArrayBuffer(
-                gothamMedium
+                gothamRegular
               ),
-            weight: 500,
             style: 'normal',
           },
         ],
+
+        headers: {
+          'Cache-Control':
+            'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
       }
     );
-
   } catch (error) {
     console.error(
       'Weekly share image generation failed:',
@@ -444,9 +432,15 @@ export async function GET(
     );
 
     return new Response(
-      'Unable to generate weekly share image.',
+      error instanceof Error
+        ? `Weekly share image generation failed: ${error.message}`
+        : `Weekly share image generation failed: ${String(error)}`,
       {
         status: 500,
+        headers: {
+          'Content-Type':
+            'text/plain; charset=utf-8',
+        },
       }
     );
   }
