@@ -521,7 +521,7 @@ export default function WeeklyChartDetail({
                                   {entry.title}
                                 </p>
 
-                                <span className="inline-flex flex-shrink-0 items-center justify-center bg-[#0050FF] px-1.5 py-1 text-center text-[0.43rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-white">
+                                <span className="inline-flex flex-shrink-0 items-center bg-[#0050FF] px-1.5 py-1 text-[0.43rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-white">
                                   {currentWeeksAtNumberOne}{' '}
                                   {currentWeeksAtNumberOne ===
                                   1
@@ -810,7 +810,7 @@ export default function WeeklyChartDetail({
                                 {entry.title}
                               </p>
 
-                              <span className="inline-flex flex-shrink-0 items-center justify-center bg-[#0050FF] px-2.5 py-2 text-center text-[0.58rem] font-brown-regular uppercase leading-none tracking-[0.06em] text-white">
+                              <span className="inline-flex flex-shrink-0 items-center bg-[#0050FF] px-2.5 py-2 text-[0.58rem] font-brown-regular uppercase leading-none tracking-[0.06em] text-white">
                                 {currentWeeksAtNumberOne}{' '}
                                 {currentWeeksAtNumberOne ===
                                 1
