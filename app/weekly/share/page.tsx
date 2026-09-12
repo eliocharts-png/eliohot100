@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { formatDateLabel } from '@/lib/chartData';
 
@@ -24,9 +23,13 @@ export async function generateMetadata({
     ? `Elio Hot 100 Top 10 (chart dated ${dateLabel})`
     : 'Elio Hot 100 Top 10';
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    'https://shiny-space-giggle-6vjx7prq4qwc6qj-3000.app.github.dev';
+
   const imagePath = week
-    ? `/api/weekly-share?week=${encodeURIComponent(week)}`
-    : '/api/weekly-share';
+    ? `${baseUrl}/api/weekly-share?week=${encodeURIComponent(week)}`
+    : `${baseUrl}/api/weekly-share`;
 
   return {
     title,
@@ -36,6 +39,9 @@ export async function generateMetadata({
       title,
       description,
       type: 'article',
+      url: week
+        ? `${baseUrl}/weekly/share?week=${encodeURIComponent(week)}`
+        : `${baseUrl}/weekly/share`,
       images: [
         {
           url: imagePath,
@@ -65,5 +71,20 @@ export default async function WeeklySharePage({
     ? `/weekly?week=${encodeURIComponent(week)}`
     : '/weekly';
 
-  redirect(destination);
+  return (
+    <html>
+      <head>
+        <meta
+          httpEquiv="refresh"
+          content={`2;url=${destination}`}
+        />
+      </head>
+
+      <body>
+        <p>
+          Redirecting to Elio Hot 100...
+        </p>
+      </body>
+    </html>
+  );
 }
