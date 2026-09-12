@@ -68,12 +68,9 @@ export default function WeeklyArtistChartDetail({
 }: WeeklyArtistChartDetailProps) {
   /*
    * =========================================================
-   * MOBILE EXPANSION
+   * CURRENT WEEK
    * =========================================================
    */
-
-  const [expandedRank, setExpandedRank] =
-    useState<number | null>(null);
 
   const [selectedWeek, setSelectedWeek] =
     useState(week);
@@ -87,15 +84,9 @@ export default function WeeklyArtistChartDetail({
   const [artistImages, setArtistImages] =
     useState<Record<string, string>>({});
 
-  const toggleEntry = (rank: number) => {
-    setExpandedRank((current) =>
-      current === rank ? null : rank
-    );
-  };
-
   /*
    * =========================================================
-   * CURRENT WEEK
+   * CURRENT ENTRIES
    * =========================================================
    */
 
@@ -288,10 +279,6 @@ export default function WeeklyArtistChartDetail({
             setSelectedWeek(
               event.target.value
             );
-
-            setExpandedRank(
-              null
-            );
           }}
           className="cursor-pointer appearance-none rounded-none bg-black px-5 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.2em] text-white outline-none sm:text-sm"
         >
@@ -348,10 +335,6 @@ export default function WeeklyArtistChartDetail({
             {currentEntries.map(
               (entry) => {
 
-                const isExpanded =
-                  expandedRank ===
-                  entry.rank;
-
                 const artistImage =
                   getArtistImage(
                     entry
@@ -364,83 +347,20 @@ export default function WeeklyArtistChartDetail({
                   >
 
                     {/* =================================
-                        #1 WEEKS AT NO. 1 BANNER
-                    ================================== */}
-
-                    {entry.rank === 1 && (
-                      <>
-
-                        {/* DESKTOP */}
-
-                        <div className="hidden sm:block">
-
-                          <div className="w-[16.8rem] bg-black px-3 py-2 text-center">
-
-                            <p className="text-sm font-brown-regular uppercase tracking-[0.12em] text-white">
-                              {
-                                weeksAtNumberOne
-                              }{' '}
-                              {weeksAtNumberOne ===
-                              1
-                                ? 'WEEK'
-                                : 'WEEKS'}{' '}
-                              AT NO. 1
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                        {/* MOBILE */}
-
-                        <div className="block px-3 pt-3 sm:hidden">
-
-                          <div className="bg-black px-3 py-2 text-center">
-
-                            <p className="text-xs font-brown-regular uppercase tracking-[0.1em] text-white">
-                              {
-                                weeksAtNumberOne
-                              }{' '}
-                              {weeksAtNumberOne ===
-                              1
-                                ? 'WEEK'
-                                : 'WEEKS'}{' '}
-                              AT NO. 1
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                      </>
-                    )}
-
-                    {/* =================================
                         MOBILE
                     ================================== */}
 
                     <div className="sm:hidden">
 
-                      <div className="flex items-center gap-1.5 px-3 py-3">
+                      <div className="relative flex w-full items-center">
 
                         {/* MOVEMENT + BULLET */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="flex h-[4.6rem] w-7 flex-shrink-0 flex-col overflow-hidden transition hover:opacity-75"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse artist details'
-                              : 'Show artist details'
-                          }
-                        >
+                        <div className="flex h-[4.1rem] w-7 flex-shrink-0 flex-col overflow-hidden">
 
-                          <div className="flex flex-1 items-center justify-center bg-black/10">
+                          {/* MOVEMENT */}
+
+                          <div className="flex min-h-0 flex-1 items-center justify-center bg-black/10">
 
                             <img
                               src={`/icons/${getIconFilename(
@@ -450,53 +370,40 @@ export default function WeeklyArtistChartDetail({
                                 entry.movementIcon ??
                                 'movement'
                               }
-                              className="h-5 w-5 object-contain"
+                              className="h-6 w-6 object-contain"
                             />
 
                           </div>
 
-                          <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
+                          {/* BULLET */}
+
+                          <div className="flex min-h-0 flex-1 items-center justify-center bg-[#0050FF]">
 
                             {entry.showBullet && (
                               <img
                                 src="/icons/bullet.PNG"
                                 alt="positive movement"
-                                className="h-5 w-5 object-contain"
+                                className="h-6 w-6 object-contain"
                               />
                             )}
 
                           </div>
 
-                        </button>
+                        </div>
 
                         {/* RANK */}
 
-                        <div className="flex w-7 flex-shrink-0 items-center justify-center">
+                        <div className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center">
 
                           <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
-                            {
-                              entry.rank
-                            }
+                            {entry.rank}
                           </p>
 
                         </div>
 
                         {/* ARTIST IMAGE */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="h-[4.6rem] w-[4.6rem] flex-shrink-0 cursor-pointer overflow-hidden bg-black/5"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse artist details'
-                              : 'Show artist details'
-                          }
-                        >
+                        <div className="h-[4.1rem] w-[4.1rem] flex-shrink-0 overflow-hidden bg-black/5">
 
                           {artistImage ? (
                             <img
@@ -512,116 +419,103 @@ export default function WeeklyArtistChartDetail({
                             </div>
                           )}
 
-                        </button>
+                        </div>
 
                         {/* ARTIST NAME */}
 
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 px-2 py-2 pr-1">
 
-                          <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
-                            {
-                              entry.artist
-                            }
-                          </p>
+                          <div className="flex h-full flex-col justify-center">
 
-                        </div>
+                            {entry.rank === 1 ? (
+                              <>
 
-                      </div>
+                                {/* WEEKS AT NO. 1 */}
 
-                      {/* MOBILE PEN */}
+                                <span className="mb-1 inline-flex w-fit items-center bg-[#0050FF] px-2 py-1.5 text-[0.58rem] font-brown-bold uppercase leading-none tracking-[0.05em] text-white">
+                                  {weeksAtNumberOne}{' '}
+                                  {weeksAtNumberOne ===
+                                  1
+                                    ? 'WEEK'
+                                    : 'WEEKS'}{' '}
+                                  AT NO. 1
+                                </span>
 
-                      {isExpanded && (
-                        <div className="px-3 pb-3">
-
-                          <div
-                            className="relative bg-black px-3 py-3"
-                            style={{
-                              clipPath:
-                                'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
-                            }}
-                          >
-
-                            <div className="grid grid-cols-4 gap-1 text-center text-white">
-
-                              {/* LAST WEEK */}
-
-                              <div>
-
-                                <p className="text-[0.48rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
-                                  LAST
-                                  <br />
-                                  WEEK
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold">
+                                <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
                                   {
-                                    entry.lastWeekRank ??
-                                    '—'
+                                    entry.artist
                                   }
                                 </p>
 
-                              </div>
-
-                              {/* PEAK */}
-
-                              <div>
-
-                                <p className="text-[0.48rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
-                                  PEAK
-                                  <br />
-                                  POSITION
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold">
-                                  {
-                                    entry.peakPosition
-                                  }
-                                </p>
-
-                              </div>
-
-                              {/* WEEKS */}
-
-                              <div>
-
-                                <p className="text-[0.48rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
-                                  WEEKS ON
-                                  <br />
-                                  CHART
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold">
-                                  {
-                                    entry.weeksOnChart
-                                  }
-                                </p>
-
-                              </div>
-
-                              {/* SONGS */}
-
-                              <div>
-
-                                <p className="text-[0.48rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
-                                  SONGS
-                                  <br />
-                                  THIS WEEK
-                                </p>
-
-                                <p className="mt-1 text-sm font-brown-bold">
-                                  {
-                                    entry.songsOnChart
-                                  }
-                                </p>
-
-                              </div>
-
-                            </div>
+                              </>
+                            ) : (
+                              <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
+                                {
+                                  entry.artist
+                                }
+                              </p>
+                            )}
 
                           </div>
 
                         </div>
-                      )}
+
+                        {/* MOBILE STATS */}
+
+                        <div className="flex w-[4.2rem] flex-shrink-0 flex-col items-end justify-center py-1 pr-1">
+
+                          {/* LAST WEEK */}
+
+                          <div className="flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
+
+                            <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+                              LW:
+                            </span>
+
+                            <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                              {
+                                entry.lastWeekRank ??
+                                '—'
+                              }
+                            </span>
+
+                          </div>
+
+                          {/* PEAK */}
+
+                          <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
+
+                            <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+                              PEAK:
+                            </span>
+
+                            <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                              {
+                                entry.peakPosition
+                              }
+                            </span>
+
+                          </div>
+
+                          {/* WEEKS */}
+
+                          <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
+
+                            <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+                              WEEKS:
+                            </span>
+
+                            <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                              {
+                                entry.weeksOnChart
+                              }
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
 
                     </div>
 
@@ -715,9 +609,7 @@ export default function WeeklyArtistChartDetail({
 
                         </div>
 
-                        {/* =================================
-                            MOVEMENT + BULLET
-                        ================================== */}
+                        {/* MOVEMENT + BULLET */}
 
                         <div className="flex w-12 flex-shrink-0 flex-col">
 
@@ -750,9 +642,7 @@ export default function WeeklyArtistChartDetail({
 
                         </div>
 
-                        {/* =================================
-                            RANK
-                        ================================== */}
+                        {/* RANK */}
 
                         <div className="flex w-24 flex-shrink-0 items-center justify-center">
 
@@ -774,20 +664,7 @@ export default function WeeklyArtistChartDetail({
 
                         {/* ARTIST IMAGE */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleEntry(
-                              entry.rank
-                            )
-                          }
-                          className="h-[7.8rem] w-[7.8rem] flex-shrink-0 cursor-pointer overflow-hidden bg-black/5"
-                          aria-label={
-                            isExpanded
-                              ? 'Collapse artist details'
-                              : 'Show artist details'
-                          }
-                        >
+                        <div className="h-[7.8rem] w-[7.8rem] flex-shrink-0 overflow-hidden bg-black/5">
 
                           {artistImage ? (
                             <img
@@ -803,17 +680,40 @@ export default function WeeklyArtistChartDetail({
                             </div>
                           )}
 
-                        </button>
+                        </div>
 
                         {/* ARTIST NAME */}
 
                         <div className="min-w-0 flex-1">
 
-                          <p className="text-4xl font-brown-bold leading-tight text-black">
-                            {
-                              entry.artist
-                            }
-                          </p>
+                          {entry.rank === 1 ? (
+                            <div className="flex min-w-0 flex-col items-start">
+
+                              {/* WEEKS AT NO. 1 */}
+
+                              <span className="mb-2 inline-flex w-fit items-center bg-[#0050FF] px-3 py-2.5 text-[0.72rem] font-brown-bold uppercase leading-none tracking-[0.06em] text-white">
+                                {weeksAtNumberOne}{' '}
+                                {weeksAtNumberOne ===
+                                1
+                                  ? 'WEEK'
+                                  : 'WEEKS'}{' '}
+                                AT NO. 1
+                              </span>
+
+                              <p className="text-4xl font-brown-bold leading-tight text-black">
+                                {
+                                  entry.artist
+                                }
+                              </p>
+
+                            </div>
+                          ) : (
+                            <p className="text-4xl font-brown-bold leading-tight text-black">
+                              {
+                                entry.artist
+                              }
+                            </p>
+                          )}
 
                         </div>
 

@@ -160,6 +160,46 @@ export default function WeeklyChartDetail({
     );
   };
 
+  const handleShare = async () => {
+    const shareUrl =
+      `${window.location.origin}/weekly/share?week=${encodeURIComponent(
+        selectedWeek
+      )}`;
+
+    const shareTitle =
+      'Elio Hot 100 Top 10';
+
+    const shareText =
+      `Elio Hot 100 Top 10 (${formatDateLabel(
+        selectedWeek
+      )})`;
+
+    try {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.share
+      ) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.clipboard
+      ) {
+        await navigator.clipboard.writeText(
+          shareUrl
+        );
+      }
+    } catch {
+      // User cancelled the native share dialog.
+    }
+  };
+
   const currentEntries =
     entriesByWeek?.[selectedWeek] ??
     entries;
@@ -265,9 +305,52 @@ export default function WeeklyChartDetail({
             &lt; HOME
           </a>
 
-          <p className="ml-auto max-w-[70%] text-right text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white sm:mx-auto sm:max-w-none sm:text-base sm:tracking-[0.2em]">
+          <p className="ml-auto mr-12 max-w-[55%] text-right text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white sm:mx-auto sm:max-w-none sm:text-base sm:tracking-[0.2em]">
             PERSONAL CHARTS BY ELIO
           </p>
+
+          {/* SHARE */}
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="absolute right-3 flex items-center gap-1.5 text-white transition-opacity hover:opacity-70 sm:right-6 sm:gap-2"
+            aria-label="Share this chart"
+          >
+            <span className="hidden text-[0.6rem] font-brown-regular uppercase tracking-[0.12em] sm:inline">
+              SHARE
+            </span>
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5 sm:h-6 sm:w-6"
+              aria-hidden="true"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="2.5"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="2.5"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="2.5"
+              />
+              <path d="M8.2 10.8 15.8 6.2" />
+              <path d="m8.2 13.2 7.6 4.6" />
+            </svg>
+          </button>
 
         </div>
       </div>
@@ -512,16 +595,11 @@ export default function WeeklyChartDetail({
                         <div className="min-w-0 flex-1 px-2 py-2 pr-1">
                           <div className="flex h-full flex-col justify-center">
 
-                            {/* #1 TITLE + WEEKS AT NO. 1 */}
+                            {/* #1 WEEKS AT NO. 1 + TITLE */}
 
                             {entry.rank === 1 ? (
-                              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-
-                                <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
-                                  {entry.title}
-                                </p>
-
-                                <span className="inline-flex flex-shrink-0 items-center bg-[#0050FF] px-1.5 py-1 text-[0.43rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-white">
+                              <>
+                                <span className="mb-1 inline-flex w-fit items-center bg-[#0050FF] px-2 py-1.5 text-[0.58rem] font-brown-bold uppercase leading-none tracking-[0.05em] text-white">
                                   {currentWeeksAtNumberOne}{' '}
                                   {currentWeeksAtNumberOne ===
                                   1
@@ -530,7 +608,10 @@ export default function WeeklyChartDetail({
                                   AT NO. 1
                                 </span>
 
-                              </div>
+                                <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
+                                  {entry.title}
+                                </p>
+                              </>
                             ) : (
                               <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
                                 {entry.title}
@@ -801,16 +882,12 @@ export default function WeeklyChartDetail({
 
                         <div className="min-w-0 flex-1">
 
-                          {/* #1 TITLE + WEEKS AT NO. 1 */}
+                          {/* #1 WEEKS AT NO. 1 + TITLE */}
 
                           {entry.rank === 1 ? (
-                            <div className="flex min-w-0 flex-wrap items-center gap-3">
+                            <div className="flex min-w-0 flex-col items-start">
 
-                              <p className="text-xl font-brown-bold leading-tight text-black sm:text-4xl">
-                                {entry.title}
-                              </p>
-
-                              <span className="inline-flex flex-shrink-0 items-center bg-[#0050FF] px-2.5 py-2 text-[0.58rem] font-brown-regular uppercase leading-none tracking-[0.06em] text-white">
+                              <span className="mb-2 inline-flex w-fit items-center bg-[#0050FF] px-3 py-2.5 text-[0.72rem] font-brown-bold uppercase leading-none tracking-[0.06em] text-white">
                                 {currentWeeksAtNumberOne}{' '}
                                 {currentWeeksAtNumberOne ===
                                 1
@@ -818,6 +895,10 @@ export default function WeeklyChartDetail({
                                   : 'WEEKS'}{' '}
                                 AT NO. 1
                               </span>
+
+                              <p className="text-xl font-brown-bold leading-tight text-black sm:text-4xl">
+                                {entry.title}
+                              </p>
 
                             </div>
                           ) : (
