@@ -24,24 +24,27 @@ export async function generateMetadata({
     : 'Elio Hot 100 Top 10';
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    'https://shiny-space-giggle-6vjx7prq4qwc6qj-3000.app.github.dev';
+    'https://eliocharts.vercel.app';
 
   const imagePath = week
     ? `${baseUrl}/api/weekly-share?week=${encodeURIComponent(week)}`
     : `${baseUrl}/api/weekly-share`;
 
+  const pageUrl = week
+    ? `${baseUrl}/weekly/share?week=${encodeURIComponent(week)}`
+    : `${baseUrl}/weekly/share`;
+
   return {
     title,
     description,
 
+    metadataBase: new URL(baseUrl),
+
     openGraph: {
       title,
       description,
+      url: pageUrl,
       type: 'article',
-      url: week
-        ? `${baseUrl}/weekly/share?week=${encodeURIComponent(week)}`
-        : `${baseUrl}/weekly/share`,
       images: [
         {
           url: imagePath,
@@ -56,7 +59,12 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: [imagePath],
+      images: [
+        {
+          url: imagePath,
+          alt: description,
+        },
+      ],
     },
   };
 }
@@ -72,19 +80,18 @@ export default async function WeeklySharePage({
     : '/weekly';
 
   return (
-    <html>
-      <head>
-        <meta
-          httpEquiv="refresh"
-          content={`2;url=${destination}`}
-        />
-      </head>
+    <main>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            setTimeout(function () {
+              window.location.href = ${JSON.stringify(destination)};
+            }, 2000);
+          `,
+        }}
+      />
 
-      <body>
-        <p>
-          Redirecting to Elio Hot 100...
-        </p>
-      </body>
-    </html>
+      <p>Redirecting to Elio Hot 100...</p>
+    </main>
   );
 }
