@@ -55,6 +55,18 @@ body {
 }
 
 /* =========================================================
+   GOTHAM FONT CLASSES
+   ========================================================= */
+
+.font-gotham-black {
+  font-family: var(--font-gotham-black), system-ui, sans-serif;
+}
+
+.font-gotham-regular {
+  font-family: var(--font-gotham-regular), system-ui, sans-serif;
+}
+
+/* =========================================================
    CHART LOADING / SKELETON ANIMATION
    ========================================================= */
 
@@ -89,3 +101,253 @@ body {
     background: #eeeeee;
   }
 }
+
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+
+/*
+ * Dark mode intentionally changes ONLY:
+ * - neutral backgrounds
+ * - black/dark text
+ * - neutral borders
+ *
+ * Brand colors, blue accents, artwork, images,
+ * and other colored elements remain unchanged.
+ */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background: #242424;
+  color: #ffffff;
+}
+
+/* =========================================================
+   DARK MODE — BACKGROUNDS
+   ========================================================= */
+
+html.dark .bg-white {
+  background-color: #242424;
+}
+
+html.dark .bg-stone-50 {
+  background-color: #292929;
+}
+
+html.dark .bg-stone-100 {
+  background-color: #303030;
+}
+
+html.dark .bg-stone-200 {
+  background-color: #383838;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #292929;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #303030;
+}
+
+html.dark .bg-gray-200 {
+  background-color: #383838;
+}
+
+/* =========================================================
+   DARK MODE — TEXT
+   ========================================================= */
+
+/* Pure black text */
+
+html.dark .text-black {
+  color: #ffffff;
+}
+
+/* Dark neutral text */
+
+html.dark .text-stone-900 {
+  color: #ffffff;
+}
+
+html.dark .text-stone-800 {
+  color: #f1f1f1;
+}
+
+html.dark .text-stone-700 {
+  color: #dddddd;
+}
+
+html.dark .text-stone-600 {
+  color: #c5c5c5;
+}
+
+html.dark .text-stone-500 {
+  color: #aaaaaa;
+}
+
+html.dark .text-gray-900 {
+  color: #ffffff;
+}
+
+html.dark .text-gray-800 {
+  color: #f1f1f1;
+}
+
+html.dark .text-gray-700 {
+  color: #dddddd;
+}
+
+html.dark .text-gray-600 {
+  color: #c5c5c5;
+}
+
+html.dark .text-gray-500 {
+  color: #aaaaaa;
+}
+
+/* =========================================================
+   DARK MODE — SEMI-TRANSPARENT BLACK TEXT
+   ========================================================= */
+
+html.dark .text-black\/90 {
+  color: rgb(255 255 255 / 0.90);
+}
+
+html.dark .text-black\/80 {
+  color: rgb(255 255 255 / 0.80);
+}
+
+html.dark .text-black\/70 {
+  color: rgb(255 255 255 / 0.70);
+}
+
+html.dark .text-black\/60 {
+  color: rgb(255 255 255 / 0.60);
+}
+
+html.dark .text-black\/50 {
+  color: rgb(255 255 255 / 0.50);
+}
+
+html.dark .text-black\/40 {
+  color: rgb(255 255 255 / 0.40);
+}
+
+html.dark .text-black\/30 {
+  color: rgb(255 255 255 / 0.30);
+}
+
+html.dark .text-black\/20 {
+  color: rgb(255 255 255 / 0.20);
+}
+
+html.dark .text-black\/10 {
+  color: rgb(255 255 255 / 0.10);
+}
+
+/* =========================================================
+   DARK MODE — BORDERS
+   ========================================================= */
+
+html.dark .border-black {
+  border-color: #555555;
+}
+
+html.dark .border-black\/20 {
+  border-color: rgb(255 255 255 / 0.20);
+}
+
+html.dark .border-black\/10 {
+  border-color: rgb(255 255 255 / 0.10);
+}
+
+html.dark .border-stone-200 {
+  border-color: #454545;
+}
+
+html.dark .border-stone-300 {
+  border-color: #505050;
+}
+
+html.dark .border-gray-200 {
+  border-color: #454545;
+}
+
+html.dark .border-gray-300 {
+  border-color: #505050;
+}
+
+/* =========================================================
+   DARK MODE — FORM INPUTS
+   ========================================================= */
+
+html.dark input,
+html.dark textarea,
+html.dark select {
+  color: #ffffff;
+}
+
+html.dark input.bg-white,
+html.dark textarea.bg-white,
+html.dark select.bg-white {
+  background-color: #242424;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgb(255 255 255 / 0.40);
+}
+
+/* =========================================================
+   DARK MODE — COMMON TABLE ELEMENTS
+   ========================================================= */
+
+html.dark table {
+  color: #ffffff;
+}
+
+html.dark td,
+html.dark th {
+  color: inherit;
+}
+
+/* =========================================================
+   DARK MODE — LOADING SHIMMER
+   ========================================================= */
+
+html.dark .chart-loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    #2d2d2d 0%,
+    #373737 35%,
+    #414141 50%,
+    #373737 65%,
+    #2d2d2d 100%
+  );
+  background-size: 1000px 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.dark .chart-loading-shimmer {
+    background: #303030;
+  }
+}
+
+/* =========================================================
+   DARK MODE — PRESERVE ELIO BLUE
+   ========================================================= */
+
+/*
+ * Do NOT alter #0050FF.
+ *
+ * Any existing:
+ *   bg-[#0050FF]
+ *   text-[#0050FF]
+ *   border-[#0050FF]
+ *
+ * remains exactly the same in dark mode.
+ */

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
+import ThemeToggle from './ThemeToggle';
 
 const ARTISTS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
@@ -376,12 +377,74 @@ export default function SiteHeader() {
             YEAR-END
           </a>
 
-          <a
-            href="/decade-end"
-            className="font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
-          >
-            DECADE-END
-          </a>
+          {/* =================================================
+           * DECADE-END DROPDOWN
+           * ================================================= */}
+
+          <div className="group relative">
+
+            <a
+              href="/decade-end"
+              className="flex items-center gap-1 font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+            >
+              DECADE-END
+
+              <svg
+                viewBox="0 0 10 6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                className="h-[5px] w-[9px] transition-transform duration-150 group-hover:rotate-180"
+                aria-hidden="true"
+              >
+                <path
+                  d="M1 1L5 5L9 1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
+
+            <div className="invisible absolute left-1/2 top-full z-[120] w-48 -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+
+              <div className="border border-white/10 bg-black shadow-xl">
+
+                {/* Official List */}
+
+                <div className="border-b border-white/10 px-4 py-2.5">
+                  <span className="font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white">
+                    Official List
+                  </span>
+                </div>
+
+                <a
+                  href="/decade-end/2010s"
+                  className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  2010s
+                </a>
+
+                <a
+                  href="/decade-end/2020s"
+                  className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  2020s
+                </a>
+
+                {/* Breakdown List */}
+
+                <a
+                  href="/decade-end/breakdown"
+                  className="block px-4 py-2.5 font-brown-bold text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  BREAKDOWN LIST
+                </a>
+
+              </div>
+
+            </div>
+
+          </div>
 
           <a
             href="/goat"
@@ -487,6 +550,12 @@ export default function SiteHeader() {
 
           </div>
 
+          {/* =================================================
+           * DESKTOP DARK MODE TOGGLE
+           * ================================================= */}
+
+          <ThemeToggle />
+
         </div>
 
         {/* =================================================
@@ -564,6 +633,14 @@ export default function SiteHeader() {
 
         </div>
 
+        {/* =================================================
+         * MOBILE DARK MODE TOGGLE
+         * ================================================= */}
+
+        <div className="ml-2 lg:hidden">
+          <ThemeToggle />
+        </div>
+
       </div>
 
       {/* =====================================================
@@ -609,13 +686,49 @@ export default function SiteHeader() {
                 YEAR-END
               </a>
 
-              <a
-                href="/decade-end"
-                onClick={closeMobileMenu}
-                className="border-b border-white/10 py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
-              >
-                DECADE-END
-              </a>
+              {/* =================================================
+               * MOBILE DECADE-END
+               * ================================================= */}
+
+              <div className="border-b border-white/10">
+
+                <div className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white">
+                  DECADE-END
+                </div>
+
+                <div className="pb-3 pl-4">
+
+                  <div className="mb-2 font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white/60">
+                    Official List
+                  </div>
+
+                  <a
+                    href="/decade-end/2010s"
+                    onClick={closeMobileMenu}
+                    className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    2010s
+                  </a>
+
+                  <a
+                    href="/decade-end/2020s"
+                    onClick={closeMobileMenu}
+                    className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    2020s
+                  </a>
+
+                  <a
+                    href="/decade-end/breakdown"
+                    onClick={closeMobileMenu}
+                    className="block pt-2 font-brown-bold text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    BREAKDOWN LIST
+                  </a>
+
+                </div>
+
+              </div>
 
               <a
                 href="/goat"
