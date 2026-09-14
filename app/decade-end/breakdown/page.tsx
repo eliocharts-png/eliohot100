@@ -32,6 +32,10 @@ type SongSummary = {
   artwork: string;
   totalPoints: number;
   yearlyPoints: Record<number, number>;
+  decadePoints: {
+    '2010s': number;
+    '2020s': number;
+  };
   currentRank: number | null;
   gain: number | null;
 };
@@ -174,7 +178,11 @@ function parseDate(value: string): Date | null {
       Number.isFinite(day) &&
       Number.isFinite(year)
     ) {
-      const date = new Date(year, month - 1, day);
+      const date = new Date(
+        year,
+        month - 1,
+        day
+      );
 
       if (!Number.isNaN(date.getTime())) {
         return date;
@@ -195,7 +203,11 @@ function parseCSV(text: string): ChartRow[] {
     const char = text[i];
     const next = text[i + 1];
 
-    if (char === '"' && insideQuotes && next === '"') {
+    if (
+      char === '"' &&
+      insideQuotes &&
+      next === '"'
+    ) {
       cell += '"';
       i++;
       continue;
@@ -206,14 +218,23 @@ function parseCSV(text: string): ChartRow[] {
       continue;
     }
 
-    if (char === ',' && !insideQuotes) {
+    if (
+      char === ',' &&
+      !insideQuotes
+    ) {
       row.push(cell);
       cell = '';
       continue;
     }
 
-    if ((char === '\n' || char === '\r') && !insideQuotes) {
-      if (char === '\r' && next === '\n') {
+    if (
+      (char === '\n' || char === '\r') &&
+      !insideQuotes
+    ) {
+      if (
+        char === '\r' &&
+        next === '\n'
+      ) {
         i++;
       }
 
@@ -235,15 +256,29 @@ function parseCSV(text: string): ChartRow[] {
   const result: ChartRow[] = [];
 
   for (const rawRow of rows.slice(1)) {
-    const date = parseDate(rawRow[0]?.trim() ?? '');
-    const rank = Number(rawRow[1]);
-    const songArtist = rawRow[2]?.trim() ?? '';
-    const points = Number(
-      (rawRow[3] ?? '').replace(/,/g, '').trim()
+    const date = parseDate(
+      rawRow[0]?.trim() ?? ''
     );
-    const artwork = rawRow[10]?.trim() ?? '';
 
-    if (!date || !songArtist || !Number.isFinite(rank)) {
+    const rank = Number(rawRow[1]);
+
+    const songArtist =
+      rawRow[2]?.trim() ?? '';
+
+    const points = Number(
+      (rawRow[3] ?? '')
+        .replace(/,/g, '')
+        .trim()
+    );
+
+    const artwork =
+      rawRow[10]?.trim() ?? '';
+
+    if (
+      !date ||
+      !songArtist ||
+      !Number.isFinite(rank)
+    ) {
       continue;
     }
 
@@ -257,14 +292,18 @@ function parseCSV(text: string): ChartRow[] {
     }
 
     const song = lines[0];
-    const artist = lines.slice(1).join(' ');
+    const artist = lines
+      .slice(1)
+      .join(' ');
 
     result.push({
       date,
       rank,
       song,
       artist,
-      points: Number.isFinite(points) ? points : 0,
+      points: Number.isFinite(points)
+        ? points
+        : 0,
       artwork,
     });
   }
@@ -281,7 +320,9 @@ function normalizeSong(song: string): string {
     .trim();
 }
 
-function normalizeArtist(artist: string): string {
+function normalizeArtist(
+  artist: string
+): string {
   return artist
     .toLowerCase()
     .replace(/[’‘]/g, "'")
@@ -290,15 +331,26 @@ function normalizeArtist(artist: string): string {
     .trim();
 }
 
-function getSongKey(song: string, artist: string): string {
-  return `${normalizeSong(song)}|||${normalizeArtist(artist)}`;
+function getSongKey(
+  song: string,
+  artist: string
+): string {
+  return `${normalizeSong(song)}|||${normalizeArtist(
+    artist
+  )}`;
 }
 
-function formatNumber(value: number): string {
-  return Math.round(value).toLocaleString('en-US');
+function formatNumber(
+  value: number
+): string {
+  return Math.round(
+    value
+  ).toLocaleString('en-US');
 }
 
-function pointFill(value: number): string {
+function pointFill(
+  value: number
+): string {
   if (value >= 20000) return '#fc1c2f';
   if (value >= 15000) return '#9546ff';
   if (value >= 12000) return '#0c7ef4';
@@ -316,7 +368,9 @@ function pointFill(value: number): string {
   return 'transparent';
 }
 
-function pointTextColor(value: number): string {
+function pointTextColor(
+  value: number
+): string {
   const fill = pointFill(value);
 
   if (
@@ -331,7 +385,9 @@ function pointTextColor(value: number): string {
   return '#000000';
 }
 
-function gainColor(rank: number | null): string {
+function gainColor(
+  rank: number | null
+): string {
   if (rank === null) {
     return '#000000';
   }
@@ -340,11 +396,17 @@ function gainColor(rank: number | null): string {
     return '#00a88f';
   }
 
-  if (rank >= 2 && rank <= 10) {
+  if (
+    rank >= 2 &&
+    rank <= 10
+  ) {
     return '#8f1d3d';
   }
 
-  if (rank >= 11 && rank <= 40) {
+  if (
+    rank >= 11 &&
+    rank <= 40
+  ) {
     return '#00a5da';
   }
 
@@ -354,11 +416,12 @@ function gainColor(rank: number | null): string {
 /*
  * Lighter versions of the existing gain colors.
  *
- * These are intentionally much softer so the song title
- * and artist remain readable while keeping the same
- * rank-based color identity.
+ * These correspond directly to the same rank groups
+ * used by gainColor().
  */
-function gainBackgroundColor(rank: number | null): string {
+function gainBackgroundColor(
+  rank: number | null
+): string {
   if (rank === null) {
     return '#ffffff';
   }
@@ -367,11 +430,17 @@ function gainBackgroundColor(rank: number | null): string {
     return '#d9f3ee';
   }
 
-  if (rank >= 2 && rank <= 10) {
+  if (
+    rank >= 2 &&
+    rank <= 10
+  ) {
     return '#f0dce3';
   }
 
-  if (rank >= 11 && rank <= 40) {
+  if (
+    rank >= 11 &&
+    rank <= 40
+  ) {
     return '#d9eef8';
   }
 
@@ -388,32 +457,52 @@ function getDecadeYears(
     );
   }
 
-  const currentYear = new Date().getFullYear();
+  const currentYear =
+    new Date().getFullYear();
 
   return Array.from(
-    { length: currentYear - 2020 + 1 },
+    {
+      length:
+        currentYear -
+        2020 +
+        1,
+    },
     (_, index) => 2020 + index
   );
 }
 
 export default function DecadeEndBreakdownPage() {
-  const [rows, setRows] = useState<ChartRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [decade, setDecade] = useState<Decade>('overall');
-  const [selectedYear, setSelectedYear] = useState<
-    number | 'all'
-  >('all');
-  const [weighted, setWeighted] = useState(false);
-  const [search, setSearch] = useState('');
+  const [rows, setRows] =
+    useState<ChartRow[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [decade, setDecade] =
+    useState<Decade>('overall');
+
+  const [selectedYear, setSelectedYear] =
+    useState<number | 'all'>('all');
+
+  const [weighted, setWeighted] =
+    useState(false);
+
+  const [search, setSearch] =
+    useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadData() {
       try {
-        const response = await fetch(CSV_URL);
-        const text = await response.text();
-        const parsed = parseCSV(text);
+        const response =
+          await fetch(CSV_URL);
+
+        const text =
+          await response.text();
+
+        const parsed =
+          parseCSV(text);
 
         if (!cancelled) {
           setRows(parsed);
@@ -449,94 +538,117 @@ export default function DecadeEndBreakdownPage() {
     setSelectedYear('all');
   }, [decade]);
 
-  const latestChartDate = useMemo(() => {
-    if (!rows.length) {
-      return null;
-    }
-
-    return rows.reduce(
-      (latest, row) =>
-        row.date.getTime() > latest.getTime()
-          ? row.date
-          : latest,
-      rows[0].date
-    );
-  }, [rows]);
-
-  const latestChartEntries = useMemo(() => {
-    if (!latestChartDate) {
-      return new Map<string, ChartRow>();
-    }
-
-    const map = new Map<string, ChartRow>();
-
-    for (const row of rows) {
-      if (
-        row.date.getTime() !==
-        latestChartDate.getTime()
-      ) {
-        continue;
+  const latestChartDate =
+    useMemo(() => {
+      if (!rows.length) {
+        return null;
       }
 
-      const key = getSongKey(
-        row.song,
-        row.artist
+      return rows.reduce(
+        (latest, row) =>
+          row.date.getTime() >
+          latest.getTime()
+            ? row.date
+            : latest,
+        rows[0].date
       );
+    }, [rows]);
 
-      map.set(key, row);
-    }
+  const latestChartEntries =
+    useMemo(() => {
+      if (!latestChartDate) {
+        return new Map<
+          string,
+          ChartRow
+        >();
+      }
 
-    return map;
-  }, [rows, latestChartDate]);
+      const map =
+        new Map<string, ChartRow>();
+
+      for (const row of rows) {
+        if (
+          row.date.getTime() !==
+          latestChartDate.getTime()
+        ) {
+          continue;
+        }
+
+        const key =
+          getSongKey(
+            row.song,
+            row.artist
+          );
+
+        map.set(key, row);
+      }
+
+      return map;
+    }, [
+      rows,
+      latestChartDate,
+    ]);
 
   const summaries = useMemo(() => {
-    const relevantRows = rows.filter((row) => {
-      const year = row.date.getFullYear();
+    const relevantRows =
+      rows.filter((row) => {
+        const year =
+          row.date.getFullYear();
 
-      if (year < 2010) {
-        return false;
-      }
+        if (year < 2010) {
+          return false;
+        }
 
-      if (
-        decade === '2010s' &&
-        (year < 2010 || year > 2019)
-      ) {
-        return false;
-      }
+        if (
+          decade === '2010s' &&
+          (year < 2010 ||
+            year > 2019)
+        ) {
+          return false;
+        }
 
-      if (
-        decade === '2020s' &&
-        year < 2020
-      ) {
-        return false;
-      }
+        if (
+          decade === '2020s' &&
+          year < 2020
+        ) {
+          return false;
+        }
 
-      if (
-        selectedYear !== 'all' &&
-        year !== selectedYear
-      ) {
-        return false;
-      }
+        if (
+          selectedYear !== 'all' &&
+          year !== selectedYear
+        ) {
+          return false;
+        }
 
-      return true;
-    });
+        return true;
+      });
 
-    const grouped = new Map<
-      string,
-      {
-        song: string;
-        artist: string;
-        artwork: string;
-        totalPoints: number;
-        yearlyPoints: Record<number, number>;
-      }
-    >();
+    const grouped =
+      new Map<
+        string,
+        {
+          song: string;
+          artist: string;
+          artwork: string;
+          totalPoints: number;
+          yearlyPoints: Record<
+            number,
+            number
+          >;
+          decadePoints: {
+            '2010s': number;
+            '2020s': number;
+          };
+        }
+      >();
 
     for (const row of relevantRows) {
-      const key = getSongKey(
-        row.song,
-        row.artist
-      );
+      const key =
+        getSongKey(
+          row.song,
+          row.artist
+        );
 
       if (!grouped.has(key)) {
         grouped.set(key, {
@@ -545,76 +657,137 @@ export default function DecadeEndBreakdownPage() {
           artwork: row.artwork,
           totalPoints: 0,
           yearlyPoints: {},
+          decadePoints: {
+            '2010s': 0,
+            '2020s': 0,
+          },
         });
       }
 
-      const item = grouped.get(key)!;
+      const item =
+        grouped.get(key)!;
 
-      if (!item.artwork && row.artwork) {
-        item.artwork = row.artwork;
+      if (
+        !item.artwork &&
+        row.artwork
+      ) {
+        item.artwork =
+          row.artwork;
       }
 
-      const contribution = weighted
-        ? (INVERSE_POINTS[row.rank] ?? 0) *
-          getMultiplier(row.date)
-        : row.points;
+      const contribution =
+        weighted
+          ? (INVERSE_POINTS[
+              row.rank
+            ] ?? 0) *
+            getMultiplier(
+              row.date
+            )
+          : row.points;
 
-      item.totalPoints += contribution;
+      item.totalPoints +=
+        contribution;
 
-      const year = row.date.getFullYear();
+      const year =
+        row.date.getFullYear();
 
       item.yearlyPoints[year] =
-        (item.yearlyPoints[year] ?? 0) +
+        (item.yearlyPoints[
+          year
+        ] ?? 0) +
         contribution;
+
+      /*
+       * Store decade totals separately.
+       *
+       * This is important for Overall because
+       * the 2010s and 2020s columns must use
+       * the exact same pointFill() thresholds
+       * as every other points cell.
+       */
+      if (
+        year >= 2010 &&
+        year <= 2019
+      ) {
+        item.decadePoints[
+          '2010s'
+        ] += contribution;
+      }
+
+      if (year >= 2020) {
+        item.decadePoints[
+          '2020s'
+        ] += contribution;
+      }
     }
 
-    const result: SongSummary[] = Array.from(
-      grouped.entries()
-    ).map(([key, item]) => {
-      const currentEntry =
-        latestChartEntries.get(key);
+    const result: SongSummary[] =
+      Array.from(
+        grouped.entries()
+      ).map(
+        ([key, item]) => {
+          const currentEntry =
+            latestChartEntries.get(
+              key
+            );
 
-      const currentRank =
-        currentEntry?.rank ?? null;
+          const currentRank =
+            currentEntry?.rank ??
+            null;
 
-      const gain =
-        currentEntry &&
-        currentEntry.points > 0
-          ? currentEntry.points
-          : null;
+          const gain =
+            currentEntry &&
+            currentEntry.points > 0
+              ? currentEntry.points
+              : null;
 
-      return {
-        key,
-        song: item.song,
-        artist: item.artist,
-        artwork: item.artwork,
-        totalPoints: item.totalPoints,
-        yearlyPoints: item.yearlyPoints,
-        currentRank,
-        gain,
-      };
-    });
+          return {
+            key,
+            song: item.song,
+            artist: item.artist,
+            artwork: item.artwork,
+            totalPoints:
+              item.totalPoints,
+            yearlyPoints:
+              item.yearlyPoints,
+            decadePoints:
+              item.decadePoints,
+            currentRank,
+            gain,
+          };
+        }
+      );
 
-    const filtered = result.filter((item) => {
-      if (!search.trim()) {
-        return true;
-      }
+    const filtered =
+      result.filter((item) => {
+        if (!search.trim()) {
+          return true;
+        }
 
-      const query = search
-        .toLowerCase()
-        .trim();
+        const query =
+          search
+            .toLowerCase()
+            .trim();
 
-      return item.artist
-        .toLowerCase()
-        .includes(query);
-    });
+        return item.artist
+          .toLowerCase()
+          .includes(query);
+      });
 
     filtered.sort((a, b) => {
-      if (b.totalPoints !== a.totalPoints) {
-        return b.totalPoints - a.totalPoints;
+      if (
+        b.totalPoints !==
+        a.totalPoints
+      ) {
+        return (
+          b.totalPoints -
+          a.totalPoints
+        );
       }
 
-      return a.song.localeCompare(b.song);
+      return a.song.localeCompare(
+        b.song
+      );
     });
 
     return filtered;
@@ -638,8 +811,14 @@ export default function DecadeEndBreakdownPage() {
   }
 
   /*
-   * Gain is relevant whenever we're viewing the
-   * current 2020s period, including Overall.
+   * Gain remains visible for:
+   * - 2020s All
+   * - 2020s 2026
+   * - Overall All
+   *
+   * Overall always represents the complete
+   * building chart, so the current 2026 gain
+   * remains relevant there.
    */
   const showGain =
     (decade === '2020s' ||
@@ -651,11 +830,15 @@ export default function DecadeEndBreakdownPage() {
     <main className="pt-24 pb-16">
       <div className="mx-auto w-full max-w-[1600px] px-4">
 
+        {/* =================================================
+         * TITLE
+         * ================================================= */}
+
         <h1
           className={`${gothamBlack.className} text-center text-2xl sm:text-3xl md:text-4xl`}
         >
           {decade === 'overall'
-            ? 'Overall Decade-End Hits'
+            ? 'Hot 100 All-Time Building Chart'
             : `Decade-End Hits of the ${decade}`}
         </h1>
 
@@ -668,7 +851,11 @@ export default function DecadeEndBreakdownPage() {
           <div className="flex items-center justify-center gap-2">
 
             {(
-              ['overall', '2010s', '2020s'] as const
+              [
+                'overall',
+                '2010s',
+                '2020s',
+              ] as const
             ).map((option) => (
               <button
                 key={option}
@@ -700,10 +887,13 @@ export default function DecadeEndBreakdownPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setSelectedYear('all')
+                  setSelectedYear(
+                    'all'
+                  )
                 }
                 className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
-                  selectedYear === 'all'
+                  selectedYear ===
+                  'all'
                     ? 'bg-black text-white'
                     : 'bg-stone-100 text-black'
                 }`}
@@ -711,22 +901,27 @@ export default function DecadeEndBreakdownPage() {
                 All
               </button>
 
-              {years.map((year) => (
-                <button
-                  key={year}
-                  type="button"
-                  onClick={() =>
-                    setSelectedYear(year)
-                  }
-                  className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
-                    selectedYear === year
-                      ? 'bg-black text-white'
-                      : 'bg-stone-100 text-black'
-                  }`}
-                >
-                  {year}
-                </button>
-              ))}
+              {years.map(
+                (year) => (
+                  <button
+                    key={year}
+                    type="button"
+                    onClick={() =>
+                      setSelectedYear(
+                        year
+                      )
+                    }
+                    className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
+                      selectedYear ===
+                      year
+                        ? 'bg-black text-white'
+                        : 'bg-stone-100 text-black'
+                    }`}
+                  >
+                    {year}
+                  </button>
+                )
+              )}
 
             </div>
           )}
@@ -748,7 +943,11 @@ export default function DecadeEndBreakdownPage() {
               className="h-4 w-4"
             />
 
-            <span className={gothamRegular.className}>
+            <span
+              className={
+                gothamRegular.className
+              }
+            >
               Apply estimated tracking period and weighting
             </span>
 
@@ -819,18 +1018,21 @@ export default function DecadeEndBreakdownPage() {
                     <col className="w-14" />
                   )}
 
-                  {decade === 'overall' ? (
+                  {decade ===
+                  'overall' ? (
                     <>
                       <col className="w-[80px]" />
                       <col className="w-[80px]" />
                     </>
                   ) : (
-                    years.map((year) => (
-                      <col
-                        key={year}
-                        className="w-[43px]"
-                      />
-                    ))
+                    years.map(
+                      (year) => (
+                        <col
+                          key={year}
+                          className="w-[43px]"
+                        />
+                      )
+                    )
                   )}
 
                 </colgroup>
@@ -857,7 +1059,8 @@ export default function DecadeEndBreakdownPage() {
                       </th>
                     )}
 
-                    {decade === 'overall' ? (
+                    {decade ===
+                    'overall' ? (
                       <>
                         <th className="sticky top-0 bg-white px-0.5 py-1 text-center">
                           2010s
@@ -868,14 +1071,21 @@ export default function DecadeEndBreakdownPage() {
                         </th>
                       </>
                     ) : (
-                      years.map((year) => (
-                        <th
-                          key={year}
-                          className={`${gothamRegular.className} sticky top-0 bg-white px-0.5 py-1 text-center`}
-                        >
-                          '{String(year).slice(-2)}
-                        </th>
-                      ))
+                      years.map(
+                        (year) => (
+                          <th
+                            key={year}
+                            className={`${gothamRegular.className} sticky top-0 bg-white px-0.5 py-1 text-center`}
+                          >
+                            '
+                            {String(
+                              year
+                            ).slice(
+                              -2
+                            )}
+                          </th>
+                        )
+                      )
                     )}
 
                   </tr>
@@ -885,15 +1095,22 @@ export default function DecadeEndBreakdownPage() {
                 <tbody>
 
                   {summaries.map(
-                    (item, index) => {
+                    (
+                      item,
+                      index
+                    ) => {
 
                       const displayedTotal =
                         item.totalPoints /
-                        (weighted ? 100 : 1);
+                        (weighted
+                          ? 100
+                          : 1);
 
                       const gainIsActive =
-                        item.currentRank !== null &&
-                        item.gain !== null &&
+                        item.currentRank !==
+                          null &&
+                        item.gain !==
+                          null &&
                         item.gain > 0;
 
                       const gainColorValue =
@@ -902,7 +1119,8 @@ export default function DecadeEndBreakdownPage() {
                         );
 
                       const currentEntry =
-                        item.currentRank !== null
+                        item.currentRank !==
+                        null
                           ? latestChartEntries.get(
                               item.key
                             )
@@ -912,8 +1130,10 @@ export default function DecadeEndBreakdownPage() {
                         currentEntry
                           ? weighted
                             ? ((INVERSE_POINTS[
-                                currentEntry.rank
-                              ] ?? 0) *
+                                currentEntry
+                                  .rank
+                              ] ??
+                                0) *
                                 getMultiplier(
                                   currentEntry.date
                                 )) /
@@ -922,21 +1142,31 @@ export default function DecadeEndBreakdownPage() {
                           : null;
 
                       /*
-                       * The song cell is highlighted ONLY
-                       * when the song is currently gaining.
+                       * Song / artist cell:
                        *
-                       * The fill uses a lighter version
-                       * of the existing gain color.
+                       * Only currently gaining songs
+                       * receive a background color.
+                       *
+                       * The background is a lighter
+                       * version of the exact same
+                       * gain-color category.
                        */
-                      const songCellBackground =
+                      const songCellStyle =
                         gainIsActive
-                          ? gainBackgroundColor(
-                              item.currentRank
-                            )
-                          : '#ffffff';
+                          ? {
+                              backgroundColor:
+                                gainBackgroundColor(
+                                  item.currentRank
+                                ),
+                            }
+                          : undefined;
 
                       return (
-                        <tr key={item.key}>
+                        <tr
+                          key={
+                            item.key
+                          }
+                        >
 
                           {/* =================================================
                            * RANK
@@ -949,7 +1179,8 @@ export default function DecadeEndBreakdownPage() {
                                 gothamBlack.className
                               }
                             >
-                              {index + 1}
+                              {index +
+                                1}
                             </span>
 
                           </td>
@@ -959,11 +1190,10 @@ export default function DecadeEndBreakdownPage() {
                            * ================================================= */}
 
                           <td
-                            className="relative z-20 py-1 align-middle"
-                            style={{
-                              backgroundColor:
-                                songCellBackground,
-                            }}
+                            className="relative z-20 bg-white py-1 align-middle"
+                            style={
+                              songCellStyle
+                            }
                           >
 
                             <div className="flex items-center gap-1 py-1 sm:gap-2">
@@ -972,7 +1202,9 @@ export default function DecadeEndBreakdownPage() {
                                 <img
                                   alt=""
                                   className="h-10 w-10 shrink-0 rounded-md bg-stone-200 object-cover md:h-11 md:w-11"
-                                  src={item.artwork}
+                                  src={
+                                    item.artwork
+                                  }
                                 />
                               ) : (
                                 <div className="h-10 w-10 shrink-0 rounded-md bg-stone-200 md:h-11 md:w-11" />
@@ -983,13 +1215,17 @@ export default function DecadeEndBreakdownPage() {
                                 <span
                                   className={`${gothamBlack.className} block truncate text-[1.1rem] leading-tight text-stone-900 md:text-[1.2rem]`}
                                 >
-                                  {item.song}
+                                  {
+                                    item.song
+                                  }
                                 </span>
 
                                 <span
                                   className={`${gothamRegular.className} block truncate text-xs leading-tight text-stone-600 md:text-sm`}
                                 >
-                                  {item.artist}
+                                  {
+                                    item.artist
+                                  }
                                 </span>
 
                               </div>
@@ -1034,7 +1270,8 @@ export default function DecadeEndBreakdownPage() {
                             <td className="relative z-20 bg-white py-1 text-center align-middle">
 
                               {gainIsActive &&
-                              displayedGain !== null ? (
+                              displayedGain !==
+                                null ? (
                                 <div className="flex items-center justify-center gap-1">
 
                                   <span
@@ -1086,117 +1323,47 @@ export default function DecadeEndBreakdownPage() {
                           )}
 
                           {/* =================================================
-                           * OVERALL DECADE COLUMNS
+                           * OVERALL — 2010s / 2020s
                            * ================================================= */}
 
-                          {decade === 'overall' ? (
+                          {decade ===
+                          'overall' ? (
                             <>
                               <td
                                 className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
                                 style={{
                                   backgroundColor:
                                     pointFill(
-                                      (item.yearlyPoints[
-                                        2010
-                                      ] ??
-                                        0) +
-                                        Object.entries(
-                                          item.yearlyPoints
-                                        )
-                                          .filter(
-                                            ([year]) =>
-                                              Number(
-                                                year
-                                              ) >=
-                                                2010 &&
-                                              Number(
-                                                year
-                                              ) <=
-                                                2019
-                                          )
-                                          .reduce(
-                                            (
-                                              total,
-                                              [
-                                                ,
-                                                value,
-                                              ]
-                                            ) =>
-                                              total +
-                                              value,
-                                            0
-                                          ) -
-                                        (item.yearlyPoints[
-                                          2010
-                                        ] ?? 0)
+                                      item.decadePoints[
+                                        '2010s'
+                                      ] /
+                                        (weighted
+                                          ? 100
+                                          : 1)
                                     ),
                                   color:
                                     pointTextColor(
-                                      Object.entries(
-                                        item.yearlyPoints
-                                      )
-                                        .filter(
-                                          ([year]) =>
-                                            Number(
-                                              year
-                                            ) >=
-                                              2010 &&
-                                            Number(
-                                              year
-                                            ) <=
-                                              2019
-                                        )
-                                        .reduce(
-                                          (
-                                            total,
-                                            [
-                                              ,
-                                              value,
-                                            ]
-                                          ) =>
-                                            total +
-                                            value,
-                                          0
-                                        ) /
+                                      item.decadePoints[
+                                        '2010s'
+                                      ] /
                                         (weighted
                                           ? 100
                                           : 1)
                                     ),
                                 }}
                               >
+
                                 <span className="relative z-40 text-sm">
                                   {formatNumber(
-                                    Object.entries(
-                                      item.yearlyPoints
-                                    )
-                                      .filter(
-                                        ([year]) =>
-                                          Number(
-                                            year
-                                          ) >=
-                                            2010 &&
-                                          Number(
-                                            year
-                                          ) <=
-                                            2019
-                                      )
-                                      .reduce(
-                                        (
-                                          total,
-                                          [
-                                            ,
-                                            value,
-                                          ]
-                                        ) =>
-                                          total +
-                                          value,
-                                        0
-                                      ) /
+                                    item.decadePoints[
+                                      '2010s'
+                                    ] /
                                       (weighted
                                         ? 100
                                         : 1)
                                   )}
                                 </span>
+
                               </td>
 
                               <td
@@ -1204,91 +1371,36 @@ export default function DecadeEndBreakdownPage() {
                                 style={{
                                   backgroundColor:
                                     pointFill(
-                                      Object.entries(
-                                        item.yearlyPoints
-                                      )
-                                        .filter(
-                                          ([year]) =>
-                                            Number(
-                                              year
-                                            ) >=
-                                            2020
-                                        )
-                                        .reduce(
-                                          (
-                                            total,
-                                            [
-                                              ,
-                                              value,
-                                            ]
-                                          ) =>
-                                            total +
-                                            value,
-                                          0
-                                        ) /
+                                      item.decadePoints[
+                                        '2020s'
+                                      ] /
                                         (weighted
                                           ? 100
                                           : 1)
                                     ),
                                   color:
                                     pointTextColor(
-                                      Object.entries(
-                                        item.yearlyPoints
-                                      )
-                                        .filter(
-                                          ([year]) =>
-                                            Number(
-                                              year
-                                            ) >=
-                                            2020
-                                        )
-                                        .reduce(
-                                          (
-                                            total,
-                                            [
-                                              ,
-                                              value,
-                                            ]
-                                          ) =>
-                                            total +
-                                            value,
-                                          0
-                                        ) /
+                                      item.decadePoints[
+                                        '2020s'
+                                      ] /
                                         (weighted
                                           ? 100
                                           : 1)
                                     ),
                                 }}
                               >
+
                                 <span className="relative z-40 text-sm">
                                   {formatNumber(
-                                    Object.entries(
-                                      item.yearlyPoints
-                                    )
-                                      .filter(
-                                        ([year]) =>
-                                          Number(
-                                            year
-                                          ) >=
-                                          2020
-                                      )
-                                      .reduce(
-                                        (
-                                          total,
-                                          [
-                                            ,
-                                            value,
-                                          ]
-                                        ) =>
-                                          total +
-                                          value,
-                                        0
-                                      ) /
+                                    item.decadePoints[
+                                      '2020s'
+                                    ] /
                                       (weighted
                                         ? 100
                                         : 1)
                                   )}
                                 </span>
+
                               </td>
                             </>
                           ) : (
@@ -1296,42 +1408,49 @@ export default function DecadeEndBreakdownPage() {
                              * NORMAL YEAR COLUMNS
                              * ================================================= */
 
-                            years.map((year) => {
+                            years.map(
+                              (year) => {
 
-                              const rawValue =
-                                item.yearlyPoints[
-                                  year
-                                ] ?? 0;
+                                const rawValue =
+                                  item.yearlyPoints[
+                                    year
+                                  ] ??
+                                  0;
 
-                              const displayedValue =
-                                rawValue /
-                                (weighted
-                                  ? 100
-                                  : 1);
+                                const displayedValue =
+                                  rawValue /
+                                  (weighted
+                                    ? 100
+                                    : 1);
 
-                              return (
-                                <td
-                                  key={year}
-                                  className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
-                                  style={{
-                                    backgroundColor:
-                                      pointFill(
+                                return (
+                                  <td
+                                    key={
+                                      year
+                                    }
+                                    className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                    style={{
+                                      backgroundColor:
+                                        pointFill(
+                                          displayedValue
+                                        ),
+                                      color:
+                                        pointTextColor(
+                                          displayedValue
+                                        ),
+                                    }}
+                                  >
+
+                                    <span className="relative z-40 text-sm">
+                                      {formatNumber(
                                         displayedValue
-                                      ),
-                                    color:
-                                      pointTextColor(
-                                        displayedValue
-                                      ),
-                                  }}
-                                >
-                                  <span className="relative z-40 text-sm">
-                                    {formatNumber(
-                                      displayedValue
-                                    )}
-                                  </span>
-                                </td>
-                              );
-                            })
+                                      )}
+                                    </span>
+
+                                  </td>
+                                );
+                              }
+                            )
                           )}
 
                         </tr>
