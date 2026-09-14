@@ -1213,7 +1213,11 @@ export default function DecadeEndBreakdownPage() {
                               <div className="min-w-0 max-w-[18rem] flex-1 pl-1 pr-2.5 md:max-w-[25.5rem]">
 
                                 <span
-                                  className={`${gothamBlack.className} block truncate text-[1.1rem] leading-tight text-stone-900 md:text-[1.2rem]`}
+                                  className={`${gothamBlack.className} block truncate text-[1.1rem] leading-tight md:text-[1.2rem] ${
+                                    gainIsActive
+                                      ? 'text-black'
+                                      : 'text-stone-900 dark:text-white'
+                                  }`}
                                 >
                                   {
                                     item.song
@@ -1221,7 +1225,11 @@ export default function DecadeEndBreakdownPage() {
                                 </span>
 
                                 <span
-                                  className={`${gothamRegular.className} block truncate text-xs leading-tight text-stone-600 md:text-sm`}
+                                  className={`${gothamRegular.className} block truncate text-xs leading-tight md:text-sm ${
+                                    gainIsActive
+                                      ? 'text-stone-700'
+                                      : 'text-stone-600 dark:text-stone-400'
+                                  }`}
                                 >
                                   {
                                     item.artist
@@ -1239,22 +1247,26 @@ export default function DecadeEndBreakdownPage() {
                            * ================================================= */}
 
                           <td
-                            className="relative z-20 py-1 text-center align-middle"
+                            className={`${gothamBlack.className} relative z-20 py-1 text-center align-middle ${
+                              displayedTotal <= 0
+                                ? 'text-black dark:text-stone-400'
+                                : ''
+                            }`}
                             style={{
                               backgroundColor:
                                 pointFill(
                                   displayedTotal
                                 ),
                               color:
-                                pointTextColor(
-                                  displayedTotal
-                                ),
+                                displayedTotal <= 0
+                                  ? undefined
+                                  : pointTextColor(
+                                      displayedTotal
+                                    ),
                             }}
                           >
 
-                            <span
-                              className={`${gothamBlack.className} relative z-40 text-sm`}
-                            >
+                            <span className="relative z-40 text-sm">
                               {formatNumber(
                                 displayedTotal
                               )}
@@ -1330,7 +1342,13 @@ export default function DecadeEndBreakdownPage() {
                           'overall' ? (
                             <>
                               <td
-                                className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle ${
+                                  item.decadePoints[
+                                    '2010s'
+                                  ] <= 0
+                                    ? 'text-black dark:text-stone-400'
+                                    : ''
+                                }`}
                                 style={{
                                   backgroundColor:
                                     pointFill(
@@ -1342,14 +1360,22 @@ export default function DecadeEndBreakdownPage() {
                                           : 1)
                                     ),
                                   color:
-                                    pointTextColor(
-                                      item.decadePoints[
-                                        '2010s'
-                                      ] /
-                                        (weighted
-                                          ? 100
-                                          : 1)
-                                    ),
+                                    item.decadePoints[
+                                      '2010s'
+                                    ] /
+                                      (weighted
+                                        ? 100
+                                        : 1) <=
+                                    0
+                                      ? undefined
+                                      : pointTextColor(
+                                          item.decadePoints[
+                                            '2010s'
+                                          ] /
+                                            (weighted
+                                              ? 100
+                                              : 1)
+                                        ),
                                 }}
                               >
 
@@ -1367,7 +1393,13 @@ export default function DecadeEndBreakdownPage() {
                               </td>
 
                               <td
-                                className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle ${
+                                  item.decadePoints[
+                                    '2020s'
+                                  ] <= 0
+                                    ? 'text-black dark:text-stone-400'
+                                    : ''
+                                }`}
                                 style={{
                                   backgroundColor:
                                     pointFill(
@@ -1379,14 +1411,22 @@ export default function DecadeEndBreakdownPage() {
                                           : 1)
                                     ),
                                   color:
-                                    pointTextColor(
-                                      item.decadePoints[
-                                        '2020s'
-                                      ] /
-                                        (weighted
-                                          ? 100
-                                          : 1)
-                                    ),
+                                    item.decadePoints[
+                                      '2020s'
+                                    ] /
+                                      (weighted
+                                        ? 100
+                                        : 1) <=
+                                    0
+                                      ? undefined
+                                      : pointTextColor(
+                                          item.decadePoints[
+                                            '2020s'
+                                          ] /
+                                            (weighted
+                                              ? 100
+                                              : 1)
+                                        ),
                                 }}
                               >
 
@@ -1428,16 +1468,23 @@ export default function DecadeEndBreakdownPage() {
                                     key={
                                       year
                                     }
-                                    className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                    className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle ${
+                                      displayedValue <= 0
+                                        ? 'text-black dark:text-stone-400'
+                                        : ''
+                                    }`}
                                     style={{
                                       backgroundColor:
                                         pointFill(
                                           displayedValue
                                         ),
                                       color:
-                                        pointTextColor(
-                                          displayedValue
-                                        ),
+                                        displayedValue <=
+                                        0
+                                          ? undefined
+                                          : pointTextColor(
+                                              displayedValue
+                                            ),
                                     }}
                                   >
 
