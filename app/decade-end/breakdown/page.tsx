@@ -810,6 +810,12 @@ export default function DecadeEndBreakdownPage() {
 
   return (
     <main className="pt-24 pb-16">
+      <style jsx global>{`
+        .dark .breakdown-zero-point {
+          color: #888888 !important;
+        }
+      `}</style>
+
       <div className="mx-auto w-full max-w-[1600px] px-4">
 
         <h1
@@ -1201,7 +1207,12 @@ export default function DecadeEndBreakdownPage() {
                           >
 
                             <span
-                              className={`${gothamBlack.className} relative z-40 text-sm`}
+                              className={`${gothamBlack.className} relative z-40 text-sm ${
+                                displayedTotal ===
+                                0
+                                  ? 'breakdown-zero-point'
+                                  : ''
+                              }`}
                             >
                               {formatNumber(
                                 displayedTotal
@@ -1293,7 +1304,19 @@ export default function DecadeEndBreakdownPage() {
                                 }}
                               >
 
-                                <span className="relative z-40 text-sm">
+                                <span
+                                  className={`relative z-40 text-sm ${
+                                    item.decadePoints[
+                                      '2010s'
+                                    ] /
+                                      (weighted
+                                        ? 100
+                                        : 1) ===
+                                    0
+                                      ? 'breakdown-zero-point'
+                                      : ''
+                                  }`}
+                                >
                                   {formatNumber(
                                     item.decadePoints[
                                       '2010s'
@@ -1330,7 +1353,19 @@ export default function DecadeEndBreakdownPage() {
                                 }}
                               >
 
-                                <span className="relative z-40 text-sm">
+                                <span
+                                  className={`relative z-40 text-sm ${
+                                    item.decadePoints[
+                                      '2020s'
+                                    ] /
+                                      (weighted
+                                        ? 100
+                                        : 1) ===
+                                    0
+                                      ? 'breakdown-zero-point'
+                                      : ''
+                                  }`}
+                                >
                                   {formatNumber(
                                     item.decadePoints[
                                       '2020s'
@@ -1377,7 +1412,14 @@ export default function DecadeEndBreakdownPage() {
                                     }}
                                   >
 
-                                    <span className="relative z-40 text-sm">
+                                    <span
+                                      className={`relative z-40 text-sm ${
+                                        displayedValue ===
+                                        0
+                                          ? 'breakdown-zero-point'
+                                          : ''
+                                      }`}
+                                    >
                                       {formatNumber(
                                         displayedValue
                                       )}
