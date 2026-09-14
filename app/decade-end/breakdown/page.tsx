@@ -146,32 +146,67 @@ const INVERSE_POINTS: Record<number, number> = {
 };
 
 function getMultiplier(date: Date): number {
-  const time = date.getTime();
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
 
-  const jan7_2010 = new Date('2010-01-07').getTime();
-  const oct17_2024 = new Date('2024-10-17').getTime();
-  const mar6_2025 = new Date('2025-03-06').getTime();
-  const mar19_2026 = new Date('2026-03-19').getTime();
+  // March 19, 2026 onward = 0.65
+  if (
+    year > 2026 ||
+    (year === 2026 &&
+      (month > 3 ||
+        (month === 3 && day >= 19)))
+  ) {
+    return 0.65;
+  }
 
-  if (time >= mar19_2026) return 0.65;
-  if (time >= mar6_2025) return 0.6;
-  if (time >= oct17_2024) return 0.54;
-  if (time >= jan7_2010) return 1;
+  // March 6, 2025 onward = 0.60
+  if (
+    year > 2025 ||
+    (year === 2025 &&
+      (month > 3 ||
+        (month === 3 && day >= 6)))
+  ) {
+    return 0.6;
+  }
+
+  // October 17, 2024 onward = 0.54
+  if (
+    year > 2024 ||
+    (year === 2024 &&
+      (month > 10 ||
+        (month === 10 && day >= 17)))
+  ) {
+    return 0.54;
+  }
+
+  // January 7, 2010 onward = 1.00
+  if (
+    year > 2010 ||
+    (year === 2010 &&
+      (month > 1 ||
+        (month === 1 && day >= 7)))
+  ) {
+    return 1;
+  }
 
   return 1;
 }
 
 function parseDate(value: string): Date | null {
-  const parsed = new Date(value);
+  const cleaned = value.trim();
 
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed;
-  }
-
-  const parts = value.split(/[/-]/);
+  /*
+   * Parse calendar dates manually first.
+   *
+   * This prevents timezone differences from moving
+   * a chart date across a multiplier boundary.
+   */
+  const parts = cleaned.split(/[/-]/);
 
   if (parts.length === 3) {
-    const [month, day, year] = parts.map(Number);
+    const [month, day, year] =
+      parts.map(Number);
 
     if (
       Number.isFinite(month) &&
@@ -184,10 +219,20 @@ function parseDate(value: string): Date | null {
         day
       );
 
-      if (!Number.isNaN(date.getTime())) {
+      if (
+        date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day
+      ) {
         return date;
       }
     }
+  }
+
+  const parsed = new Date(cleaned);
+
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed;
   }
 
   return null;
