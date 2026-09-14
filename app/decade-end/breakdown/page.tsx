@@ -151,9 +151,9 @@ function getMultiplier(date: Date): number {
   const jan7_2010 = new Date('2010-01-07').getTime();
   const oct17_2024 = new Date('2024-10-17').getTime();
   const mar6_2025 = new Date('2025-03-06').getTime();
-  const mar17_2026 = new Date('2026-03-17').getTime();
+  const mar19_2026 = new Date('2026-03-19').getTime();
 
-  if (time >= mar17_2026) return 0.65;
+  if (time >= mar19_2026) return 0.65;
   if (time >= mar6_2025) return 0.6;
   if (time >= oct17_2024) return 0.54;
   if (time >= jan7_2010) return 1;
