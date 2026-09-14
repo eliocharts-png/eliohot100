@@ -36,6 +36,8 @@ type SongSummary = {
   gain: number | null;
 };
 
+type Decade = 'overall' | '2010s' | '2020s';
+
 const INVERSE_POINTS: Record<number, number> = {
   1: 75000,
   2: 55000,
@@ -349,9 +351,41 @@ function gainColor(rank: number | null): string {
   return '#8bb7d9';
 }
 
-function getDecadeYears(decade: '2010s' | '2020s'): number[] {
+/*
+ * Lighter versions of the existing gain colors.
+ *
+ * These are intentionally much softer so the song title
+ * and artist remain readable while keeping the same
+ * rank-based color identity.
+ */
+function gainBackgroundColor(rank: number | null): string {
+  if (rank === null) {
+    return '#ffffff';
+  }
+
+  if (rank === 1) {
+    return '#d9f3ee';
+  }
+
+  if (rank >= 2 && rank <= 10) {
+    return '#f0dce3';
+  }
+
+  if (rank >= 11 && rank <= 40) {
+    return '#d9eef8';
+  }
+
+  return '#e7f0f7';
+}
+
+function getDecadeYears(
+  decade: '2010s' | '2020s'
+): number[] {
   if (decade === '2010s') {
-    return Array.from({ length: 10 }, (_, index) => 2010 + index);
+    return Array.from(
+      { length: 10 },
+      (_, index) => 2010 + index
+    );
   }
 
   const currentYear = new Date().getFullYear();
@@ -365,8 +399,10 @@ function getDecadeYears(decade: '2010s' | '2020s'): number[] {
 export default function DecadeEndBreakdownPage() {
   const [rows, setRows] = useState<ChartRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [decade, setDecade] = useState<'2010s' | '2020s'>('2010s');
-  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [decade, setDecade] = useState<Decade>('overall');
+  const [selectedYear, setSelectedYear] = useState<
+    number | 'all'
+  >('all');
   const [weighted, setWeighted] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -383,7 +419,10 @@ export default function DecadeEndBreakdownPage() {
           setRows(parsed);
         }
       } catch (error) {
-        console.error('Failed to load decade-end data:', error);
+        console.error(
+          'Failed to load decade-end data:',
+          error
+        );
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -398,10 +437,13 @@ export default function DecadeEndBreakdownPage() {
     };
   }, []);
 
-  const years = useMemo(
-    () => getDecadeYears(decade),
-    [decade]
-  );
+  const years = useMemo(() => {
+    if (decade === 'overall') {
+      return [];
+    }
+
+    return getDecadeYears(decade);
+  }, [decade]);
 
   useEffect(() => {
     setSelectedYear('all');
@@ -430,12 +472,17 @@ export default function DecadeEndBreakdownPage() {
 
     for (const row of rows) {
       if (
-        row.date.getTime() !== latestChartDate.getTime()
+        row.date.getTime() !==
+        latestChartDate.getTime()
       ) {
         continue;
       }
 
-      const key = getSongKey(row.song, row.artist);
+      const key = getSongKey(
+        row.song,
+        row.artist
+      );
+
       map.set(key, row);
     }
 
@@ -443,16 +490,24 @@ export default function DecadeEndBreakdownPage() {
   }, [rows, latestChartDate]);
 
   const summaries = useMemo(() => {
-    const startYear = decade === '2010s' ? 2010 : 2020;
-    const endYear =
-      decade === '2010s'
-        ? 2019
-        : new Date().getFullYear();
-
     const relevantRows = rows.filter((row) => {
       const year = row.date.getFullYear();
 
-      if (year < startYear || year > endYear) {
+      if (year < 2010) {
+        return false;
+      }
+
+      if (
+        decade === '2010s' &&
+        (year < 2010 || year > 2019)
+      ) {
+        return false;
+      }
+
+      if (
+        decade === '2020s' &&
+        year < 2020
+      ) {
         return false;
       }
 
@@ -478,7 +533,10 @@ export default function DecadeEndBreakdownPage() {
     >();
 
     for (const row of relevantRows) {
-      const key = getSongKey(row.song, row.artist);
+      const key = getSongKey(
+        row.song,
+        row.artist
+      );
 
       if (!grouped.has(key)) {
         grouped.set(key, {
@@ -506,19 +564,22 @@ export default function DecadeEndBreakdownPage() {
       const year = row.date.getFullYear();
 
       item.yearlyPoints[year] =
-        (item.yearlyPoints[year] ?? 0) + contribution;
+        (item.yearlyPoints[year] ?? 0) +
+        contribution;
     }
 
     const result: SongSummary[] = Array.from(
       grouped.entries()
     ).map(([key, item]) => {
-      const currentEntry = latestChartEntries.get(key);
+      const currentEntry =
+        latestChartEntries.get(key);
 
       const currentRank =
         currentEntry?.rank ?? null;
 
       const gain =
-        currentEntry && currentEntry.points > 0
+        currentEntry &&
+        currentEntry.points > 0
           ? currentEntry.points
           : null;
 
@@ -539,7 +600,9 @@ export default function DecadeEndBreakdownPage() {
         return true;
       }
 
-      const query = search.toLowerCase().trim();
+      const query = search
+        .toLowerCase()
+        .trim();
 
       return item.artist
         .toLowerCase()
@@ -574,74 +637,113 @@ export default function DecadeEndBreakdownPage() {
     );
   }
 
+  /*
+   * Gain is relevant whenever we're viewing the
+   * current 2020s period, including Overall.
+   */
   const showGain =
-    decade === '2020s' &&
-    (selectedYear === 'all' || selectedYear === 2026);
+    (decade === '2020s' ||
+      decade === 'overall') &&
+    (selectedYear === 'all' ||
+      selectedYear === 2026);
 
   return (
     <main className="pt-24 pb-16">
       <div className="mx-auto w-full max-w-[1600px] px-4">
+
         <h1
           className={`${gothamBlack.className} text-center text-2xl sm:text-3xl md:text-4xl`}
         >
-          Decade-End Hits of the {decade}
+          {decade === 'overall'
+            ? 'Overall Decade-End Hits'
+            : `Decade-End Hits of the ${decade}`}
         </h1>
 
         <div className="mt-8 flex flex-col items-center gap-4">
+
+          {/* =================================================
+           * DECADE SELECTOR
+           * ================================================= */}
+
           <div className="flex items-center justify-center gap-2">
-            {(['2010s', '2020s'] as const).map(
-              (option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setDecade(option)}
-                  className={`${gothamBlack.className} px-4 py-2 text-sm ${
-                    decade === option
-                      ? 'bg-black text-white'
-                      : 'bg-stone-100 text-black'
-                  }`}
-                >
-                  {option}
-                </button>
-              )
-            )}
-          </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedYear('all')}
-              className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
-                selectedYear === 'all'
-                  ? 'bg-black text-white'
-                  : 'bg-stone-100 text-black'
-              }`}
-            >
-              All
-            </button>
-
-            {years.map((year) => (
+            {(
+              ['overall', '2010s', '2020s'] as const
+            ).map((option) => (
               <button
-                key={year}
+                key={option}
                 type="button"
-                onClick={() => setSelectedYear(year)}
-                className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
-                  selectedYear === year
+                onClick={() =>
+                  setDecade(option)
+                }
+                className={`${gothamBlack.className} px-4 py-2 text-sm ${
+                  decade === option
                     ? 'bg-black text-white'
                     : 'bg-stone-100 text-black'
                 }`}
               >
-                {year}
+                {option === 'overall'
+                  ? 'OVERALL'
+                  : option}
               </button>
             ))}
+
           </div>
 
+          {/* =================================================
+           * YEAR SELECTOR
+           * ================================================= */}
+
+          {decade !== 'overall' && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedYear('all')
+                }
+                className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
+                  selectedYear === 'all'
+                    ? 'bg-black text-white'
+                    : 'bg-stone-100 text-black'
+                }`}
+              >
+                All
+              </button>
+
+              {years.map((year) => (
+                <button
+                  key={year}
+                  type="button"
+                  onClick={() =>
+                    setSelectedYear(year)
+                  }
+                  className={`${gothamBlack.className} px-3 py-1.5 text-sm ${
+                    selectedYear === year
+                      ? 'bg-black text-white'
+                      : 'bg-stone-100 text-black'
+                  }`}
+                >
+                  {year}
+                </button>
+              ))}
+
+            </div>
+          )}
+
+          {/* =================================================
+           * WEIGHTING
+           * ================================================= */}
+
           <label className="flex items-center gap-2 text-sm">
+
             <input
               type="checkbox"
               checked={weighted}
               onChange={(event) =>
-                setWeighted(event.target.checked)
+                setWeighted(
+                  event.target.checked
+                )
               }
               className="h-4 w-4"
             />
@@ -649,9 +751,15 @@ export default function DecadeEndBreakdownPage() {
             <span className={gothamRegular.className}>
               Apply estimated tracking period and weighting
             </span>
+
           </label>
 
+          {/* =================================================
+           * SEARCH
+           * ================================================= */}
+
           <div className="relative w-full max-w-md">
+
             <svg
               viewBox="0 0 24 24"
               aria-hidden="true"
@@ -660,7 +768,12 @@ export default function DecadeEndBreakdownPage() {
               stroke="currentColor"
               strokeWidth="2"
             >
-              <circle cx="11" cy="11" r="7" />
+              <circle
+                cx="11"
+                cy="11"
+                r="7"
+              />
+
               <path d="m20 20-4-4" />
             </svg>
 
@@ -668,21 +781,34 @@ export default function DecadeEndBreakdownPage() {
               type="text"
               value={search}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setSearch(
+                  event.target.value
+                )
               }
               placeholder="Search by artist name..."
               className={`${gothamRegular.className} w-full border border-stone-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-black`}
             />
+
           </div>
+
         </div>
 
+        {/* =================================================
+         * TABLE
+         * ================================================= */}
+
         <div className="mt-10 overflow-x-auto">
+
           <div className="flex min-w-full justify-center">
+
             <div className="relative inline-block">
+
               <table
                 className={`${gothamRegular.className} relative z-10 table-fixed border-collapse`}
               >
+
                 <colgroup>
+
                   <col className="w-10" />
 
                   <col className="w-[300px] md:w-[360px]" />
@@ -693,214 +819,533 @@ export default function DecadeEndBreakdownPage() {
                     <col className="w-14" />
                   )}
 
-                  {years.map((year) => (
-                    <col
-                      key={year}
-                      className="w-[43px]"
-                    />
-                  ))}
+                  {decade === 'overall' ? (
+                    <>
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                    </>
+                  ) : (
+                    years.map((year) => (
+                      <col
+                        key={year}
+                        className="w-[43px]"
+                      />
+                    ))
+                  )}
+
                 </colgroup>
 
                 <thead>
+
                   <tr className="text-sm">
-                    <th className="py-1 text-center sticky top-0 bg-white">
+
+                    <th className="sticky top-0 bg-white py-1 text-center">
                       #
                     </th>
 
-                    <th className="py-1 text-left sticky top-0 bg-white">
+                    <th className="sticky top-0 bg-white py-1 text-left">
                       Song
                     </th>
 
-                    <th className="py-1 text-center min-w-[3.5rem] sticky top-0 bg-white">
+                    <th className="sticky top-0 min-w-[3.5rem] bg-white py-1 text-center">
                       Points
                     </th>
 
                     {showGain && (
-                      <th className="py-1 text-center min-w-[3.5rem] sticky top-0 bg-white">
+                      <th className="sticky top-0 min-w-[3.5rem] bg-white py-1 text-center">
                         Gain
                       </th>
                     )}
 
-                    {years.map((year) => (
-                      <th
-                        key={year}
-                        className={`${gothamRegular.className} py-1 text-center sticky top-0 bg-white px-0.5`}
-                      >
-                        '{String(year).slice(-2)}
-                      </th>
-                    ))}
+                    {decade === 'overall' ? (
+                      <>
+                        <th className="sticky top-0 bg-white px-0.5 py-1 text-center">
+                          2010s
+                        </th>
+
+                        <th className="sticky top-0 bg-white px-0.5 py-1 text-center">
+                          2020s
+                        </th>
+                      </>
+                    ) : (
+                      years.map((year) => (
+                        <th
+                          key={year}
+                          className={`${gothamRegular.className} sticky top-0 bg-white px-0.5 py-1 text-center`}
+                        >
+                          '{String(year).slice(-2)}
+                        </th>
+                      ))
+                    )}
+
                   </tr>
+
                 </thead>
 
                 <tbody>
-                  {summaries.map((item, index) => {
-                    const displayedTotal =
-                      item.totalPoints /
-                      (weighted ? 100 : 1);
 
-                    const gainIsActive =
-                      item.currentRank !== null &&
-                      item.gain !== null &&
-                      item.gain > 0;
+                  {summaries.map(
+                    (item, index) => {
 
-                    const gainColorValue = gainColor(
-                      item.currentRank
-                    );
+                      const displayedTotal =
+                        item.totalPoints /
+                        (weighted ? 100 : 1);
 
-                    const currentEntry =
-                      item.currentRank !== null
-                        ? latestChartEntries.get(item.key)
-                        : null;
+                      const gainIsActive =
+                        item.currentRank !== null &&
+                        item.gain !== null &&
+                        item.gain > 0;
 
-                    const displayedGain = currentEntry
-                      ? weighted
-                        ? ((INVERSE_POINTS[
-                            currentEntry.rank
-                          ] ?? 0) *
-                            getMultiplier(
-                              currentEntry.date
-                            )) /
-                          100
-                        : currentEntry.points
-                      : null;
+                      const gainColorValue =
+                        gainColor(
+                          item.currentRank
+                        );
 
-                    return (
-                      <tr key={item.key}>
-                        <td className="relative z-20 py-1 text-center align-middle">
-                          <span
-                            className={gothamBlack.className}
+                      const currentEntry =
+                        item.currentRank !== null
+                          ? latestChartEntries.get(
+                              item.key
+                            )
+                          : null;
+
+                      const displayedGain =
+                        currentEntry
+                          ? weighted
+                            ? ((INVERSE_POINTS[
+                                currentEntry.rank
+                              ] ?? 0) *
+                                getMultiplier(
+                                  currentEntry.date
+                                )) /
+                              100
+                            : currentEntry.points
+                          : null;
+
+                      /*
+                       * The song cell is highlighted ONLY
+                       * when the song is currently gaining.
+                       *
+                       * The fill uses a lighter version
+                       * of the existing gain color.
+                       */
+                      const songCellBackground =
+                        gainIsActive
+                          ? gainBackgroundColor(
+                              item.currentRank
+                            )
+                          : '#ffffff';
+
+                      return (
+                        <tr key={item.key}>
+
+                          {/* =================================================
+                           * RANK
+                           * ================================================= */}
+
+                          <td className="relative z-20 py-1 text-center align-middle">
+
+                            <span
+                              className={
+                                gothamBlack.className
+                              }
+                            >
+                              {index + 1}
+                            </span>
+
+                          </td>
+
+                          {/* =================================================
+                           * SONG / ARTIST
+                           * ================================================= */}
+
+                          <td
+                            className="relative z-20 py-1 align-middle"
+                            style={{
+                              backgroundColor:
+                                songCellBackground,
+                            }}
                           >
-                            {index + 1}
-                          </span>
-                        </td>
 
-                        <td className="relative z-20 py-1 align-middle bg-white">
-                          <div className="flex items-center gap-1 sm:gap-2 py-1">
-                            {item.artwork ? (
-                              <img
-                                alt=""
-                                className="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-md bg-stone-200 object-cover"
-                                src={item.artwork}
-                              />
-                            ) : (
-                              <div className="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-md bg-stone-200" />
-                            )}
+                            <div className="flex items-center gap-1 py-1 sm:gap-2">
 
-                            <div className="min-w-0 flex-1 pl-1 pr-2.5 max-w-[18rem] md:max-w-[25.5rem]">
-                              <span
-                                className={`${gothamBlack.className} block text-stone-900 leading-tight truncate text-[1.1rem] md:text-[1.2rem]`}
-                              >
-                                {item.song}
-                              </span>
+                              {item.artwork ? (
+                                <img
+                                  alt=""
+                                  className="h-10 w-10 shrink-0 rounded-md bg-stone-200 object-cover md:h-11 md:w-11"
+                                  src={item.artwork}
+                                />
+                              ) : (
+                                <div className="h-10 w-10 shrink-0 rounded-md bg-stone-200 md:h-11 md:w-11" />
+                              )}
 
-                              <span
-                                className={`${gothamRegular.className} block text-xs md:text-sm leading-tight truncate text-stone-600`}
-                              >
-                                {item.artist}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
+                              <div className="min-w-0 max-w-[18rem] flex-1 pl-1 pr-2.5 md:max-w-[25.5rem]">
 
-                        <td
-                          className="relative z-20 py-1 text-center align-middle"
-                          style={{
-                            backgroundColor:
-                              pointFill(displayedTotal),
-                            color:
-                              pointTextColor(displayedTotal),
-                          }}
-                        >
-                          <span
-                            className={`${gothamBlack.className} relative z-40 text-sm`}
-                          >
-                            {formatNumber(displayedTotal)}
-                          </span>
-                        </td>
-
-                        {showGain && (
-                          <td className="relative z-20 py-1 text-center align-middle bg-white">
-                            {gainIsActive &&
-                            displayedGain !== null ? (
-                              <div className="flex items-center justify-center gap-1">
                                 <span
-                                  className="flex h-4 w-4 items-center justify-center rounded-full"
-                                  style={{
-                                    backgroundColor:
-                                      gainColorValue,
-                                  }}
-                                  aria-hidden="true"
+                                  className={`${gothamBlack.className} block truncate text-[1.1rem] leading-tight text-stone-900 md:text-[1.2rem]`}
                                 >
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    className="h-3 w-3"
-                                    fill="none"
-                                    stroke="#ffffff"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M12 19V5" />
-                                    <path d="m6 11 6-6 6 6" />
-                                  </svg>
+                                  {item.song}
                                 </span>
 
                                 <span
-                                  className={`${gothamBlack.className} text-sm`}
-                                  style={{
-                                    color:
-                                      gainColorValue,
-                                  }}
+                                  className={`${gothamRegular.className} block truncate text-xs leading-tight text-stone-600 md:text-sm`}
                                 >
+                                  {item.artist}
+                                </span>
+
+                              </div>
+
+                            </div>
+
+                          </td>
+
+                          {/* =================================================
+                           * TOTAL POINTS
+                           * ================================================= */}
+
+                          <td
+                            className="relative z-20 py-1 text-center align-middle"
+                            style={{
+                              backgroundColor:
+                                pointFill(
+                                  displayedTotal
+                                ),
+                              color:
+                                pointTextColor(
+                                  displayedTotal
+                                ),
+                            }}
+                          >
+
+                            <span
+                              className={`${gothamBlack.className} relative z-40 text-sm`}
+                            >
+                              {formatNumber(
+                                displayedTotal
+                              )}
+                            </span>
+
+                          </td>
+
+                          {/* =================================================
+                           * GAIN
+                           * ================================================= */}
+
+                          {showGain && (
+                            <td className="relative z-20 bg-white py-1 text-center align-middle">
+
+                              {gainIsActive &&
+                              displayedGain !== null ? (
+                                <div className="flex items-center justify-center gap-1">
+
+                                  <span
+                                    className="flex h-4 w-4 items-center justify-center rounded-full"
+                                    style={{
+                                      backgroundColor:
+                                        gainColorValue,
+                                    }}
+                                    aria-hidden="true"
+                                  >
+
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      className="h-3 w-3"
+                                      fill="none"
+                                      stroke="#ffffff"
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M12 19V5" />
+                                      <path d="m6 11 6-6 6 6" />
+                                    </svg>
+
+                                  </span>
+
+                                  <span
+                                    className={`${gothamBlack.className} text-sm`}
+                                    style={{
+                                      color:
+                                        gainColorValue,
+                                    }}
+                                  >
+                                    {formatNumber(
+                                      displayedGain
+                                    )}
+                                  </span>
+
+                                </div>
+                              ) : (
+                                <span
+                                  className={`${gothamRegular.className} text-stone-500`}
+                                >
+                                  --
+                                </span>
+                              )}
+
+                            </td>
+                          )}
+
+                          {/* =================================================
+                           * OVERALL DECADE COLUMNS
+                           * ================================================= */}
+
+                          {decade === 'overall' ? (
+                            <>
+                              <td
+                                className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                style={{
+                                  backgroundColor:
+                                    pointFill(
+                                      (item.yearlyPoints[
+                                        2010
+                                      ] ??
+                                        0) +
+                                        Object.entries(
+                                          item.yearlyPoints
+                                        )
+                                          .filter(
+                                            ([year]) =>
+                                              Number(
+                                                year
+                                              ) >=
+                                                2010 &&
+                                              Number(
+                                                year
+                                              ) <=
+                                                2019
+                                          )
+                                          .reduce(
+                                            (
+                                              total,
+                                              [
+                                                ,
+                                                value,
+                                              ]
+                                            ) =>
+                                              total +
+                                              value,
+                                            0
+                                          ) -
+                                        (item.yearlyPoints[
+                                          2010
+                                        ] ?? 0)
+                                    ),
+                                  color:
+                                    pointTextColor(
+                                      Object.entries(
+                                        item.yearlyPoints
+                                      )
+                                        .filter(
+                                          ([year]) =>
+                                            Number(
+                                              year
+                                            ) >=
+                                              2010 &&
+                                            Number(
+                                              year
+                                            ) <=
+                                              2019
+                                        )
+                                        .reduce(
+                                          (
+                                            total,
+                                            [
+                                              ,
+                                              value,
+                                            ]
+                                          ) =>
+                                            total +
+                                            value,
+                                          0
+                                        ) /
+                                        (weighted
+                                          ? 100
+                                          : 1)
+                                    ),
+                                }}
+                              >
+                                <span className="relative z-40 text-sm">
                                   {formatNumber(
-                                    displayedGain
+                                    Object.entries(
+                                      item.yearlyPoints
+                                    )
+                                      .filter(
+                                        ([year]) =>
+                                          Number(
+                                            year
+                                          ) >=
+                                            2010 &&
+                                          Number(
+                                            year
+                                          ) <=
+                                            2019
+                                      )
+                                      .reduce(
+                                        (
+                                          total,
+                                          [
+                                            ,
+                                            value,
+                                          ]
+                                        ) =>
+                                          total +
+                                          value,
+                                        0
+                                      ) /
+                                      (weighted
+                                        ? 100
+                                        : 1)
                                   )}
                                 </span>
-                              </div>
-                            ) : (
-                              <span
-                                className={`${gothamRegular.className} text-stone-500`}
+                              </td>
+
+                              <td
+                                className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                style={{
+                                  backgroundColor:
+                                    pointFill(
+                                      Object.entries(
+                                        item.yearlyPoints
+                                      )
+                                        .filter(
+                                          ([year]) =>
+                                            Number(
+                                              year
+                                            ) >=
+                                            2020
+                                        )
+                                        .reduce(
+                                          (
+                                            total,
+                                            [
+                                              ,
+                                              value,
+                                            ]
+                                          ) =>
+                                            total +
+                                            value,
+                                          0
+                                        ) /
+                                        (weighted
+                                          ? 100
+                                          : 1)
+                                    ),
+                                  color:
+                                    pointTextColor(
+                                      Object.entries(
+                                        item.yearlyPoints
+                                      )
+                                        .filter(
+                                          ([year]) =>
+                                            Number(
+                                              year
+                                            ) >=
+                                            2020
+                                        )
+                                        .reduce(
+                                          (
+                                            total,
+                                            [
+                                              ,
+                                              value,
+                                            ]
+                                          ) =>
+                                            total +
+                                            value,
+                                          0
+                                        ) /
+                                        (weighted
+                                          ? 100
+                                          : 1)
+                                    ),
+                                }}
                               >
-                                --
-                              </span>
-                            )}
-                          </td>
-                        )}
+                                <span className="relative z-40 text-sm">
+                                  {formatNumber(
+                                    Object.entries(
+                                      item.yearlyPoints
+                                    )
+                                      .filter(
+                                        ([year]) =>
+                                          Number(
+                                            year
+                                          ) >=
+                                          2020
+                                      )
+                                      .reduce(
+                                        (
+                                          total,
+                                          [
+                                            ,
+                                            value,
+                                          ]
+                                        ) =>
+                                          total +
+                                          value,
+                                        0
+                                      ) /
+                                      (weighted
+                                        ? 100
+                                        : 1)
+                                  )}
+                                </span>
+                              </td>
+                            </>
+                          ) : (
+                            /* =================================================
+                             * NORMAL YEAR COLUMNS
+                             * ================================================= */
 
-                        {years.map((year) => {
-                          const rawValue =
-                            item.yearlyPoints[year] ?? 0;
+                            years.map((year) => {
 
-                          const displayedValue =
-                            rawValue /
-                            (weighted ? 100 : 1);
+                              const rawValue =
+                                item.yearlyPoints[
+                                  year
+                                ] ?? 0;
 
-                          return (
-                            <td
-                              key={year}
-                              className={`${gothamRegular.className} relative z-20 py-1 text-center align-middle px-0.5`}
-                              style={{
-                                backgroundColor:
-                                  pointFill(displayedValue),
-                                color:
-                                  pointTextColor(
-                                    displayedValue
-                                  ),
-                              }}
-                            >
-                              <span className="relative z-40 text-sm">
-                                {formatNumber(
-                                  displayedValue
-                                )}
-                              </span>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
+                              const displayedValue =
+                                rawValue /
+                                (weighted
+                                  ? 100
+                                  : 1);
+
+                              return (
+                                <td
+                                  key={year}
+                                  className={`${gothamRegular.className} relative z-20 px-0.5 py-1 text-center align-middle`}
+                                  style={{
+                                    backgroundColor:
+                                      pointFill(
+                                        displayedValue
+                                      ),
+                                    color:
+                                      pointTextColor(
+                                        displayedValue
+                                      ),
+                                  }}
+                                >
+                                  <span className="relative z-40 text-sm">
+                                    {formatNumber(
+                                      displayedValue
+                                    )}
+                                  </span>
+                                </td>
+                              );
+                            })
+                          )}
+
+                        </tr>
+                      );
+                    }
+                  )}
+
                 </tbody>
+
               </table>
+
+              {/* =================================================
+               * TEXTURE
+               * ================================================= */}
 
               <div
                 aria-hidden="true"
@@ -908,14 +1353,21 @@ export default function DecadeEndBreakdownPage() {
                 style={{
                   backgroundImage:
                     "url('/texture/texture.jpg')",
-                  backgroundRepeat: 'repeat-y',
-                  backgroundPosition: 'top left',
-                  backgroundSize: '100% 650px',
+                  backgroundRepeat:
+                    'repeat-y',
+                  backgroundPosition:
+                    'top left',
+                  backgroundSize:
+                    '100% 650px',
                 }}
               />
+
             </div>
+
           </div>
+
         </div>
+
       </div>
     </main>
   );
