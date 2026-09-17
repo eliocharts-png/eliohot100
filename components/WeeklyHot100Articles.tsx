@@ -1,6 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import {
   analyzeWeeklyHot100,
@@ -17,6 +21,19 @@ import type {
 
 type WeeklyHot100ArticlesProps = {
   weeklyData: WeeklyChartPayload;
+};
+
+/*
+ * ---------------------------------------------------------
+ * MEDIUM ARTICLE
+ * ---------------------------------------------------------
+ */
+
+type MediumArticle = {
+  title: string;
+  link: string;
+  pubDate: string;
+  thumbnail: string;
 };
 
 /*
@@ -57,20 +74,13 @@ function parseChartDate(
 }
 
 function getRelativeTime(
-  week: string
+  date: Date
 ): string {
-  const articleDate =
-    parseChartDate(week);
-
-  if (!articleDate) {
-    return '';
-  }
-
   const now = new Date();
 
   const difference =
     now.getTime() -
-    articleDate.getTime();
+    date.getTime();
 
   const seconds =
     Math.floor(
@@ -160,6 +170,148 @@ function getRelativeTime(
 
 /*
  * ---------------------------------------------------------
+ * MEDIUM DATE
+ * ---------------------------------------------------------
+ */
+
+function parseMediumDate(
+  value: string
+): Date | null {
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+/*
+ * ---------------------------------------------------------
+ * MEDIUM COVER IMAGE
+ * ---------------------------------------------------------
+ */
+
+function getMediumThumbnail(
+  item: any
+): string {
+  if (
+    typeof item.thumbnail ===
+      'string' &&
+    item.thumbnail
+  ) {
+    return item.thumbnail;
+  }
+
+  if (
+    typeof item.description ===
+      'string'
+  ) {
+    const imageMatch =
+      item.description.match(
+        /<img[^>]+src=["']([^"']+)["']/i
+      );
+
+    if (
+      imageMatch?.[1]
+    ) {
+      return imageMatch[1];
+    }
+  }
+
+  return (
+    'https://ui-avatars.com/api/' +
+    `?name=${encodeURIComponent(
+      item.title ??
+        'Medium'
+    )}` +
+    '&size=1200' +
+    '&background=0050FF' +
+    '&color=ffffff' +
+    '&bold=true' +
+    '&format=png'
+  );
+}
+
+/*
+ * ---------------------------------------------------------
+ * FETCH MEDIUM ARTICLES
+ * ---------------------------------------------------------
+ */
+
+async function fetchMediumArticles(): Promise<
+  MediumArticle[]
+> {
+  const feedUrl =
+    'https://medium.com/feed/@eliocharts';
+
+  const apiUrl =
+    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
+      feedUrl
+    )}`;
+
+  const response =
+    await fetch(apiUrl);
+
+  if (!response.ok) {
+    throw new Error(
+      `Medium request failed: ${response.status}`
+    );
+  }
+
+  const data =
+    await response.json();
+
+  if (
+    data.status !== 'ok' ||
+    !Array.isArray(data.items)
+  ) {
+    throw new Error(
+      'Invalid Medium feed'
+    );
+  }
+
+  return data.items
+    .map(
+      (item: any) => ({
+        title:
+          String(
+            item.title ?? ''
+          ).trim(),
+
+        link:
+          String(
+            item.link ?? ''
+          ).trim(),
+
+        pubDate:
+          String(
+            item.pubDate ?? ''
+          ).trim(),
+
+        thumbnail:
+          getMediumThumbnail(
+            item
+          ),
+      })
+    )
+    .filter(
+      (
+        article: MediumArticle
+      ) =>
+        article.title &&
+        article.link &&
+        article.pubDate
+    );
+}
+
+/*
+ * ---------------------------------------------------------
  * COVER IMAGE
  * ---------------------------------------------------------
  */
@@ -203,11 +355,11 @@ function getCoverImage(
 
 /*
  * ---------------------------------------------------------
- * ARTICLE CARD
+ * WEEKLY ARTICLE CARD
  * ---------------------------------------------------------
  */
 
-function ArticleCard({
+function WeeklyArticleCard({
   payload,
 }: {
   payload: WeeklyChartPayload;
@@ -236,10 +388,17 @@ function ArticleCard({
       payload.entries
     );
 
-  const relativeTime =
-    getRelativeTime(
+  const articleDate =
+    parseChartDate(
       payload.week
     );
+
+  const relativeTime =
+    articleDate
+      ? getRelativeTime(
+          articleDate
+        )
+      : '';
 
   if (!article) {
     return null;
@@ -310,6 +469,92 @@ function ArticleCard({
 
 /*
  * ---------------------------------------------------------
+ * MEDIUM ARTICLE CARD
+ * ---------------------------------------------------------
+ */
+
+function MediumArticleCard({
+  article,
+}: {
+  article: MediumArticle;
+}) {
+  const articleDate =
+    parseMediumDate(
+      article.pubDate
+    );
+
+  const relativeTime =
+    articleDate
+      ? getRelativeTime(
+          articleDate
+        )
+      : '';
+
+  return (
+    <article className="min-w-0">
+
+      <a
+        href={article.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block"
+      >
+
+        {/* =================================================
+            16:9 COVER
+        ================================================= */}
+
+        <div className="relative aspect-[16/9] w-full overflow-hidden bg-black">
+
+          <img
+            src={article.thumbnail}
+            alt=""
+            className="h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-90"
+            onError={(event) => {
+              const image =
+                event.currentTarget;
+
+              image.src =
+                'https://ui-avatars.com/api/' +
+                `?name=${encodeURIComponent(
+                  article.title
+                )}` +
+                '&size=1200' +
+                '&background=0050FF' +
+                '&color=ffffff' +
+                '&bold=true' +
+                '&format=png';
+            }}
+          />
+
+        </div>
+
+        {/* =================================================
+            ARTICLE TITLE
+        ================================================= */}
+
+        <h3 className="mt-3 font-brown-bold text-base leading-[1.08] tracking-[-0.025em] text-black transition-colors duration-150 group-hover:text-[#0050FF] sm:text-lg">
+          {article.title}
+        </h3>
+
+        {/* =================================================
+            ARTICLE AGE
+        ================================================= */}
+
+        {relativeTime && (
+          <p className="mt-2 font-brown-regular text-[0.58rem] uppercase tracking-[0.12em] text-black/40 sm:text-[0.62rem]">
+            {relativeTime}
+          </p>
+        )}
+
+      </a>
+
+    </article>
+  );
+}
+
+/*
+ * ---------------------------------------------------------
  * CHART BEAT
  * ---------------------------------------------------------
  */
@@ -317,6 +562,59 @@ function ArticleCard({
 export default function WeeklyHot100Articles({
   weeklyData,
 }: WeeklyHot100ArticlesProps) {
+  const [
+    mediumArticles,
+    setMediumArticles,
+  ] = useState<
+    MediumArticle[]
+  >([]);
+
+  /*
+   * -------------------------------------------------------
+   * LOAD MEDIUM
+   * -------------------------------------------------------
+   */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMediumArticles() {
+      try {
+        const articles =
+          await fetchMediumArticles();
+
+        if (!cancelled) {
+          setMediumArticles(
+            articles
+          );
+        }
+      } catch (error) {
+        console.error(
+          'Failed to load Medium articles:',
+          error
+        );
+
+        if (!cancelled) {
+          setMediumArticles(
+            []
+          );
+        }
+      }
+    }
+
+    void loadMediumArticles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /*
+   * -------------------------------------------------------
+   * WEEKLY HOT 100 ARTICLES
+   * -------------------------------------------------------
+   */
+
   const recentWeeks =
     useMemo(() => {
       return weeklyData.availableWeeks
@@ -327,8 +625,16 @@ export default function WeeklyHot100Articles({
               week
             ] ?? [];
 
+          const articleDate =
+            parseChartDate(
+              week
+            );
+
           return {
             week,
+            date:
+              articleDate ??
+              new Date(0),
             payload: {
               ...weeklyData,
               week,
@@ -343,8 +649,64 @@ export default function WeeklyHot100Articles({
         });
     }, [weeklyData]);
 
+  /*
+   * -------------------------------------------------------
+   * COMBINE + SORT ARTICLES
+   * -------------------------------------------------------
+   *
+   * Medium articles and generated Chart Beat articles
+   * are treated as one feed.
+   *
+   * Newest published article appears first.
+   */
+
+  const combinedArticles =
+    useMemo(() => {
+      const weeklyArticles =
+        recentWeeks.map(
+          ({
+            week,
+            date,
+            payload,
+          }) => ({
+            type: 'weekly' as const,
+            date,
+            week,
+            payload,
+          })
+        );
+
+      const medium =
+        mediumArticles
+          .map(
+            (article) => ({
+              type: 'medium' as const,
+              date:
+                parseMediumDate(
+                  article.pubDate
+                ) ??
+                new Date(0),
+              article,
+            })
+          );
+
+      return [
+        ...weeklyArticles,
+        ...medium,
+      ]
+        .sort(
+          (a, b) =>
+            b.date.getTime() -
+            a.date.getTime()
+        )
+        .slice(0, 3);
+    }, [
+      recentWeeks,
+      mediumArticles,
+    ]);
+
   if (
-    recentWeeks.length === 0
+    combinedArticles.length === 0
   ) {
     return null;
   }
@@ -389,16 +751,32 @@ export default function WeeklyHot100Articles({
 
       <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
 
-        {recentWeeks.map(
-          ({
-            week,
-            payload,
-          }) => (
-            <ArticleCard
-              key={week}
-              payload={payload}
-            />
-          )
+        {combinedArticles.map(
+          (item) => {
+
+            if (
+              item.type ===
+              'medium'
+            ) {
+              return (
+                <MediumArticleCard
+                  key={`medium-${item.article.link}`}
+                  article={
+                    item.article
+                  }
+                />
+              );
+            }
+
+            return (
+              <WeeklyArticleCard
+                key={`weekly-${item.week}`}
+                payload={
+                  item.payload
+                }
+              />
+            );
+          }
         )}
 
       </div>
