@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
@@ -51,6 +52,11 @@ export default function RootLayout({
         <SiteFooter />
 
         <Analytics />
+
+        <Script
+          src="/elio-preview-player.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
