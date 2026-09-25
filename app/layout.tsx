@@ -33,6 +33,9 @@ const gothamRegular = localFont({
 export const metadata: Metadata = {
   title: 'Elio Charts',
   description: 'Personal charts by Elio',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
