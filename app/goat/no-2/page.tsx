@@ -119,7 +119,7 @@ type HistoryMap = Record<
   }[]
 >;
 
-export default function GoatPage() {
+export default function No2GoatPage() {
   const [entries, setEntries] =
     useState<ChartEntry[]>([]);
 
@@ -142,8 +142,8 @@ export default function GoatPage() {
     useState(false);
 
   /*
-   * Load the GOAT list once when the
-   * component mounts.
+   * Load the No. 2 GOAT list once
+   * when the component mounts.
    */
   useEffect(() => {
     let cancelled = false;
@@ -153,7 +153,7 @@ export default function GoatPage() {
         sheetSources.find(
           (source) =>
             source.title ===
-            'Greatest of All-Time'
+            'Greatest of All-Time No. 2 Songs'
         );
 
       if (!goatSource) {
@@ -173,7 +173,7 @@ export default function GoatPage() {
         }
       } catch (error) {
         console.error(
-          'Failed to load GOAT chart:',
+          'Failed to load No. 2 GOAT chart:',
           error
         );
 
@@ -271,7 +271,7 @@ export default function GoatPage() {
       );
     } catch (error) {
       console.error(
-        'Failed to load GOAT chart history:',
+        'Failed to load No. 2 GOAT chart history:',
         error
       );
 
@@ -289,13 +289,13 @@ export default function GoatPage() {
   return (
     <main className="min-h-screen bg-white text-black">
 
-      {/* SAME SPACING AS ARTIST PAGE */}
+      {/* SAME SPACING AS GOAT PAGE */}
       <div className="pt-[3.8rem]">
 
         {/* HEADER */}
         <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
           <h1 className="text-[3.4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
-            HOT 1OO SONGS
+            HOT 1OO NO. 2 SONGS
           </h1>
         </div>
 
@@ -318,7 +318,7 @@ export default function GoatPage() {
                 PERSONAL CHARTS BY ELIO
               </p>
 
-              {/* INFO BUTTON + FLOATING POPUP */}
+              {/* INFO BUTTON + HOVER POPUP */}
               <div
                 className="relative flex-shrink-0"
                 onMouseEnter={() =>
@@ -328,6 +328,7 @@ export default function GoatPage() {
                   setShowInfo(false)
                 }
               >
+
                 <button
                   type="button"
                   onClick={() =>
@@ -346,12 +347,21 @@ export default function GoatPage() {
                   i
                 </button>
 
+                {/* FLOATING INFORMATION POPUP */}
                 {showInfo && (
-                  <div className="absolute right-0 top-full z-[200] w-[18rem] pt-3 sm:right-1/2 sm:w-[32rem] sm:translate-x-1/2">
+                  <div
+                    className="absolute right-0 top-full z-[200] mt-3 w-[18rem] sm:right-1/2 sm:w-[32rem] sm:translate-x-1/2"
+                    onMouseEnter={() =>
+                      setShowInfo(true)
+                    }
+                    onMouseLeave={() =>
+                      setShowInfo(false)
+                    }
+                  >
                     <div className="border border-black/10 bg-white px-5 py-5 text-center shadow-[0_18px_50px_rgba(0,0,0,0.2)] sm:px-7 sm:py-6">
 
                       <p className="text-[0.62rem] font-brown-bold uppercase tracking-[0.2em] text-black sm:text-xs">
-                        GREATEST OF ALL-TIME
+                        HOT 1OO NO. 2 SONGS
                       </p>
 
                       <p className="mt-3 text-xs font-brown-regular leading-relaxed text-black/70 sm:text-sm">
@@ -363,6 +373,7 @@ export default function GoatPage() {
                     </div>
                   </div>
                 )}
+
               </div>
 
             </div>
@@ -378,7 +389,7 @@ export default function GoatPage() {
             {!loaded && (
               <div className="flex min-h-[300px] items-center justify-center">
                 <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
-                  LOADING GREATEST OF ALL-TIME
+                  LOADING GREATEST OF ALL-TIME: NO. 2 SONGS
                 </p>
               </div>
             )}
@@ -639,7 +650,7 @@ export default function GoatPage() {
               entries.length === 0 && (
                 <div className="flex min-h-[300px] items-center justify-center">
                   <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
-                    NO GREATEST OF ALL-TIME DATA AVAILABLE
+                    NO GREATEST OF ALL-TIME: NO. 2 SONGS DATA AVAILABLE
                   </p>
                 </div>
               )}

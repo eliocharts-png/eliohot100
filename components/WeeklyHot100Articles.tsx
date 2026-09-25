@@ -38,7 +38,7 @@ type MediumArticle = {
 
 /*
  * ---------------------------------------------------------
- * RELATIVE ARTICLE TIME
+ * ARTICLE DATE
  * ---------------------------------------------------------
  */
 
@@ -73,6 +73,47 @@ function parseChartDate(
   );
 }
 
+/*
+ * ---------------------------------------------------------
+ * PUBLISHED DATE
+ * ---------------------------------------------------------
+ */
+
+function formatPublishedDate(
+  date: Date
+): string {
+  return date.toLocaleDateString(
+    'en-US',
+    {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }
+  );
+}
+
+/*
+ * ---------------------------------------------------------
+ * RELATIVE ARTICLE TIME
+ * ---------------------------------------------------------
+ *
+ * Under 1 minute:
+ *   just now
+ *
+ * Under 1 hour:
+ *   X minutes ago
+ *
+ * Under 24 hours:
+ *   X hours ago
+ *
+ * 1–3 days:
+ *   X day(s) ago
+ *
+ * Older than 3 days:
+ *   Published date
+ * ---------------------------------------------------------
+ */
+
 function getRelativeTime(
   date: Date
 ): string {
@@ -81,6 +122,14 @@ function getRelativeTime(
   const difference =
     now.getTime() -
     date.getTime();
+
+  /*
+   * If the date is somehow in the future,
+   * avoid displaying negative time.
+   */
+  if (difference < 0) {
+    return 'just now';
+  }
 
   const seconds =
     Math.floor(
@@ -122,7 +171,7 @@ function getRelativeTime(
       hours / 24
     );
 
-  if (days < 7) {
+  if (days <= 3) {
     return `${days} ${
       days === 1
         ? 'day'
@@ -130,42 +179,9 @@ function getRelativeTime(
     } ago`;
   }
 
-  const weeks =
-    Math.floor(
-      days / 7
-    );
-
-  if (weeks < 5) {
-    return `${weeks} ${
-      weeks === 1
-        ? 'week'
-        : 'weeks'
-    } ago`;
-  }
-
-  const months =
-    Math.floor(
-      days / 30.4375
-    );
-
-  if (months < 12) {
-    return `${months} ${
-      months === 1
-        ? 'month'
-        : 'months'
-    } ago`;
-  }
-
-  const years =
-    Math.floor(
-      days / 365.25
-    );
-
-  return `${years} ${
-    years === 1
-      ? 'year'
-      : 'years'
-  } ago`;
+  return formatPublishedDate(
+    date
+  );
 }
 
 /*

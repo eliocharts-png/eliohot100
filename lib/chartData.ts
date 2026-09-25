@@ -28,6 +28,27 @@ export const sheetSources: ChartSource[] = [
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=861998262&single=true&output=csv',
   },
 
+  {
+    title: 'Greatest of All-Time Filipino Songs',
+    href: '/goat/filipino',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1687213192&single=true&output=csv',
+  },
+
+  {
+    title: 'Greatest of All-Time No. 2 Songs',
+    href: '/goat/no-2',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1145220552&single=true&output=csv',
+  },
+
+  {
+    title: 'Greatest of All-Time Female Songs',
+    href: '/goat/female',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?output=csv',
+  },
+
   /*
    * DECADE-END — 2010s
    */
@@ -575,8 +596,10 @@ export async function fetchChartData(
     }
 
     if (
-      title ===
-      'Greatest of All-Time'
+      title === 'Greatest of All-Time' ||
+      title === 'Greatest of All-Time Filipino Songs' ||
+      title === 'Greatest of All-Time No. 2 Songs' ||
+      title === 'Greatest of All-Time Female Songs'
     ) {
       return parseGoatCsv(
         csvText
@@ -1067,9 +1090,9 @@ export async function fetchWeeklyChartData(
       week: '',
       displayWeek: 'UNKNOWN',
       availableWeeks: [],
-      weeksAtNumberOne: 0,
       entries: [],
       entriesByWeek: {},
+      weeksAtNumberOne: 0,
       weeksAtNumberOneByWeek: {},
     };
   }
