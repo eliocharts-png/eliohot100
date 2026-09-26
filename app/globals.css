@@ -351,3 +351,58 @@ html.dark .chart-loading-shimmer {
  *
  * remains exactly the same in dark mode.
  */
+ /* =========================================================
+   GOAT BLUR TRANSITION
+   ========================================================= */
+
+@keyframes goat-blur-in {
+  0% {
+    filter: blur(10px);
+    opacity: 0.35;
+  }
+
+  45% {
+    filter: blur(5px);
+    opacity: 0.7;
+  }
+
+  100% {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+.goat-blur-enter {
+  animation: goat-blur-in 0.8s ease-out both;
+}
+
+/* Header title */
+
+.goat-header-blur {
+  animation: goat-blur-in 0.7s ease-out both;
+}
+
+/* Artwork */
+
+.goat-artwork-blur {
+  animation: goat-blur-in 0.8s ease-out both;
+}
+
+/* Song title + artist */
+
+.goat-text-blur {
+  animation: goat-blur-in 0.8s ease-out both;
+}
+
+/* Respect users who prefer reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .goat-blur-enter,
+  .goat-header-blur,
+  .goat-artwork-blur,
+  .goat-text-blur {
+    animation: none;
+    filter: none;
+    opacity: 1;
+  }
+}

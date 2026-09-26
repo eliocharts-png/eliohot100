@@ -19,13 +19,20 @@ import {
 import type { ChartEntry } from '@/types';
 
 const ARTISTS_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
 
 type ChartData = {
   title: string;
   href: string;
   entries: ChartEntry[];
 };
+
+const GOAT_CHART_TITLES = [
+  'Greatest of All-Time',
+  'Greatest of All-Time Filipino Songs',
+  'Greatest of All-Time No. 2 Songs',
+  'Greatest of All-Time Female Songs',
+];
 
 function parseArtists(csv: string): string[] {
   const parsed = Papa.parse<string[]>(csv, {
@@ -86,16 +93,19 @@ export default function HomePage() {
   const [chartsLoading, setChartsLoading] =
     useState(true);
 
-  /*
-   * ---------------------------------------------------------
-   * WEEKLY HOT 100 DATA
-   * ---------------------------------------------------------
-   *
-   * This contains the complete Hot 100 history.
-   *
-   * CHART BEAT uses this same data to generate
-   * the three most recent weekly articles.
-   */
+  /* =========================================================
+     GOAT CHART ROTATION
+  ========================================================= */
+
+  const [activeGoatIndex, setActiveGoatIndex] =
+    useState(0);
+
+  const [goatTransitionKey, setGoatTransitionKey] =
+    useState(0);
+
+  /* =========================================================
+     WEEKLY HOT 100 DATA
+  ========================================================= */
 
   const [
     weeklyHot100Data,
@@ -108,11 +118,9 @@ export default function HomePage() {
     > | null
   >(null);
 
-  /*
-   * ---------------------------------------------------------
-   * WEEKLY ARTISTS
-   * ---------------------------------------------------------
-   */
+  /* =========================================================
+     WEEKLY ARTISTS
+  ========================================================= */
 
   const [weeklyArtists, setWeeklyArtists] =
     useState<
@@ -120,7 +128,8 @@ export default function HomePage() {
         ReturnType<
           typeof fetchWeeklyArtistData
         >
-      > | null
+      >
+    | null
     >(null);
 
   const [
@@ -144,12 +153,6 @@ export default function HomePage() {
                 try {
                   /*
                    * THE HOT 100
-                   *
-                   * Fetch the full weekly payload.
-                   *
-                   * We keep this separately so
-                   * CHART BEAT can access the
-                   * previous three weeks.
                    */
 
                   if (
@@ -220,6 +223,75 @@ export default function HomePage() {
 
     void loadCharts();
   }, []);
+
+  /* =========================================================
+     GOAT CHARTS
+  ========================================================= */
+
+  const goatCharts =
+    useMemo(
+      () =>
+        charts.filter(
+          (chart) =>
+            GOAT_CHART_TITLES.includes(
+              chart.title
+            )
+        ),
+      [charts]
+    );
+
+  /* =========================================================
+     ROTATE GOAT CHARTS EVERY 5 SECONDS
+  ========================================================= */
+
+  useEffect(() => {
+    if (goatCharts.length <= 1) {
+      return;
+    }
+
+    const interval =
+      window.setInterval(() => {
+        setActiveGoatIndex(
+          (current) =>
+            (current + 1) %
+            goatCharts.length
+        );
+
+        setGoatTransitionKey(
+          (current) => current + 1
+        );
+      }, 5000);
+
+    return () => {
+      window.clearInterval(
+        interval
+      );
+    };
+  }, [goatCharts.length]);
+
+  const activeGoatChart =
+    goatCharts.length > 0
+      ? goatCharts[
+          activeGoatIndex %
+            goatCharts.length
+        ]
+      : null;
+
+  /* =========================================================
+     GOAT HEADER TITLES
+  ========================================================= */
+
+  const activeGoatHeaderTitle =
+    activeGoatChart?.title ===
+    'Greatest of All-Time'
+      ? 'HOT 100 SONGS'
+      : activeGoatChart?.title ===
+        'Greatest of All-Time Filipino Songs'
+        ? 'FILIPINO SONGS'
+        : activeGoatChart?.title ===
+          'Greatest of All-Time No. 2 Songs'
+          ? 'NO. 2 SONGS'
+          : 'FEMALE SONGS';
 
   /* =========================================================
      LOAD ARTISTS FOR SEARCH
@@ -338,12 +410,6 @@ export default function HomePage() {
       search,
     ]);
 
-  /*
-   * Keep these variables available because
-   * they may be used by the global/header
-   * search implementation.
-   */
-
   void filteredArtists;
   void artistsLoading;
   void search;
@@ -410,13 +476,11 @@ export default function HomePage() {
                               key={`artist-loading-${index}`}
                               className="flex flex-col items-center"
                             >
-
                               <div className="aspect-square w-full max-w-[150px] animate-pulse bg-white/10" />
 
                               <div className="mt-3 h-5 w-12 animate-pulse bg-white/10" />
 
                               <div className="mt-2 h-4 w-[80%] animate-pulse bg-white/10" />
-
                             </div>
                           )
                         )}
@@ -582,7 +646,6 @@ export default function HomePage() {
                             key={`chart-skeleton-1-${index}`}
                             className="min-w-0"
                           >
-
                             <div className="aspect-square w-full animate-pulse bg-black/10" />
 
                             <div className="mt-2 space-y-1.5 sm:mt-3">
@@ -592,7 +655,6 @@ export default function HomePage() {
                               <div className="h-2.5 w-[65%] animate-pulse bg-black/5 sm:h-3" />
 
                             </div>
-
                           </div>
                         )
                       )}
@@ -620,7 +682,6 @@ export default function HomePage() {
                             key={`chart-skeleton-2-${index}`}
                             className="min-w-0"
                           >
-
                             <div className="aspect-square w-full animate-pulse bg-black/10" />
 
                             <div className="mt-2 space-y-1.5 sm:mt-3">
@@ -630,7 +691,6 @@ export default function HomePage() {
                               <div className="h-2.5 w-[65%] animate-pulse bg-black/5 sm:h-3" />
 
                             </div>
-
                           </div>
                         )
                       )}
@@ -658,7 +718,6 @@ export default function HomePage() {
                             key={`chart-skeleton-3-${index}`}
                             className="min-w-0"
                           >
-
                             <div className="aspect-square w-full animate-pulse bg-black/10" />
 
                             <div className="mt-2 space-y-1.5 sm:mt-3">
@@ -668,7 +727,6 @@ export default function HomePage() {
                               <div className="h-2.5 w-[65%] animate-pulse bg-black/5 sm:h-3" />
 
                             </div>
-
                           </div>
                         )
                       )}
@@ -684,22 +742,73 @@ export default function HomePage() {
                 <div className="space-y-9 sm:space-y-12">
 
                   {charts.map(
-                    (chart) => (
-                      <ChartSection
-                        key={
+                    (chart) => {
+
+                      /*
+                       * The four GOAT charts share one
+                       * position. Only the currently
+                       * active GOAT chart is rendered.
+                       */
+
+                      if (
+                        GOAT_CHART_TITLES.includes(
                           chart.title
+                        )
+                      ) {
+                        if (
+                          chart.title !==
+                          'Greatest of All-Time'
+                        ) {
+                          return null;
                         }
-                        title={
-                          chart.title
+
+                        if (
+                          !activeGoatChart
+                        ) {
+                          return null;
                         }
-                        href={
-                          chart.href
-                        }
-                        entries={
-                          chart.entries
-                        }
-                      />
-                    )
+
+                        return (
+                          <div
+                            key={`goat-rotation-${goatTransitionKey}`}
+                            className="goat-blur-enter"
+                          >
+                            <ChartSection
+                              title={
+                                activeGoatChart.title
+                              }
+                              href={
+                                activeGoatChart.href
+                              }
+                              entries={
+                                activeGoatChart.entries
+                              }
+                              headerEyebrow="GREATEST OF ALL TIME"
+                              headerTitle={
+                                activeGoatHeaderTitle
+                              }
+                            />
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <ChartSection
+                          key={
+                            chart.title
+                          }
+                          title={
+                            chart.title
+                          }
+                          href={
+                            chart.href
+                          }
+                          entries={
+                            chart.entries
+                          }
+                        />
+                      );
+                    }
                   )}
 
                   {/* =================================================

@@ -8,12 +8,18 @@ interface ChartSectionProps {
   href: string;
   entries: ChartEntry[];
   loading?: boolean;
+  headerEyebrow?: string;
+  headerTitle?: string;
 }
 
 function ChartSectionSkeleton({
   title,
+  headerEyebrow,
+  headerTitle,
 }: {
   title: string;
+  headerEyebrow?: string;
+  headerTitle?: string;
 }) {
   const displayTitle =
     title === 'Year-End'
@@ -22,62 +28,46 @@ function ChartSectionSkeleton({
 
   return (
     <section className="space-y-4 sm:space-y-6">
+      <div className="flex min-h-[3rem] w-full items-center bg-[#0050FF] px-3 py-2.5 sm:min-h-[4.5rem] sm:px-6 sm:py-3">
+        <h2 className="min-w-0 flex-1 font-brown-bold uppercase leading-none text-white">
+          {headerEyebrow && (
+            <span className="block text-[0.45rem] tracking-[0.12em] sm:text-[0.85rem] sm:tracking-[0.16em] lg:text-[1rem]">
+              {headerEyebrow}
+            </span>
+          )}
 
-      {/* BLUE SECTION HEADER */}
-      <div className="flex min-h-[3rem] w-full items-center bg-[#0050FF] px-3 py-2.5 sm:min-h-[4.5rem] sm:px-6 sm:py-4">
-
-        <h2 className="min-w-0 flex-1 truncate font-brown-bold text-[1rem] uppercase leading-none tracking-[0.1em] text-white sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]">
-          {displayTitle}
+          <span className="block text-[1rem] tracking-[0.1em] sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]">
+            {headerTitle ?? displayTitle}
+          </span>
         </h2>
 
-        {/* VIEW CHART SKELETON */}
         <div className="ml-3 h-3 w-20 animate-pulse bg-white/30 sm:ml-6 sm:h-4 sm:w-28" />
-
       </div>
 
-      {/* SONG PREVIEW SKELETON */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <article
+            key={`skeleton-${index}`}
+            className={`min-w-0 ${
+              index >= 3 ? 'hidden lg:block' : ''
+            }`}
+          >
+            <div className="relative">
+              <div className="aspect-square w-full animate-pulse bg-black/[0.08]" />
 
-        {Array.from({ length: 5 }).map(
-          (_, index) => (
-            <article
-              key={`skeleton-${index}`}
-              className={`min-w-0 ${
-                index >= 3
-                  ? 'hidden lg:block'
-                  : ''
-              }`}
-            >
+              <div className="absolute bottom-0 left-0 h-7 w-[1.9rem] animate-pulse bg-[#0050FF]/70 sm:h-10 sm:w-[2.75rem]" />
+            </div>
 
-              {/* ARTWORK SKELETON */}
-              <div className="relative">
+            <div className="mt-2 min-w-0 sm:mt-3">
+              <div className="h-3.5 w-[85%] animate-pulse bg-black/[0.08] sm:h-5" />
 
-                <div className="aspect-square w-full animate-pulse bg-black/[0.08]" />
+              <div className="mt-1 h-3.5 w-[65%] animate-pulse bg-black/[0.08] sm:h-5" />
 
-                {/* RANK SKELETON */}
-                <div className="absolute bottom-0 left-0 h-7 w-[1.9rem] animate-pulse bg-[#0050FF]/70 sm:h-10 sm:w-[2.75rem]" />
-
-              </div>
-
-              {/* SONG INFORMATION SKELETON */}
-              <div className="mt-2 min-w-0 sm:mt-3">
-
-                {/* TITLE */}
-                <div className="h-3.5 w-[85%] animate-pulse bg-black/[0.08] sm:h-5" />
-
-                <div className="mt-1 h-3.5 w-[65%] animate-pulse bg-black/[0.08] sm:h-5" />
-
-                {/* ARTIST */}
-                <div className="mt-1.5 h-2.5 w-[55%] animate-pulse bg-black/[0.05] sm:mt-2 sm:h-4" />
-
-              </div>
-
-            </article>
-          )
-        )}
-
+              <div className="mt-1.5 h-2.5 w-[55%] animate-pulse bg-black/[0.05] sm:mt-2 sm:h-4" />
+            </div>
+          </article>
+        ))}
       </div>
-
     </section>
   );
 }
@@ -87,6 +77,8 @@ export default function ChartSection({
   href,
   entries,
   loading = false,
+  headerEyebrow,
+  headerTitle,
 }: ChartSectionProps) {
   const isDesktop = useMediaQuery(
     '(min-width: 1024px)',
@@ -112,18 +104,36 @@ export default function ChartSection({
     return (
       <ChartSectionSkeleton
         title={title}
+        headerEyebrow={headerEyebrow}
+        headerTitle={headerTitle}
       />
     );
   }
 
   return (
     <section className="space-y-4 sm:space-y-6">
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
 
-      {/* BLUE SECTION HEADER */}
-      <div className="flex min-h-[3rem] w-full items-center bg-[#0050FF] px-3 py-2.5 sm:min-h-[4.5rem] sm:px-6 sm:py-4">
+      <div className="flex min-h-[3rem] w-full items-center bg-[#0050FF] px-3 py-2.5 sm:min-h-[4.5rem] sm:px-6 sm:py-3">
+        <h2 className="min-w-0 flex-1 font-brown-bold uppercase leading-none text-white">
+          {/* FIXED EYEBROW */}
 
-        <h2 className="min-w-0 flex-1 truncate font-brown-bold text-[1rem] uppercase leading-none tracking-[0.1em] text-white sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]">
-          {displayTitle}
+          {headerEyebrow && (
+            <span className="block text-[0.45rem] tracking-[0.12em] sm:text-[0.85rem] sm:tracking-[0.16em] lg:text-[1rem]">
+              {headerEyebrow}
+            </span>
+          )}
+
+          {/* ROTATING TITLE */}
+
+          <span
+            key={headerTitle}
+            className="goat-header-blur block text-[1rem] tracking-[0.1em] sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]"
+          >
+            {headerTitle ?? displayTitle}
+          </span>
         </h2>
 
         <a
@@ -132,55 +142,62 @@ export default function ChartSection({
         >
           VIEW CHART →
         </a>
-
       </div>
 
-      {/* SONG PREVIEW */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5">
+      {/* =====================================================
+          CHART ENTRIES
+      ====================================================== */}
 
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5">
         {displayedEntries.map((entry) => (
           <article
             key={`${entry.rank}-${entry.title}-${entry.artist}`}
             className="min-w-0"
           >
+            {/* ARTWORK */}
 
-            {/* ARTWORK + RANK */}
             <div className="relative">
-
               {entry.artwork ? (
                 <img
+                  key={`${entry.title}-${entry.artist}-artwork`}
                   src={entry.artwork}
                   alt={`${entry.title} artwork`}
-                  className="block aspect-square w-full object-cover"
+                  className="goat-artwork-blur block aspect-square w-full object-cover"
                 />
               ) : (
-                <div className="aspect-square w-full bg-black/5" />
+                <div
+                  key={`${entry.title}-${entry.artist}-placeholder`}
+                  className="goat-artwork-blur aspect-square w-full bg-black/5"
+                />
               )}
+
+              {/* RANK BADGE */}
 
               <div className="absolute bottom-0 left-0 flex h-7 min-w-[1.9rem] items-center justify-center bg-[#0050FF] px-1.5 font-brown-bold text-[0.85rem] leading-none text-white sm:h-10 sm:min-w-[2.75rem] sm:px-2 sm:text-lg">
                 {entry.rank}
               </div>
-
             </div>
 
-            {/* SONG INFORMATION */}
-            <div className="mt-2 min-w-0 sm:mt-3">
+            {/* SONG / ARTIST */}
 
-              <p className="break-words font-brown-bold text-[0.7rem] leading-[1.08] text-black sm:text-base sm:leading-5">
+            <div className="mt-2 min-w-0 sm:mt-3">
+              <p
+                key={`${entry.title}-${entry.artist}-title`}
+                className="goat-text-blur break-words font-brown-bold text-[0.7rem] leading-[1.08] text-black sm:text-base sm:leading-5"
+              >
                 {entry.title}
               </p>
 
-              <p className="mt-0.5 break-words font-brown-regular text-[0.58rem] leading-[1.1] tracking-[0.01em] text-[#666666] sm:text-sm sm:leading-5 sm:tracking-[0.02em]">
+              <p
+                key={`${entry.title}-${entry.artist}-artist`}
+                className="goat-text-blur mt-0.5 break-words font-brown-regular text-[0.58rem] leading-[1.1] tracking-[0.01em] text-[#666666] sm:text-sm sm:leading-5 sm:tracking-[0.02em]"
+              >
                 {entry.artist}
               </p>
-
             </div>
-
           </article>
         ))}
-
       </div>
-
     </section>
   );
 }

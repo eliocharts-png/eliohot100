@@ -366,7 +366,7 @@ export default function FemaleGoatPage() {
 
                       <p className="mt-3 text-xs font-brown-regular leading-relaxed text-black/70 sm:text-sm">
                         <em>
-                          Songs are ranked based on an inverse point system, with weeks at №1 earning the greatest value and weeks at lower spots earning the least. Due to changes in chart methodology over the years, eras are weighted differently to account for chart turnover rates during periods. As of August 24th, 2026 week-ending.
+                          Songs are ranked based on an inverse point system, with weeks at №1 earning the greatest value and weeks at lower spots earning the least. Due to changes in chart methodology over the years, eras are weighted differently to account for chart turnover rates during periods. As of September 24th, 2026 week-ending.
                         </em>
                       </p>
 

@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
+import { useSearchParams } from 'next/navigation';
+
 import { sheetSources } from '@/lib/chartData';
 import type { ChartEntry } from '@/types';
 
@@ -18,7 +26,10 @@ function parseCSV(csv: string): string[][] {
     const char = csv[i];
 
     if (char === '"') {
-      if (quoted && csv[i + 1] === '"') {
+      if (
+        quoted &&
+        csv[i + 1] === '"'
+      ) {
         value += '"';
         i += 1;
       } else {
@@ -28,14 +39,18 @@ function parseCSV(csv: string): string[][] {
       continue;
     }
 
-    if (char === ',' && !quoted) {
+    if (
+      char === ',' &&
+      !quoted
+    ) {
       row.push(value);
       value = '';
       continue;
     }
 
     if (
-      (char === '\n' || char === '\r') &&
+      (char === '\n' ||
+        char === '\r') &&
       !quoted
     ) {
       if (
@@ -50,7 +65,8 @@ function parseCSV(csv: string): string[][] {
 
       if (
         row.some(
-          (cell) => cell.trim() !== ''
+          (cell) =>
+            cell.trim() !== ''
         )
       ) {
         rows.push(row);
@@ -63,12 +79,16 @@ function parseCSV(csv: string): string[][] {
     value += char;
   }
 
-  if (value !== '' || row.length > 0) {
+  if (
+    value !== '' ||
+    row.length > 0
+  ) {
     row.push(value);
 
     if (
       row.some(
-        (cell) => cell.trim() !== ''
+        (cell) =>
+          cell.trim() !== ''
       )
     ) {
       rows.push(row);
@@ -84,14 +104,25 @@ function parseSong(
   title: string;
   artist: string;
 } {
-  const parts = content
-    .split(/\r?\n/)
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const normalizedContent =
+    content.replace(
+      /<br\s*\/?>/gi,
+      '\n'
+    );
+
+  const parts =
+    normalizedContent
+      .split(/\r?\n/)
+      .map(
+        (part) => part.trim()
+      )
+      .filter(Boolean);
 
   return {
-    title: parts[0] || content,
-    artist: parts[1] || '',
+    title:
+      parts[0] || content,
+    artist:
+      parts[1] || '',
   };
 }
 
@@ -149,14 +180,25 @@ function parseYearEndData(
         return yearDifference;
       }
 
-      return (
-        a.rank - b.rank
-      );
+      return a.rank - b.rank;
     }
   );
 }
 
 export default function YearEndPage() {
+  const searchParams =
+    useSearchParams();
+
+  const requestedYear =
+    searchParams.get(
+      'year'
+    );
+
+  const requestedSong =
+    searchParams.get(
+      'song'
+    );
+
   const [entries, setEntries] =
     useState<YearEndEntry[]>([]);
 
@@ -175,6 +217,9 @@ export default function YearEndPage() {
   const [error, setError] =
     useState(false);
 
+  const hasHandledTarget =
+    useRef(false);
+
   useEffect(() => {
     async function loadYearEnd() {
       try {
@@ -184,7 +229,8 @@ export default function YearEndPage() {
         const source =
           sheetSources.find(
             (item) =>
-              item.title === 'Year-End'
+              item.title ===
+              'Year-End'
           );
 
         if (!source) {
@@ -219,7 +265,9 @@ export default function YearEndPage() {
         const data =
           parseYearEndData(csv);
 
-        if (data.length === 0) {
+        if (
+          data.length === 0
+        ) {
           throw new Error(
             'No Year-End chart entries found'
           );
@@ -227,11 +275,12 @@ export default function YearEndPage() {
 
         setEntries(data);
 
-        const availableYears: string[] =
+        const availableYears =
           Array.from(
             new Set<string>(
               data.map(
-                (entry) => entry.year
+                (entry) =>
+                  entry.year
               )
             )
           ).sort(
@@ -244,7 +293,24 @@ export default function YearEndPage() {
           availableYears
         );
 
+        /*
+         * If a year was supplied
+         * in the URL and that year
+         * exists, use it.
+         *
+         * Otherwise default to
+         * the newest year.
+         */
         if (
+          requestedYear &&
+          availableYears.includes(
+            requestedYear
+          )
+        ) {
+          setSelectedYear(
+            requestedYear
+          );
+        } else if (
           availableYears.length > 0
         ) {
           setSelectedYear(
@@ -264,7 +330,7 @@ export default function YearEndPage() {
     }
 
     void loadYearEnd();
-  }, []);
+  }, [requestedYear]);
 
   const currentEntries =
     useMemo(() => {
@@ -283,18 +349,110 @@ export default function YearEndPage() {
       selectedYear,
     ]);
 
+  /*
+   * Find the requested song
+   * inside the selected year.
+   */
+  const targetEntry =
+    useMemo(() => {
+      if (
+        !requestedSong ||
+        !selectedYear
+      ) {
+        return null;
+      }
+
+      const normalizedTarget =
+        requestedSong
+          .trim()
+          .toLowerCase();
+
+      return (
+        currentEntries.find(
+          (entry) =>
+            entry.title
+              .trim()
+              .toLowerCase() ===
+            normalizedTarget
+        ) ?? null
+      );
+    }, [
+      currentEntries,
+      requestedSong,
+      selectedYear,
+    ]);
+
+  /*
+   * Scroll to the requested
+   * song after the chart has
+   * rendered.
+   */
+  useEffect(() => {
+    if (
+      loading ||
+      !targetEntry ||
+      hasHandledTarget.current
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(() => {
+        const targetId =
+          `year-end-${targetEntry.year}-${targetEntry.rank}`;
+
+        const element =
+          document.getElementById(
+            targetId
+          );
+
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+
+          element.classList.add(
+            'year-end-target'
+          );
+
+          window.setTimeout(() => {
+            element.classList.remove(
+              'year-end-target'
+            );
+          }, 2500);
+
+          hasHandledTarget.current =
+            true;
+        }
+      }, 150);
+
+    return () =>
+      window.clearTimeout(
+        timer
+      );
+  }, [
+    loading,
+    targetEntry,
+  ]);
+
+  /*
+   * Reset the target handler
+   * whenever the requested
+   * year/song changes.
+   */
+  useEffect(() => {
+    hasHandledTarget.current =
+      false;
+  }, [
+    requestedYear,
+    requestedSong,
+  ]);
+
   return (
     <main className="min-h-screen bg-white text-black">
 
-      {/* ===================================================
-       * MAIN CONTENT
-       * ================================================= */}
-
       <div className="pt-[3.8rem]">
-
-        {/* =================================================
-         * TITLE
-         * ================================================= */}
 
         <header className="px-4 pb-6 pt-6 sm:px-6 sm:pb-8 sm:pt-8">
 
@@ -305,8 +463,6 @@ export default function YearEndPage() {
               <h1 className="font-brown-bold text-[3.4rem] uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
                 YEAR-END CHARTS
               </h1>
-
-              {/* YEAR DROPDOWN */}
 
               <div className="mt-6 flex justify-center sm:mt-7">
 
@@ -344,15 +500,9 @@ export default function YearEndPage() {
 
         </header>
 
-        {/* =================================================
-         * BLUE BANNER
-         * ================================================= */}
-
         <div className="mx-auto max-w-6xl px-3 sm:px-6">
 
           <div className="relative flex min-h-[2.75rem] items-center bg-[#0050FF] px-4 py-3 sm:px-6">
-
-            {/* HOME */}
 
             <a
               href="/"
@@ -361,15 +511,11 @@ export default function YearEndPage() {
               &lt; HOME
             </a>
 
-            {/* PERSONAL CHARTS */}
-
             <div className="ml-auto flex max-w-[62%] items-center justify-end gap-1.5 sm:mx-auto sm:max-w-none sm:justify-center sm:gap-2">
 
               <p className="text-right text-[0.58rem] font-brown-regular uppercase leading-tight tracking-[0.12em] text-white sm:text-base sm:tracking-[0.2em]">
                 PERSONAL CHARTS BY ELIO
               </p>
-
-              {/* INFO */}
 
               <button
                 type="button"
@@ -396,10 +542,6 @@ export default function YearEndPage() {
 
           </div>
 
-          {/* =================================================
-           * INFORMATION
-           * ================================================= */}
-
           {showInfo && (
             <div className="border-x border-b border-black/10 bg-white px-3 py-6 sm:px-6">
 
@@ -422,13 +564,7 @@ export default function YearEndPage() {
             </div>
           )}
 
-          {/* =================================================
-           * CHART
-           * ================================================= */}
-
           <div className="border-x border-b border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
-
-            {/* LOADING */}
 
             {loading && (
               <div className="flex min-h-[300px] items-center justify-center">
@@ -439,8 +575,6 @@ export default function YearEndPage() {
 
               </div>
             )}
-
-            {/* ERROR */}
 
             {!loading &&
               error && (
@@ -453,72 +587,73 @@ export default function YearEndPage() {
                 </div>
               )}
 
-            {/* =================================================
-             * CHART ENTRIES
-             * ================================================= */}
-
             {!loading &&
               !error &&
               currentEntries.map(
-                (entry, index) => (
-                  <div
-                    key={`${entry.year}-${entry.rank}-${entry.title}-${entry.artist}-${index}`}
-                    className={`flex items-center gap-1.5 px-3 py-3 sm:gap-6 sm:px-6 ${
-                      index > 0
-                        ? 'border-t border-black/10'
-                        : ''
-                    }`}
-                  >
+                (entry, index) => {
+                  const isTarget =
+                    targetEntry?.year ===
+                      entry.year &&
+                    targetEntry.rank ===
+                      entry.rank &&
+                    targetEntry.title ===
+                      entry.title;
 
-                    {/* RANK */}
+                  return (
+                    <div
+                      id={`year-end-${entry.year}-${entry.rank}`}
+                      key={`${entry.year}-${entry.rank}-${entry.title}-${entry.artist}-${index}`}
+                      className={`flex items-center gap-1.5 px-3 py-3 transition-all duration-500 sm:gap-6 sm:px-6 ${
+                        index > 0
+                          ? 'border-t border-black/10'
+                          : ''
+                      } ${
+                        isTarget
+                          ? 'bg-[#0050FF]/10'
+                          : ''
+                      }`}
+                    >
 
-                    <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
+                      <div className="flex w-7 flex-shrink-0 items-center justify-center sm:w-20">
 
-                      <p className="m-0 font-brown-bold text-[1.35rem] leading-none text-black sm:text-[3.5rem]">
-                        {entry.rank}
-                      </p>
+                        <p className="m-0 font-brown-bold text-[1.35rem] leading-none text-black sm:text-[3.5rem]">
+                          {entry.rank}
+                        </p>
+
+                      </div>
+
+                      <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
+
+                        {entry.artwork ? (
+                          <img
+                            src={entry.artwork}
+                            alt={`${entry.title} artwork`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center font-brown-regular text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
+                            ARTWORK
+                          </div>
+                        )}
+
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+
+                        <p className="break-words font-brown-bold text-[0.9rem] leading-[1.08] text-black sm:text-4xl">
+                          {entry.title}
+                        </p>
+
+                        <p className="mt-0.5 break-words font-brown-regular text-[0.72rem] leading-tight text-blue-600 sm:mt-1 sm:text-xl">
+                          {entry.artist}
+                        </p>
+
+                      </div>
 
                     </div>
-
-                    {/* ARTWORK */}
-
-                    <div className="h-[4.6rem] w-[4.6rem] flex-shrink-0 overflow-hidden bg-black/5 sm:h-[7.8rem] sm:w-[7.8rem]">
-
-                      {entry.artwork ? (
-                        <img
-                          src={entry.artwork}
-                          alt={`${entry.title} artwork`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center font-brown-regular text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
-                          ARTWORK
-                        </div>
-                      )}
-
-                    </div>
-
-                    {/* TITLE + ARTIST */}
-
-                    <div className="min-w-0 flex-1">
-
-                      <p className="break-words font-brown-bold text-[0.9rem] leading-[1.08] text-black sm:text-4xl">
-                        {entry.title}
-                      </p>
-
-                      <p className="mt-0.5 break-words font-brown-regular text-[0.72rem] leading-tight text-blue-600 sm:mt-1 sm:text-xl">
-                        {entry.artist}
-                      </p>
-
-                    </div>
-
-                  </div>
-                )
+                  );
+                }
               )}
-
-            {/* =================================================
-             * NO DATA
-             * ================================================= */}
 
             {!loading &&
               !error &&
@@ -539,6 +674,26 @@ export default function YearEndPage() {
         <div className="h-12" />
 
       </div>
+
+      <style jsx global>{`
+        @keyframes year-end-target-pulse {
+          0% {
+            background-color: rgba(0, 80, 255, 0);
+          }
+
+          25% {
+            background-color: rgba(0, 80, 255, 0.18);
+          }
+
+          100% {
+            background-color: rgba(0, 80, 255, 0);
+          }
+        }
+
+        .year-end-target {
+          animation: year-end-target-pulse 1.0s ease-out both;
+        }
+      `}</style>
 
     </main>
   );

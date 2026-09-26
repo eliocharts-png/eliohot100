@@ -1,7 +1,7 @@
 import RecordsPage from '@/components/RecordsPage';
 import { fetchRecordsData } from '@/lib/records';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export default async function Records() {
   const records = await fetchRecordsData();

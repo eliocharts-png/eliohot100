@@ -46,7 +46,7 @@ export const sheetSources: ChartSource[] = [
     title: 'Greatest of All-Time Female Songs',
     href: '/goat/female',
     csvUrl:
-      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?output=csv',
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=52589889&single=true&output=csv',
   },
 
   /*
@@ -309,15 +309,37 @@ function parseGoatCsv(
         const image =
           row[2]?.trim() ?? '';
 
+        /*
+         * Ignore headers and malformed rows.
+         * This prevents NaN from reaching
+         * React as a rendered rank.
+         */
         if (
+          !Number.isFinite(rank) ||
           rank <= 0 ||
           !content
         ) {
           return null;
         }
 
+        /*
+         * Some GOAT sheets separate the
+         * song title and artist with an
+         * actual line break, while the
+         * Female GOAT sheet uses <br>.
+         *
+         * Convert all <br> variants to a
+         * normal line break first so both
+         * formats work.
+         */
+        const normalizedContent =
+          content.replace(
+            /<br\s*\/?>/gi,
+            '\n'
+          );
+
         const parts =
-          content
+          normalizedContent
             .split(/\r?\n/)
             .map(
               (value) =>
@@ -733,9 +755,9 @@ export async function fetchWeeklyChartData(
         week: '',
         displayWeek: 'UNKNOWN',
         availableWeeks: [],
-        weeksAtNumberOne: 0,
         entries: [],
         entriesByWeek: {},
+        weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
     }
@@ -748,9 +770,9 @@ export async function fetchWeeklyChartData(
         week: '',
         displayWeek: 'UNKNOWN',
         availableWeeks: [],
-        weeksAtNumberOne: 0,
         entries: [],
         entriesByWeek: {},
+        weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
     }
@@ -763,9 +785,9 @@ export async function fetchWeeklyChartData(
         week: '',
         displayWeek: 'UNKNOWN',
         availableWeeks: [],
-        weeksAtNumberOne: 0,
         entries: [],
         entriesByWeek: {},
+        weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
     }
