@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -185,7 +186,7 @@ function parseYearEndData(
   );
 }
 
-export default function YearEndPage() {
+function YearEndPageContent() {
   const searchParams =
     useSearchParams();
 
@@ -696,5 +697,13 @@ export default function YearEndPage() {
       `}</style>
 
     </main>
+  );
+}
+
+export default function YearEndPage() {
+  return (
+    <Suspense fallback={null}>
+      <YearEndPageContent />
+    </Suspense>
   );
 }
