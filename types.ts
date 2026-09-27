@@ -56,6 +56,32 @@ export interface WeeklyChartPayload {
 
 /*
  * =========================================================
+ * RECURRENT HOT 100
+ * =========================================================
+ */
+
+export interface RecurrentChartEntry
+  extends WeeklyChartEntry {
+  recurrentPoints: number;
+  recurrentWeeks: number;
+  isRecurrentDebut: boolean;
+}
+
+export interface RecurrentChartPayload {
+  week: string;
+  displayWeek: string;
+  availableWeeks: string[];
+
+  entries: RecurrentChartEntry[];
+
+  entriesByWeek: Record<
+    string,
+    RecurrentChartEntry[]
+  >;
+}
+
+/*
+ * =========================================================
  * WEEKLY HOT 100 ARTICLE ANALYSIS
  * =========================================================
  */

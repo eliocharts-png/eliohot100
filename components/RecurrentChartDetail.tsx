@@ -1,0 +1,1410 @@
+'use client';
+
+import { useState } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import { formatDateLabel } from '@/lib/chartData';
+import type { RecurrentChartEntry } from '@/types';
+
+interface RecurrentChartDetailProps {
+  title: string;
+  weekLabel: string;
+  week: string;
+  availableWeeks: string[];
+  entries: RecurrentChartEntry[];
+  entriesByWeek: Record<
+    string,
+    RecurrentChartEntry[]
+  >;
+}
+
+type ChartFilter =
+  | 'all'
+  | 'rising'
+  | 'nonmovers'
+  | 'falling'
+  | 'dropouts'
+  | 'points'
+  | 'new'
+  | 'weeks';
+
+function normalizeMovementIcon(
+  movementIcon: string | undefined
+): string {
+  return String(movementIcon ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[-_\s]/g, '');
+}
+
+function getIconFilename(
+  movementIcon: string | undefined
+): string {
+  const normalizedIcon =
+    normalizeMovementIcon(movementIcon);
+
+  switch (normalizedIcon) {
+    case 'reentry':
+    case 'reenter':
+      return 'reentry.PNG';
+
+    case 'debut':
+      return 'debut.PNG';
+
+    case 'down':
+      return 'down.PNG';
+
+    case 'nonmover':
+    case 'nonmovement':
+      return 'non-move.PNG';
+
+    case 'up':
+    default:
+      return 'up.PNG';
+  }
+}
+
+function shouldShowBullet(
+  entry: RecurrentChartEntry
+): boolean {
+  const movement =
+    normalizeMovementIcon(
+      entry.movementIcon
+    );
+
+  if (
+    movement === 'reentry' ||
+    movement === 'reenter' ||
+    movement === 'debut'
+  ) {
+    return true;
+  }
+
+  if (
+    entry.points !== undefined &&
+    entry.lastWeekPoints !== undefined
+  ) {
+    return (
+      entry.points >
+      entry.lastWeekPoints
+    );
+  }
+
+  return false;
+}
+
+function parseChartDate(
+  value: string
+): number {
+  const [month, day, year] =
+    value.split('/').map(Number);
+
+  if (
+    !month ||
+    !day ||
+    year === undefined
+  ) {
+    return 0;
+  }
+
+  const fullYear =
+    year < 50
+      ? 2000 + year
+      : 1900 + year;
+
+  return new Date(
+    fullYear,
+    month - 1,
+    day
+  ).getTime();
+}
+
+function getPointIncreasePercentage(
+  entry: RecurrentChartEntry
+): number | null {
+  if (
+    entry.points === undefined ||
+    entry.lastWeekPoints === undefined ||
+    entry.lastWeekPoints <= 0
+  ) {
+    return null;
+  }
+
+  return (
+    ((entry.points -
+      entry.lastWeekPoints) /
+      entry.lastWeekPoints) *
+    100
+  );
+}
+
+function FilterIcon({
+  type,
+}: {
+  type: Exclude<ChartFilter, 'all'>;
+}) {
+  const commonProps = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    className: 'h-[18px] w-[18px] sm:h-5 sm:w-5',
+    'aria-hidden': true,
+  };
+
+  switch (type) {
+    case 'rising':
+      return (
+        <svg {...commonProps}>
+          <path d="M5 17 17 5" />
+          <path d="M8 5h9v9" />
+        </svg>
+      );
+
+    case 'nonmovers':
+      return (
+        <svg {...commonProps}>
+          <path d="M5 8h14" />
+          <path d="m16 5 3 3-3 3" />
+          <path d="M19 16H5" />
+          <path d="m8 13-3 3 3 3" />
+        </svg>
+      );
+
+    case 'falling':
+      return (
+        <svg {...commonProps}>
+          <path d="M5 7 17 19" />
+          <path d="M8 19h9v-9" />
+        </svg>
+      );
+
+    case 'dropouts':
+      return (
+        <svg {...commonProps}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="m8.5 8.5 7 7" />
+          <path d="m15.5 8.5-7 7" />
+        </svg>
+      );
+
+    case 'points':
+      return (
+        <svg {...commonProps}>
+          <path d="M5 16 9 12l3 3 7-8" />
+          <path d="M15 7h4v4" />
+        </svg>
+      );
+
+    case 'new':
+      return (
+        <svg {...commonProps}>
+          <path d="m12 3 2.1 5.8L20 11l-5.9 2.1L12 19l-2.1-5.9L4 11l5.9-2.2L12 3Z" />
+        </svg>
+      );
+
+    case 'weeks':
+      return (
+        <svg {...commonProps}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7v5l3.5 2" />
+        </svg>
+      );
+  }
+}
+
+export default function RecurrentChartDetail({
+  title,
+  weekLabel,
+  week,
+  availableWeeks,
+  entries,
+  entriesByWeek,
+}: RecurrentChartDetailProps) {
+  const [expandedHistory, setExpandedHistory] =
+    useState<number | null>(null);
+
+  const [selectedWeek, setSelectedWeek] =
+    useState(week);
+
+  const [activeFilter, setActiveFilter] =
+    useState<ChartFilter>('all');
+
+  const toggleHistory = (
+    rank: number
+  ) => {
+    setExpandedHistory((current) =>
+      current === rank
+        ? null
+        : rank
+    );
+  };
+
+  const handleShare = async () => {
+    const shareUrl =
+      `${window.location.origin}/weekly/recurrent?week=${encodeURIComponent(
+        selectedWeek
+      )}`;
+
+    const shareTitle =
+      'Elio Hot 100 Recurrent';
+
+    const shareText =
+      `Elio Hot 100 Recurrent (${formatDateLabel(
+        selectedWeek
+      )})`;
+
+    try {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.share
+      ) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.clipboard
+      ) {
+        await navigator.clipboard.writeText(
+          shareUrl
+        );
+      }
+    } catch {
+      // User cancelled the native share dialog.
+    }
+  };
+
+  const currentEntries =
+    entriesByWeek?.[selectedWeek] ??
+    entries;
+
+  /*
+   * Find the immediately preceding available
+   * recurrent chart week.
+   */
+  const selectedWeekIndex =
+    availableWeeks.indexOf(selectedWeek);
+
+  const previousWeek =
+    selectedWeekIndex >= 0 &&
+    selectedWeekIndex <
+      availableWeeks.length - 1
+      ? availableWeeks[
+          selectedWeekIndex + 1
+        ]
+      : null;
+
+  const previousEntries =
+    previousWeek
+      ? entriesByWeek?.[previousWeek] ?? []
+      : [];
+
+  /*
+   * Dropouts are songs that appeared on the
+   * previous recurrent chart but are not on
+   * the selected recurrent chart.
+   */
+  const currentSongKeys = new Set(
+    currentEntries.map(
+      (entry) =>
+        `${entry.title}|||${entry.artist}`
+    )
+  );
+
+  const dropoutEntries =
+    previousEntries
+      .filter(
+        (entry) =>
+          !currentSongKeys.has(
+            `${entry.title}|||${entry.artist}`
+          )
+      )
+      .map((entry) => ({
+        ...entry,
+        rank: entry.rank,
+      }));
+
+  /*
+   * Apply the selected filter/sort.
+   */
+  let displayedEntries =
+    [...currentEntries];
+
+  switch (activeFilter) {
+    case 'rising':
+      displayedEntries =
+        displayedEntries.filter(
+          (entry) =>
+            normalizeMovementIcon(
+              entry.movementIcon
+            ) === 'up'
+        );
+      break;
+
+    case 'nonmovers':
+      displayedEntries =
+        displayedEntries.filter(
+          (entry) =>
+            normalizeMovementIcon(
+              entry.movementIcon
+            ) === 'nonmover' ||
+            normalizeMovementIcon(
+              entry.movementIcon
+            ) === 'nonmovement'
+        );
+      break;
+
+    case 'falling':
+      displayedEntries =
+        displayedEntries.filter(
+          (entry) =>
+            normalizeMovementIcon(
+              entry.movementIcon
+            ) === 'down'
+        );
+      break;
+
+    case 'dropouts':
+      displayedEntries =
+        dropoutEntries;
+      break;
+
+    case 'points':
+      displayedEntries =
+        displayedEntries
+          .filter(
+            (entry) =>
+              entry.points !== undefined &&
+              entry.lastWeekPoints !== undefined &&
+              entry.points >
+                entry.lastWeekPoints
+          )
+          .sort((a, b) => {
+            const aIncrease =
+              (a.points ?? 0) -
+              (a.lastWeekPoints ?? 0);
+
+            const bIncrease =
+              (b.points ?? 0) -
+              (b.lastWeekPoints ?? 0);
+
+            return (
+              bIncrease -
+              aIncrease
+            );
+          });
+      break;
+
+    case 'new':
+      displayedEntries =
+        displayedEntries.filter(
+          (entry) => {
+            const movement =
+              normalizeMovementIcon(
+                entry.movementIcon
+              );
+
+            return (
+              movement === 'debut' ||
+              movement === 'reentry' ||
+              movement === 'reenter'
+            );
+          }
+        );
+      break;
+
+    case 'weeks':
+      displayedEntries =
+        displayedEntries.sort(
+          (a, b) => {
+            const weeksDifference =
+              b.weeksOnChart -
+              a.weeksOnChart;
+
+            if (
+              weeksDifference !== 0
+            ) {
+              return weeksDifference;
+            }
+
+            return (
+              a.rank -
+              b.rank
+            );
+          }
+        );
+      break;
+
+    case 'all':
+    default:
+      break;
+  }
+
+  const filterOptions: Array<{
+    id: Exclude<ChartFilter, 'all'>;
+    label: string;
+  }> = [
+    {
+      id: 'rising',
+      label: 'Rising',
+    },
+    {
+      id: 'nonmovers',
+      label: 'Non-Movers',
+    },
+    {
+      id: 'falling',
+      label: 'Falling',
+    },
+    {
+      id: 'dropouts',
+      label: 'Dropouts',
+    },
+    {
+      id: 'points',
+      label: 'Point Increase',
+    },
+    {
+      id: 'new',
+      label: 'New / Re-Entry',
+    },
+    {
+      id: 'weeks',
+      label: 'Weeks on Chart',
+    },
+  ];
+
+  const handleFilterClick = (
+    filter: ChartFilter
+  ) => {
+    setActiveFilter((current) =>
+      current === filter
+        ? 'all'
+        : filter
+    );
+
+    setExpandedHistory(null);
+  };
+
+  let greatestGainerRank: number | null =
+    null;
+
+  let greatestGainerPercentage =
+    -Infinity;
+
+  for (const entry of currentEntries) {
+    const percentage =
+      getPointIncreasePercentage(
+        entry
+      );
+
+    if (
+      percentage !== null &&
+      percentage > greatestGainerPercentage
+    ) {
+      greatestGainerPercentage =
+        percentage;
+
+      greatestGainerRank =
+        entry.rank;
+    }
+  }
+
+  const hotshotDebutRank =
+    currentEntries
+      .filter((entry) => {
+        const movement =
+          normalizeMovementIcon(
+            entry.movementIcon
+          );
+
+        return movement === 'debut';
+      })
+      .sort(
+        (a, b) =>
+          a.rank - b.rank
+      )[0]?.rank ?? null;
+
+  return (
+    <section className="space-y-0">
+
+      {/* =========================================
+          CHART TITLE
+      ========================================== */}
+
+      <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
+        <h1 className="text-[3.4rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[6rem] lg:text-[7rem]">
+          RECURRENT SONGS
+        </h1>
+      </div>
+
+      {/* =========================================
+          DATE SELECTOR
+      ========================================== */}
+
+      <div className="flex items-center justify-center bg-white px-4 py-3">
+        <select
+          value={selectedWeek}
+          onChange={(event) => {
+            setSelectedWeek(
+              event.target.value
+            );
+
+            setActiveFilter('all');
+            setExpandedHistory(null);
+          }}
+          className="cursor-pointer appearance-none rounded-none bg-black px-5 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.2em] text-white outline-none sm:text-sm"
+        >
+          {availableWeeks.map(
+            (weekOption) => (
+              <option
+                key={weekOption}
+                value={weekOption}
+              >
+                {formatDateLabel(
+                  weekOption
+                )}
+              </option>
+            )
+          )}
+        </select>
+      </div>
+
+      {/* =========================================
+          CHART FILTER / SORT CONTROLS
+      ========================================== */}
+
+      <div className="flex items-center justify-center bg-white px-4 pb-4 pt-1">
+        <div
+          className="flex items-center justify-center gap-1.5 sm:gap-2"
+          role="toolbar"
+          aria-label="Chart filters and sorting"
+        >
+          {filterOptions.map(
+            (filter) => {
+              const isActive =
+                activeFilter ===
+                filter.id;
+
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() =>
+                    handleFilterClick(
+                      filter.id
+                    )
+                  }
+                  aria-label={
+                    filter.label
+                  }
+                  aria-pressed={
+                    isActive
+                  }
+                  title={
+                    filter.label
+                  }
+                  className={`flex h-8 w-8 items-center justify-center border transition-all duration-150 sm:h-9 sm:w-9 ${
+                    isActive
+                      ? 'border-[#0050FF] bg-[#0050FF] text-white'
+                      : 'border-black/10 bg-white text-black/45 hover:border-black/30 hover:bg-black/[0.03] hover:text-black'
+                  }`}
+                >
+                  <FilterIcon
+                    type={filter.id}
+                  />
+                </button>
+              );
+            }
+          )}
+        </div>
+      </div>
+
+      {/* =========================================
+          ACTIVE FILTER LABEL
+      ========================================== */}
+
+      {activeFilter !== 'all' && (
+        <div className="flex items-center justify-center bg-white px-4 pb-3">
+          <p className="text-[0.58rem] font-brown-regular uppercase tracking-[0.18em] text-black/45">
+            {filterOptions.find(
+              (filter) =>
+                filter.id ===
+                activeFilter
+            )?.label}
+            {' · '}
+            {displayedEntries.length}{' '}
+            {displayedEntries.length ===
+            1
+              ? 'SONG'
+              : 'SONGS'}
+          </p>
+        </div>
+      )}
+
+      {/* =========================================
+          BLUE HEADER
+      ========================================== */}
+
+      <div className="mx-auto max-w-[68rem] px-3 sm:px-6">
+        <div className="relative flex w-full items-center justify-center bg-[#0050FF] px-4 py-3 sm:px-6">
+
+          <a
+            href="/weekly"
+            className="absolute left-4 text-xs font-brown-regular uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-70 sm:left-6 sm:text-sm sm:tracking-[0.2em]"
+          >
+            &lt; HOT 100
+          </a>
+
+          <p className="ml-auto mr-12 max-w-[55%] text-right text-[0.58rem] font-brown-regular uppercase tracking-[0.12em] text-white sm:mx-auto sm:max-w-none sm:text-base sm:tracking-[0.2em]">
+            PERSONAL CHARTS BY ELIO
+          </p>
+
+          {/* SHARE */}
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="absolute right-3 flex items-center gap-1.5 text-white transition-opacity hover:opacity-70 sm:right-6 sm:gap-2"
+            aria-label="Share this chart"
+          >
+            <span className="hidden text-[0.6rem] font-brown-regular uppercase tracking-[0.12em] sm:inline">
+              SHARE
+            </span>
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5 sm:h-6 sm:w-6"
+              aria-hidden="true"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="2.5"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="2.5"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="2.5"
+              />
+              <path d="M8.2 10.8 15.8 6.2" />
+              <path d="m8.2 13.2 7.6 4.6" />
+            </svg>
+          </button>
+
+        </div>
+      </div>
+
+      {/* =========================================
+          CHART CONTAINER
+      ========================================== */}
+
+      <div className="mx-auto max-w-[68rem] px-3 sm:px-6">
+        <div className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+
+          <div className="space-y-0">
+
+            {displayedEntries.length > 0 ? (
+              displayedEntries.map(
+                (entry) => {
+
+                  const isHistoryExpanded =
+                    expandedHistory ===
+                    entry.rank;
+
+                  const showBullet =
+                    shouldShowBullet(
+                      entry
+                    );
+
+                  const isGreatestGainer =
+                    greatestGainerRank ===
+                    entry.rank;
+
+                  const isHotshotDebut =
+                    hotshotDebutRank ===
+                    entry.rank;
+
+                  /* =================================
+                     CHART HISTORY DATA
+                  ================================= */
+
+                  const graphData = (() => {
+                    const history = (
+                      entry.chartHistory ?? []
+                    )
+                      .filter(
+                        (item) =>
+                          parseChartDate(
+                            item.week
+                          ) <=
+                          parseChartDate(
+                            selectedWeek
+                          )
+                      )
+                      .sort(
+                        (a, b) =>
+                          parseChartDate(
+                            a.week
+                          ) -
+                          parseChartDate(
+                            b.week
+                          )
+                      );
+
+                    const data: Array<{
+                      week: string;
+                      rank: number | null;
+                      label: string;
+                    }> = [];
+
+                    for (
+                      let i = 0;
+                      i < history.length;
+                      i++
+                    ) {
+                      const current =
+                        history[i];
+
+                      const previous =
+                        history[i - 1];
+
+                      if (previous) {
+                        const currentDate =
+                          parseChartDate(
+                            current.week
+                          );
+
+                        const previousDate =
+                          parseChartDate(
+                            previous.week
+                          );
+
+                        const weekDifference =
+                          Math.round(
+                            (currentDate -
+                              previousDate) /
+                              (7 *
+                                24 *
+                                60 *
+                                60 *
+                                1000)
+                          );
+
+                        if (
+                          weekDifference > 1
+                        ) {
+                          const breakDate =
+                            new Date(
+                              previousDate +
+                                7 *
+                                  24 *
+                                  60 *
+                                  60 *
+                                  1000
+                            );
+
+                          const month =
+                            String(
+                              breakDate.getMonth() +
+                                1
+                            ).padStart(
+                              2,
+                              '0'
+                            );
+
+                          const day =
+                            String(
+                              breakDate.getDate()
+                            ).padStart(
+                              2,
+                              '0'
+                            );
+
+                          const year =
+                            String(
+                              breakDate.getFullYear()
+                            ).slice(-2);
+
+                          const breakWeek =
+                            `${month}/${day}/${year}`;
+
+                          data.push({
+                            week:
+                              breakWeek,
+                            rank: null,
+                            label:
+                              formatDateLabel(
+                                breakWeek
+                              ),
+                          });
+                        }
+                      }
+
+                      data.push({
+                        week:
+                          current.week,
+                        rank:
+                          current.rank,
+                        label:
+                          formatDateLabel(
+                            current.week
+                          ),
+                      });
+                    }
+
+                    return data;
+                  })();
+
+                  return (
+                    <div
+                      key={`${entry.rank}-${entry.title}-${entry.artist}`}
+                      className="group border-y border-black/10 transition-colors duration-150 first:border-t-0 hover:border-[#0050FF]"
+                    >
+
+                      {/* =================================
+                          MOBILE
+                      ================================== */}
+
+                      <div className="sm:hidden">
+
+                        <div className="relative flex w-full items-center">
+
+                          {/* MOVEMENT + BULLET */}
+
+                          <div className="flex h-[4.1rem] w-7 flex-shrink-0 flex-col overflow-hidden">
+
+                            <div className="flex min-h-0 flex-1 items-center justify-center bg-black/10">
+                              <img
+                                src={`/icons/${getIconFilename(
+                                  entry.movementIcon
+                                )}`}
+                                alt={
+                                  entry.movementIcon ??
+                                  'movement'
+                                }
+                                className="h-6 w-6 object-contain"
+                              />
+                            </div>
+
+                            <div className="flex min-h-0 flex-1 items-center justify-center bg-[#0050FF]">
+                              {showBullet && (
+                                <img
+                                  src="/icons/bullet.PNG"
+                                  alt="trending up"
+                                  className="h-6 w-6 object-contain"
+                                />
+                              )}
+                            </div>
+
+                          </div>
+
+                          {/* RANK */}
+
+                          <div className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center">
+                            <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
+                              {entry.rank}
+                            </p>
+                          </div>
+
+                          {/* ARTWORK */}
+
+                          <div className="h-[4.1rem] w-[4.1rem] flex-shrink-0 overflow-hidden bg-black/5">
+                            {entry.artwork ? (
+                              <img
+                                src={entry.artwork}
+                                alt={`${entry.title} artwork`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center bg-black/5 text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
+                                ARTWORK
+                              </div>
+                            )}
+                          </div>
+
+                          {/* SONG + ARTIST */}
+
+                          <div className="min-w-0 flex-1 px-2 py-2 pr-1">
+                            <div className="flex h-full flex-col justify-center">
+
+                              {entry.rank === 1 ? (
+                                <>
+                                  <span className="mb-1 inline-flex w-fit items-center bg-[#0050FF] px-2 py-1.5 text-[0.58rem] font-brown-bold uppercase leading-none tracking-[0.05em] text-white">
+                                    {entry.recurrentWeeks}{' '}
+                                    {entry.recurrentWeeks ===
+                                    1
+                                      ? 'WEEK'
+                                      : 'WEEKS'}{' '}
+                                    AT NO. 1
+                                  </span>
+
+                                  <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
+                                    {entry.title}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
+                                  {entry.title}
+                                </p>
+                              )}
+
+                              <p className="mt-0.5 break-words text-[0.72rem] font-brown-regular leading-tight text-blue-600">
+                                {entry.artist}
+                              </p>
+
+                            </div>
+                          </div>
+
+                          {/* MOBILE STATS */}
+
+                          <div className="flex w-[4.2rem] flex-shrink-0 flex-col items-end justify-center py-1 pr-1">
+
+                            <div className="flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
+                              <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+                                LW:
+                              </span>
+
+                              <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                                {entry.lastWeekRank ??
+                                  '—'}
+                              </span>
+                            </div>
+
+                            <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
+                              <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+                                PEAK:
+                              </span>
+
+                              <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                                {entry.peakPosition}
+                              </span>
+                            </div>
+
+                            <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
+                              <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+                                WEEKS ON CHART:
+                              </span>
+
+                              <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                                {entry.recurrentWeeks}
+                              </span>
+                            </div>
+
+                          </div>
+
+                          {/* CHART HISTORY */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleHistory(
+                                entry.rank
+                              )
+                            }
+                            className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center text-xl font-brown-regular leading-none text-black/40 transition hover:text-black/60"
+                            aria-label={
+                              isHistoryExpanded
+                                ? 'Collapse chart history'
+                                : 'Show chart history'
+                            }
+                          >
+                            {isHistoryExpanded
+                              ? '−'
+                              : '+'}
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                      {/* =================================
+                          DESKTOP
+                      ================================== */}
+
+                      <div className="hidden sm:flex sm:flex-row sm:items-stretch">
+
+                        <div className="relative flex flex-shrink-0 items-stretch">
+
+                          {/* PEN PANEL */}
+
+                          <div className="pointer-events-none absolute right-full top-1/2 z-20 hidden -translate-y-1/2 pr-2 group-hover:block">
+
+                            <div
+                              className="relative bg-black px-2 py-3 shadow-md"
+                              style={{
+                                clipPath:
+                                  'polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%)',
+                              }}
+                            >
+
+                              <div className="grid w-[155px] grid-cols-3 gap-2 text-center text-white">
+
+                                <div className="flex min-w-0 flex-col items-center justify-center text-center">
+                                  <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
+                                    LAST
+                                    <br />
+                                    WEEK
+                                  </p>
+
+                                  <p className="mt-1 text-base font-brown-bold leading-none text-white">
+                                    {entry.lastWeekRank ??
+                                      '—'}
+                                  </p>
+                                </div>
+
+                                <div className="flex min-w-0 flex-col items-center justify-center text-center">
+                                  <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
+                                    PEAK
+                                    <br />
+                                    POSITION
+                                  </p>
+
+                                  <p className="mt-1 text-base font-brown-bold leading-none text-white">
+                                    {entry.peakPosition}
+                                  </p>
+                                </div>
+
+                                <div className="flex min-w-0 flex-col items-center justify-center text-center">
+                                  <p className="text-[0.52rem] font-brown-regular uppercase leading-tight tracking-[0.08em] text-white/70">
+                                    WEEKS ON
+                                    <br />
+                                    CHART
+                                  </p>
+
+                                  <p className="mt-1 text-base font-brown-bold leading-none text-white">
+                                    {entry.recurrentWeeks}
+                                  </p>
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                            {(isGreatestGainer ||
+                              isHotshotDebut) && (
+                              <div className="mt-1 space-y-1">
+
+                                {isGreatestGainer && (
+                                  <div
+                                    className="relative inline-block bg-black px-3 py-2"
+                                    style={{
+                                      clipPath:
+                                        'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)',
+                                    }}
+                                  >
+                                    <p className="text-[0.68rem] font-brown-regular uppercase leading-none tracking-[0.1em] text-white">
+                                      GREATEST GAINER
+                                    </p>
+                                  </div>
+                                )}
+
+                                {isHotshotDebut && (
+                                  <div
+                                    className="relative inline-block bg-black px-3 py-2"
+                                    style={{
+                                      clipPath:
+                                        'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)',
+                                    }}
+                                  >
+                                    <p className="text-[0.68rem] font-brown-regular uppercase leading-none tracking-[0.1em] text-white">
+                                      HOTSHOT DEBUT
+                                    </p>
+                                  </div>
+                                )}
+
+                              </div>
+                            )}
+
+                          </div>
+
+                          {/* MOVEMENT */}
+
+                          <div className="flex w-12 flex-shrink-0 flex-col">
+
+                            <div className="flex flex-1 items-center justify-center bg-black/10">
+                              <img
+                                src={`/icons/${getIconFilename(
+                                  entry.movementIcon
+                                )}`}
+                                alt={
+                                  entry.movementIcon ??
+                                  'movement'
+                                }
+                                className="h-12 w-12 object-contain"
+                              />
+                            </div>
+
+                            <div className="flex flex-1 items-center justify-center bg-[#0050FF]">
+                              {showBullet && (
+                                <img
+                                  src="/icons/bullet.PNG"
+                                  alt="trending up"
+                                  className="h-12 w-12 object-contain"
+                                />
+                              )}
+                            </div>
+
+                          </div>
+
+                          {/* RANK */}
+
+                          <div className="flex w-24 flex-shrink-0 items-center justify-center">
+                            <p className="m-0 text-center text-[3rem] font-brown-bold leading-none text-black">
+                              {entry.rank}
+                            </p>
+                          </div>
+
+                        </div>
+
+                        {/* ARTWORK + SONG */}
+
+                        <div className="flex min-w-0 flex-1 items-center gap-4 py-[3px]">
+
+                          <div className="h-[7.8rem] w-[7.8rem] flex-shrink-0 overflow-hidden bg-black/5">
+                            {entry.artwork ? (
+                              <img
+                                src={entry.artwork}
+                                alt={`${entry.title} artwork`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center bg-black/5 text-xs uppercase tracking-[0.35em] text-black/40">
+                                ARTWORK
+                              </div>
+                            )}
+                          </div>
+
+                          {/* SONG */}
+
+                          <div className="min-w-0 flex-1">
+
+                            {entry.rank === 1 ? (
+                              <div className="flex min-w-0 flex-col items-start">
+
+                                <span className="mb-2 inline-flex w-fit items-center bg-[#0050FF] px-3 py-2.5 text-[0.72rem] font-brown-bold uppercase leading-none tracking-[0.06em] text-white">
+                                  {entry.recurrentWeeks}{' '}
+                                  {entry.recurrentWeeks ===
+                                  1
+                                    ? 'WEEK'
+                                    : 'WEEKS'}{' '}
+                                  AT NO. 1
+                                </span>
+
+                                <p className="text-xl font-brown-bold leading-tight text-black sm:text-4xl">
+                                  {entry.title}
+                                </p>
+
+                              </div>
+                            ) : (
+                              <p className="text-xl font-brown-bold leading-tight text-black sm:text-4xl">
+                                {entry.title}
+                              </p>
+                            )}
+
+                            <p className="mt-1 text-xl font-brown-regular text-blue-600">
+                              {entry.artist}
+                            </p>
+
+                          </div>
+
+                          {/* HISTORY */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleHistory(
+                                entry.rank
+                              )
+                            }
+                            className="ml-auto flex h-10 w-10 flex-shrink-0 items-center justify-center self-center text-3xl font-brown-regular text-black/40 transition hover:text-black/60"
+                            aria-label={
+                              isHistoryExpanded
+                                ? 'Collapse chart history'
+                                : 'Show chart history'
+                            }
+                          >
+                            {isHistoryExpanded
+                              ? '−'
+                              : '+'}
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                      {/* =================================
+                          CHART HISTORY
+                      ================================== */}
+
+                      {isHistoryExpanded && (
+                        <div className="border-t border-black/10 bg-white px-4 py-6 sm:px-8">
+
+                          <div className="mb-4">
+
+                            <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
+                              RECURRENT RUN
+                            </p>
+
+                            <p className="mt-1 text-lg font-brown-bold text-black">
+                              {entry.title}
+                            </p>
+
+                            <p className="text-sm font-brown-regular text-blue-600">
+                              {entry.artist}
+                            </p>
+
+                          </div>
+
+                          {graphData.length > 0 ? (
+
+                            <div className="h-[220px] w-full sm:h-[320px]">
+
+                              <ResponsiveContainer
+                                width="100%"
+                                height="100%"
+                              >
+
+                                <LineChart
+                                  data={graphData}
+                                  margin={{
+                                    top: 10,
+                                    right: 20,
+                                    left: 0,
+                                    bottom: 10,
+                                  }}
+                                >
+
+                                  <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke="#00000015"
+                                  />
+
+                                  <XAxis
+                                    dataKey="week"
+                                    tick={{
+                                      fontSize: 10,
+                                    }}
+                                    tickFormatter={(value) => {
+                                      const parts =
+                                        String(value).split('/');
+
+                                      if (
+                                        parts.length >= 2
+                                      ) {
+                                        return `${parts[0]}/${parts[1]}`;
+                                      }
+
+                                      return String(value);
+                                    }}
+                                  />
+
+                                  <YAxis
+                                    reversed
+                                    domain={[1, 20]}
+                                    allowDecimals={false}
+                                    tick={{
+                                      fontSize: 10,
+                                    }}
+                                    width={30}
+                                  />
+
+                                  <Tooltip
+                                    formatter={(value) => [
+                                      `#${value}`,
+                                      'Rank',
+                                    ]}
+                                    labelFormatter={(label) =>
+                                      formatDateLabel(
+                                        String(label)
+                                      )
+                                    }
+                                  />
+
+                                  <Line
+                                    type="monotone"
+                                    dataKey="rank"
+                                    stroke="#0050FF"
+                                    strokeWidth={3}
+                                    dot={{
+                                      r: 3,
+                                      fill: '#0050FF',
+                                      stroke: '#0050FF',
+                                    }}
+                                    activeDot={{
+                                      r: 5,
+                                    }}
+                                  />
+
+                                </LineChart>
+
+                              </ResponsiveContainer>
+
+                            </div>
+
+                          ) : (
+
+                            <div className="flex h-[220px] items-center justify-center bg-black/[0.03]">
+
+                              <p className="text-xs font-brown-regular uppercase tracking-[0.2em] text-black/50">
+                                NO RECURRENT HISTORY AVAILABLE
+                              </p>
+
+                            </div>
+
+                          )}
+
+                        </div>
+                      )}
+
+                    </div>
+                  );
+                }
+              )
+            ) : (
+              <div className="flex min-h-[220px] items-center justify-center px-6 text-center">
+                <p className="text-xs font-brown-regular uppercase tracking-[0.18em] text-black/40">
+                  NO SONGS IN THIS CATEGORY
+                </p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================
+          BOTTOM SPACING
+      ========================================== */}
+
+      <div className="h-20" />
+
+    </section>
+  );
+}

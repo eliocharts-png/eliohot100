@@ -5,6 +5,8 @@ import type {
   WeeklyChartEntry,
   WeeklyChartPayload,
   MovementIcon,
+  RecurrentChartEntry,
+  RecurrentChartPayload,
 } from '@/types';
 
 export interface ChartSource {
@@ -20,45 +22,36 @@ export const sheetSources: ChartSource[] = [
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=2098313277&single=true&output=csv',
   },
-
   {
     title: 'Greatest of All-Time',
     href: '/goat',
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=861998262&single=true&output=csv',
   },
-
   {
     title: 'Greatest of All-Time Filipino Songs',
     href: '/goat/filipino',
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1687213192&single=true&output=csv',
   },
-
   {
     title: 'Greatest of All-Time No. 2 Songs',
     href: '/goat/no-2',
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1145220552&single=true&output=csv',
   },
-
   {
     title: 'Greatest of All-Time Female Songs',
     href: '/goat/female',
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=52589889&single=true&output=csv',
   },
-
-  /*
-   * DECADE-END — 2010s
-   */
   {
     title: 'Decade-End 2010s',
     href: '/decade-end/2010s',
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1710077475&single=true&output=csv',
   },
-
   {
     title: 'Year-End',
     href: '/year-end',
@@ -309,11 +302,6 @@ function parseGoatCsv(
         const image =
           row[2]?.trim() ?? '';
 
-        /*
-         * Ignore headers and malformed rows.
-         * This prevents NaN from reaching
-         * React as a rendered rank.
-         */
         if (
           !Number.isFinite(rank) ||
           rank <= 0 ||
@@ -322,16 +310,6 @@ function parseGoatCsv(
           return null;
         }
 
-        /*
-         * Some GOAT sheets separate the
-         * song title and artist with an
-         * actual line break, while the
-         * Female GOAT sheet uses <br>.
-         *
-         * Convert all <br> variants to a
-         * normal line break first so both
-         * formats work.
-         */
         const normalizedContent =
           content.replace(
             /<br\s*\/?>/gi,
@@ -371,13 +349,11 @@ function parseGoatCsv(
 }
 
 /*
+ * ============================================================
  * DECADE-END
- *
- * This is kept separate from GOAT.
- *
- * The 2010s Decade-End chart uses
- * its own Google Sheets CSV source.
+ * ============================================================
  */
+
 function parseDecadeEndCsv(
   csvText: string
 ): ChartEntry[] {
@@ -466,8 +442,8 @@ function parseYearEndCsv(
   const rows =
     parsed.data as string[][];
 
-  const entries: YearEndChartEntry[] =
-    [];
+  const entries:
+    YearEndChartEntry[] = [];
 
   for (const row of rows) {
     const year =
@@ -541,15 +517,11 @@ function parseYearEndCsv(
 }
 
 /*
- * Adds a cache-busting parameter to
- * Google Sheets CSV requests.
- *
- * Google occasionally returns HTTP 400
- * for repeated requests to the same
- * published CSV URL. A unique query
- * parameter prevents that request from
- * being treated as a stale/reused request.
+ * ============================================================
+ * CACHE-BUSTING GOOGLE SHEETS REQUEST
+ * ============================================================
  */
+
 function getFreshCsvUrl(
   csvUrl: string
 ): string {
@@ -577,19 +549,6 @@ export async function fetchChartData(
     const freshUrl =
       getFreshCsvUrl(csvUrl);
 
-    /*
-     * Do not allow Google Sheets
-     * responses to enter Next.js's
-     * 2 MB data cache.
-     *
-     * This is especially important
-     * for THE HOT 100, which is
-     * approximately 10 MB.
-     *
-     * GOAT and DECADE-END also use
-     * no-store so Google Sheets HTTP
-     * responses are not tied to cache.
-     */
     const response =
       await fetch(
         freshUrl,
@@ -618,10 +577,14 @@ export async function fetchChartData(
     }
 
     if (
-      title === 'Greatest of All-Time' ||
-      title === 'Greatest of All-Time Filipino Songs' ||
-      title === 'Greatest of All-Time No. 2 Songs' ||
-      title === 'Greatest of All-Time Female Songs'
+      title ===
+        'Greatest of All-Time' ||
+      title ===
+        'Greatest of All-Time Filipino Songs' ||
+      title ===
+        'Greatest of All-Time No. 2 Songs' ||
+      title ===
+        'Greatest of All-Time Female Songs'
     ) {
       return parseGoatCsv(
         csvText
@@ -638,7 +601,8 @@ export async function fetchChartData(
     }
 
     if (
-      title === 'Year-End'
+      title ===
+      'Year-End'
     ) {
       return parseYearEndCsv(
         csvText
@@ -715,6 +679,1009 @@ export async function fetchChartData(
   }
 }
 
+/*
+ * ============================================================
+ * RECURRENT HOT 100
+ * ============================================================
+ *
+ * Recurrent chart begins:
+ *
+ *     AUGUST 19, 2010
+ *
+ * Modern recurrency rules begin:
+ *
+ *     FEBRUARY 24, 2022
+ *
+ * Modern eligibility when a song leaves the Hot 100:
+ *
+ *     More than 20 weeks on chart
+ *
+ * First recurrent week:
+ *
+ *     last Hot 100 points × 1.02
+ *
+ * Every following recurrent week:
+ *
+ *     normal songs:
+ *       previous recurrent points × 0.97
+ *
+ *     selected Christmas songs:
+ *       previous recurrent points × 0.80
+ *
+ * Recurrent status remains tracked even when a song
+ * falls outside the displayed Top 20.
+ *
+ * Recurrent weeks are cumulative across ALL recurrent
+ * appearances, including periods where the song returns
+ * to the main Hot 100.
+ */
+
+const FIRST_RECURRENT_WEEK =
+  '08/19/10';
+
+const MODERN_RECURRENCY_WEEK =
+  '02/24/22';
+
+/*
+ * ============================================================
+ * SPECIAL CHRISTMAS RECURRENT DECAY
+ * ============================================================
+ *
+ * These three songs receive a 20% weekly recurrent
+ * points deduction after their first recurrent week.
+ *
+ * First recurrent week remains the normal +2%.
+ *
+ * Every following recurrent week:
+ *
+ *     previous recurrent points × 0.80
+ *
+ * All other songs continue using × 0.97.
+ */
+
+const CHRISTMAS_RECURRENT_SONGS =
+  new Set([
+    songKey(
+      'All I Want for Christmas Is You',
+      'Mariah Carey'
+    ),
+    songKey(
+      'Santa Tell Me',
+      'Ariana Grande'
+    ),
+    songKey(
+      "Rockin' Around The Christmas The Tree",
+      'Brenda Lee'
+    ),
+    songKey(
+      'Jingle Bell Rock',
+      'Bobby Helms'
+    ),
+    songKey(
+      'Last Christmas',
+      'Wham!'
+    ), 
+  ]);
+
+function isChristmasRecurrentSong(
+  title: string,
+  artist: string
+): boolean {
+  const normalizedTitle =
+    title
+      .toLowerCase()
+      .replace(/[’']/g, "'")
+      .trim();
+
+  const normalizedArtist =
+    artist
+      .toLowerCase()
+      .trim();
+
+  const normalizedKey =
+    `${normalizedTitle}|||${normalizedArtist}`;
+
+  return (
+    CHRISTMAS_RECURRENT_SONGS.has(
+      normalizedKey
+    ) ||
+    normalizedKey ===
+      songKey(
+        'Rockin Around the Christmas Tree',
+        'Brenda Lee'
+      )
+  );
+}
+
+type RecurrentState = {
+  title: string;
+  artist: string;
+  artwork?: string;
+  recurrentPoints: number;
+  recurrentWeeks: number;
+  hasPriorRecurrentAppearance: boolean;
+  peakPosition: number | null;
+};
+
+function roundRecurrentPoints(
+  points: number
+): number {
+  return (
+    Math.round(
+      points * 100
+    ) / 100
+  );
+}
+
+function isModernRecurrencyWeek(
+  week: string
+): boolean {
+  return (
+    parseChartDate(week) >=
+    parseChartDate(
+      MODERN_RECURRENCY_WEEK
+    )
+  );
+}
+
+function isRecurrentEligibleModern(
+  entry: WeeklyChartEntry
+): boolean {
+  /*
+   * More than 20 weeks and below No. 50.
+   */
+  if (
+    entry.weeksOnChart > 20 &&
+    entry.rank > 50
+  ) {
+    return true;
+  }
+
+  /*
+   * 53 weeks or more and below No. 30.
+   */
+  if (
+    entry.weeksOnChart >= 53 &&
+    entry.rank > 30
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function calculateRecurrentChart(
+  weeklyData: WeeklyChartPayload
+): RecurrentChartPayload {
+  const chronologicalWeeks =
+    [...weeklyData.availableWeeks].sort(
+      (a, b) =>
+        parseChartDate(a) -
+        parseChartDate(b)
+    );
+
+  const firstRecurrentDate =
+    parseChartDate(
+      FIRST_RECURRENT_WEEK
+    );
+
+  const entriesByWeek:
+    Record<
+      string,
+      RecurrentChartEntry[]
+    > = {};
+
+  /*
+   * Contains ALL active recurrent songs,
+   * not only the displayed Top 20.
+   */
+  const recurrentState =
+    new Map<
+      string,
+      RecurrentState
+    >();
+
+  /*
+   * Remembers every song that has ever
+   * entered recurrent.
+   */
+  const priorRecurrentAppearance =
+    new Set<string>();
+
+  /*
+   * Stores the latest recurrent point value.
+   *
+   * This allows a song to return to the
+   * Hot 100 and later become recurrent again
+   * without receiving another +2% boost.
+   */
+  const lastRecurrentPoints =
+    new Map<
+      string,
+      number
+    >();
+
+  /*
+   * Stores the TOTAL number of recurrent
+   * chart weeks for every song.
+   *
+   * This map survives when a song returns
+   * to the main Hot 100.
+   */
+  const recurrentWeekCounts =
+    new Map<
+      string,
+      number
+    >();
+
+  /*
+   * Stores the highest recurrent-chart
+   * position each song has ever achieved.
+   */
+  const recurrentPeakPositions =
+    new Map<
+      string,
+      number
+    >();
+
+  /*
+   * Previous displayed recurrent Top 20.
+   */
+  let previousDisplayedRanks =
+    new Map<
+      string,
+      number
+    >();
+
+  /*
+   * Previous displayed recurrent points.
+   */
+  let previousDisplayedPoints =
+    new Map<
+      string,
+      number
+    >();
+
+  /*
+   * Process chronologically.
+   */
+  for (
+    let weekIndex = 0;
+    weekIndex <
+    chronologicalWeeks.length;
+    weekIndex += 1
+  ) {
+    const currentWeek =
+      chronologicalWeeks[
+        weekIndex
+      ];
+
+    const currentEntries =
+      weeklyData.entriesByWeek[
+        currentWeek
+      ] ?? [];
+
+    const currentSongKeys =
+      new Set(
+        currentEntries.map(
+          (entry) =>
+            songKey(
+              entry.title,
+              entry.artist
+            )
+        )
+      );
+
+    /*
+     * --------------------------------------------------------
+     * BEFORE THE RECURRENT CHART STARTED
+     * --------------------------------------------------------
+     */
+    if (
+      parseChartDate(
+        currentWeek
+      ) <
+      firstRecurrentDate
+    ) {
+      entriesByWeek[
+        currentWeek
+      ] = [];
+
+      continue;
+    }
+
+    /*
+     * --------------------------------------------------------
+     * 1. Remove recurrent status from songs
+     *    that returned to the main Hot 100.
+     * --------------------------------------------------------
+     */
+    for (
+      const key of Array.from(
+        recurrentState.keys()
+      )
+    ) {
+      if (
+        currentSongKeys.has(key)
+      ) {
+        const state =
+          recurrentState.get(
+            key
+          );
+
+        if (state) {
+          lastRecurrentPoints.set(
+            key,
+            state.recurrentPoints
+          );
+
+          priorRecurrentAppearance.add(
+            key
+          );
+
+          if (
+            state.peakPosition !==
+            null
+          ) {
+            recurrentPeakPositions.set(
+              key,
+              state.peakPosition
+            );
+          }
+        }
+
+        recurrentState.delete(
+          key
+        );
+      }
+    }
+
+    /*
+     * --------------------------------------------------------
+     * 2. Find songs that fell off the Hot 100
+     *    this week.
+     * --------------------------------------------------------
+     */
+    const newRecurrentKeys =
+      new Set<string>();
+
+    if (weekIndex > 0) {
+      const previousWeek =
+        chronologicalWeeks[
+          weekIndex - 1
+        ];
+
+      const previousEntries =
+        weeklyData.entriesByWeek[
+          previousWeek
+        ] ?? [];
+
+      for (
+        const previousEntry of previousEntries
+      ) {
+        const key =
+          songKey(
+            previousEntry.title,
+            previousEntry.artist
+          );
+
+        /*
+         * Still on the main chart.
+         */
+        if (
+          currentSongKeys.has(key)
+        ) {
+          continue;
+        }
+
+        /*
+         * Already active on recurrent.
+         */
+        if (
+          recurrentState.has(key)
+        ) {
+          continue;
+        }
+
+        let eligible = false;
+
+        if (
+          isModernRecurrencyWeek(
+            currentWeek
+          )
+        ) {
+          /*
+           * More than 20 Hot 100 weeks.
+           *
+           * Once the song leaves the main
+           * chart, its final rank is no longer
+           * used to prevent recurrent status.
+           */
+          eligible =
+            previousEntry.weeksOnChart >
+              20 ||
+            isRecurrentEligibleModern(
+              previousEntry
+            );
+        } else {
+          /*
+           * Historical reconstruction.
+           */
+          eligible =
+            previousEntry.weeksOnChart >=
+            20;
+        }
+
+        if (!eligible) {
+          continue;
+        }
+
+        if (
+          !previousEntry.points ||
+          previousEntry.points <= 0
+        ) {
+          continue;
+        }
+
+        const hasPriorRecurrentAppearance =
+          priorRecurrentAppearance.has(
+            key
+          ) ||
+          lastRecurrentPoints.has(
+            key
+          );
+
+        let recurrentPoints: number;
+
+        /*
+         * FIRST recurrent appearance:
+         *
+         * Last Hot 100 points × 1.02
+         *
+         * This remains unchanged even for
+         * the selected Christmas songs.
+         */
+        if (
+          !hasPriorRecurrentAppearance
+        ) {
+          recurrentPoints =
+            roundRecurrentPoints(
+              previousEntry.points *
+                1.02
+            );
+        } else {
+          /*
+           * SUBSEQUENT recurrent appearance:
+           *
+           * Normal songs:
+           * Previous recurrent points × 0.97
+           *
+           * Selected Christmas songs:
+           * Previous recurrent points × 0.80
+           */
+          const previousRecurrentPoints =
+            lastRecurrentPoints.get(
+              key
+            );
+
+          const decayMultiplier =
+            isChristmasRecurrentSong(
+              previousEntry.title,
+              previousEntry.artist
+            )
+              ? 0.80
+              : 0.97;
+
+          recurrentPoints =
+            roundRecurrentPoints(
+              (
+                previousRecurrentPoints ??
+                previousEntry.points
+              ) *
+                decayMultiplier
+            );
+        }
+
+        /*
+         * ----------------------------------------------------
+         * CUMULATIVE RECURRENT WEEK COUNT
+         * ----------------------------------------------------
+         */
+        const recurrentWeeks =
+          (
+            recurrentWeekCounts.get(
+              key
+            ) ?? 0
+          ) + 1;
+
+        recurrentWeekCounts.set(
+          key,
+          recurrentWeeks
+        );
+
+        /*
+         * Preserve the previous peak if
+         * the song is returning to recurrent.
+         */
+        const previousPeak =
+          recurrentPeakPositions.get(
+            key
+          ) ?? null;
+
+        recurrentState.set(
+          key,
+          {
+            title:
+              previousEntry.title,
+            artist:
+              previousEntry.artist,
+            artwork:
+              previousEntry.artwork,
+            recurrentPoints,
+            recurrentWeeks,
+            hasPriorRecurrentAppearance,
+            peakPosition:
+              previousPeak,
+          }
+        );
+
+        newRecurrentKeys.add(
+          key
+        );
+
+        lastRecurrentPoints.set(
+          key,
+          recurrentPoints
+        );
+      }
+    }
+
+    /*
+     * --------------------------------------------------------
+     * 3. Advance the recurrent week count for songs
+     *    that were ALREADY active before this week.
+     * --------------------------------------------------------
+     */
+    for (
+      const [
+        key,
+        state,
+      ] of recurrentState.entries()
+    ) {
+      if (
+        newRecurrentKeys.has(key)
+      ) {
+        continue;
+      }
+
+      const recurrentWeeks =
+        (
+          recurrentWeekCounts.get(
+            key
+          ) ?? state.recurrentWeeks
+        ) + 1;
+
+      recurrentWeekCounts.set(
+        key,
+        recurrentWeeks
+      );
+
+      state.recurrentWeeks =
+        recurrentWeeks;
+    }
+
+    /*
+     * --------------------------------------------------------
+     * 4. Apply recurrent decay.
+     * --------------------------------------------------------
+     *
+     * Newly recurrent songs are Week 1
+     * and retain their +2% adjustment.
+     *
+     * Existing recurrent songs:
+     *
+     * Normal songs:
+     *     × 0.97
+     *
+     * Selected Christmas songs:
+     *     × 0.80
+     *
+     * Returning songs are NOT treated as
+     * recurrent debuts.
+     */
+    for (
+      const state of recurrentState.values()
+    ) {
+      if (
+        state.recurrentWeeks > 1
+      ) {
+        const decayMultiplier =
+          isChristmasRecurrentSong(
+            state.title,
+            state.artist
+          )
+            ? 0.80
+            : 0.97;
+
+        state.recurrentPoints =
+          roundRecurrentPoints(
+            state.recurrentPoints *
+              decayMultiplier
+          );
+      }
+    }
+
+    /*
+     * --------------------------------------------------------
+     * 5. Rank the COMPLETE recurrent pool.
+     * --------------------------------------------------------
+     */
+    const rankedRecurrentSongs =
+      Array.from(
+        recurrentState.entries()
+      ).sort(
+        (
+          [, a],
+          [, b]
+        ) =>
+          b.recurrentPoints -
+          a.recurrentPoints
+      );
+
+    /*
+     * --------------------------------------------------------
+     * 6. Update the ALL-TIME recurrent peak
+     *    for every active recurrent song.
+     * --------------------------------------------------------
+     */
+    rankedRecurrentSongs.forEach(
+      (
+        [
+          key,
+          state,
+        ],
+        index
+      ) => {
+        const currentPosition =
+          index + 1;
+
+        const previousPeak =
+          recurrentPeakPositions.get(
+            key
+          );
+
+        const peakPosition =
+          previousPeak === undefined
+            ? currentPosition
+            : Math.min(
+                previousPeak,
+                currentPosition
+              );
+
+        recurrentPeakPositions.set(
+          key,
+          peakPosition
+        );
+
+        state.peakPosition =
+          peakPosition;
+
+        recurrentState.set(
+          key,
+          state
+        );
+
+        lastRecurrentPoints.set(
+          key,
+          state.recurrentPoints
+        );
+      }
+    );
+
+    /*
+     * Historical charts are hidden until
+     * there are at least 20 qualifying songs.
+     *
+     * Modern recurrent charts display whenever
+     * at least one qualifying recurrent song exists.
+     */
+    const shouldDisplayChart =
+      isModernRecurrencyWeek(
+        currentWeek
+      )
+        ? rankedRecurrentSongs.length >
+          0
+        : rankedRecurrentSongs.length >=
+          20;
+
+    if (
+      !shouldDisplayChart
+    ) {
+      entriesByWeek[
+        currentWeek
+      ] = [];
+
+      /*
+       * Recurrent state still remains active
+       * even when the chart is not displayed.
+       */
+      for (
+        const [
+          key,
+          state,
+        ] of recurrentState.entries()
+      ) {
+        lastRecurrentPoints.set(
+          key,
+          state.recurrentPoints
+        );
+
+        priorRecurrentAppearance.add(
+          key
+        );
+
+        state.hasPriorRecurrentAppearance =
+          true;
+      }
+
+      previousDisplayedRanks =
+        new Map();
+
+      previousDisplayedPoints =
+        new Map();
+
+      continue;
+    }
+
+    /*
+     * --------------------------------------------------------
+     * 7. Build the displayed Top 20.
+     * --------------------------------------------------------
+     */
+    const displayedSongs =
+      rankedRecurrentSongs.slice(
+        0,
+        20
+      );
+
+    const currentDisplayedRanks =
+      new Map<
+        string,
+        number
+      >();
+
+    const currentDisplayedPoints =
+      new Map<
+        string,
+        number
+      >();
+
+    entriesByWeek[
+      currentWeek
+    ] = displayedSongs.map(
+      (
+        [
+          key,
+          state,
+        ],
+        index
+      ) => {
+        const rank =
+          index + 1;
+
+        const lastWeekRank =
+          previousDisplayedRanks.get(
+            key
+          ) ?? null;
+
+        const lastWeekPoints =
+          previousDisplayedPoints.get(
+            key
+          );
+
+        const hasAnyPriorAppearance =
+          state.hasPriorRecurrentAppearance ||
+          priorRecurrentAppearance.has(
+            key
+          );
+
+        const isRecurrentDebut =
+          !hasAnyPriorAppearance &&
+          state.recurrentWeeks ===
+            1;
+
+        /*
+         * BEST-EVER recurrent position.
+         */
+        const peakPosition =
+          recurrentPeakPositions.get(
+            key
+          ) ??
+          state.peakPosition ??
+          rank;
+
+        currentDisplayedRanks.set(
+          key,
+          rank
+        );
+
+        currentDisplayedPoints.set(
+          key,
+          state.recurrentPoints
+        );
+
+        return {
+          rank,
+          title:
+            state.title,
+          artist:
+            state.artist,
+          artwork:
+            state.artwork,
+          week:
+            currentWeek,
+          points:
+            state.recurrentPoints,
+          lastWeekRank,
+          lastWeekPoints,
+          peakPosition,
+          weeksOnChart:
+            state.recurrentWeeks,
+          arrow:
+            getMovementArrow(
+              rank,
+              lastWeekRank
+            ),
+          movementIcon:
+            getMovementIcon(
+              rank,
+              lastWeekRank,
+              hasAnyPriorAppearance
+            ),
+          hasAnyPriorAppearance,
+          chartHistory: [],
+          recurrentPoints:
+            state.recurrentPoints,
+          recurrentWeeks:
+            state.recurrentWeeks,
+          isRecurrentDebut,
+        };
+      }
+    );
+
+    /*
+     * --------------------------------------------------------
+     * 8. Remember EVERY active recurrent song.
+     * --------------------------------------------------------
+     */
+    for (
+      const [
+        key,
+        state,
+      ] of recurrentState.entries()
+    ) {
+      priorRecurrentAppearance.add(
+        key
+      );
+
+      state.hasPriorRecurrentAppearance =
+        true;
+
+      lastRecurrentPoints.set(
+        key,
+        state.recurrentPoints
+      );
+
+      /*
+       * Keep the persistent peak synchronized.
+       */
+      if (
+        state.peakPosition !== null
+      ) {
+        recurrentPeakPositions.set(
+          key,
+          state.peakPosition
+        );
+      }
+    }
+
+    previousDisplayedRanks =
+      currentDisplayedRanks;
+
+    previousDisplayedPoints =
+      currentDisplayedPoints;
+
+    /*
+     * IMPORTANT:
+     *
+     * There is NO recurrentWeeks += 1 here anymore.
+     *
+     * The cumulative counter is updated at the
+     * beginning of each recurrent week above.
+     */
+  }
+
+  /*
+   * The recurrent chart itself begins on
+   * August 19, 2010.
+   *
+   * Earlier Hot 100 weeks are used internally
+   * but are not selectable recurrent weeks.
+   */
+  const recurrentAvailableWeeks =
+    chronologicalWeeks
+      .filter(
+        (week) =>
+          parseChartDate(week) >=
+          firstRecurrentDate
+      )
+      .reverse();
+
+  /*
+   * Use the selected week only if it is
+   * actually within the recurrent chart.
+   *
+   * Otherwise use the latest recurrent week.
+   */
+  const selectedWeek =
+    weeklyData.week &&
+    recurrentAvailableWeeks.includes(
+      weeklyData.week
+    )
+      ? weeklyData.week
+      : recurrentAvailableWeeks[0] ??
+        '';
+
+  return {
+    week:
+      selectedWeek,
+
+    displayWeek:
+      formatDateLabel(
+        selectedWeek
+      ),
+
+    availableWeeks:
+      recurrentAvailableWeeks,
+
+    entries:
+      entriesByWeek[
+        selectedWeek
+      ] ?? [],
+
+    entriesByWeek,
+  };
+}
+
+/*
+ * ============================================================
+ * RECURRENT DATA FETCHER
+ * ============================================================
+ */
+
+export async function fetchRecurrentChartData(
+  csvUrl: string,
+  selectedWeek?: string,
+  chartTitle?: string
+): Promise<RecurrentChartPayload> {
+  const weeklyData =
+    await fetchWeeklyChartData(
+      csvUrl,
+      selectedWeek,
+      chartTitle
+    );
+
+  return calculateRecurrentChart(
+    weeklyData
+  );
+}
+
+/*
+ * ============================================================
+ * WEEKLY HOT 100
+ * ============================================================
+ */
+
 export async function fetchWeeklyChartData(
   csvUrl: string,
   selectedWeek?: string,
@@ -734,9 +1701,9 @@ export async function fetchWeeklyChartData(
 
   try {
     /*
-     * Weekly data is approximately
-     * 10 MB, so it must never enter
-     * Next.js's 2 MB data cache.
+     * Weekly data is approximately 10 MB,
+     * so it must never enter Next.js's
+     * 2 MB data cache.
      */
     const response =
       await fetch(
@@ -754,9 +1721,9 @@ export async function fetchWeeklyChartData(
       return {
         week: '',
         displayWeek: 'UNKNOWN',
-        availableWeeks: [],
         entries: [],
         entriesByWeek: {},
+        availableWeeks: [],
         weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
@@ -769,9 +1736,9 @@ export async function fetchWeeklyChartData(
       return {
         week: '',
         displayWeek: 'UNKNOWN',
-        availableWeeks: [],
         entries: [],
         entriesByWeek: {},
+        availableWeeks: [],
         weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
@@ -784,27 +1751,34 @@ export async function fetchWeeklyChartData(
       return {
         week: '',
         displayWeek: 'UNKNOWN',
-        availableWeeks: [],
         entries: [],
         entriesByWeek: {},
+        availableWeeks: [],
         weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
     }
 
-    const groupedRows: Record<
-      string,
-      RawRow[]
-    > = {};
+    const groupedRows:
+      Record<
+        string,
+        RawRow[]
+      > = {};
 
     for (const row of rows) {
-      if (!groupedRows[row.week]) {
-        groupedRows[row.week] = [];
+      if (
+        !groupedRows[
+          row.week
+        ]
+      ) {
+        groupedRows[
+          row.week
+        ] = [];
       }
 
-      groupedRows[row.week].push(
-        row
-      );
+      groupedRows[
+        row.week
+      ].push(row);
     }
 
     const availableWeeks =
@@ -823,9 +1797,9 @@ export async function fetchWeeklyChartData(
       return {
         week: '',
         displayWeek: 'UNKNOWN',
-        availableWeeks: [],
         entries: [],
         entriesByWeek: {},
+        availableWeeks: [],
         weeksAtNumberOne: 0,
         weeksAtNumberOneByWeek: {},
       };
@@ -837,18 +1811,22 @@ export async function fetchWeeklyChartData(
         ? selectedWeek
         : availableWeeks[0];
 
-    const allHistoryBySong: Record<
-      string,
-      RawRow[]
-    > = {};
+    const allHistoryBySong:
+      Record<
+        string,
+        RawRow[]
+      > = {};
 
     for (const row of rows) {
-      const key = songKey(
-        row.title,
-        row.artist
-      );
+      const key =
+        songKey(
+          row.title,
+          row.artist
+        );
 
-      if (!allHistoryBySong[key]) {
+      if (
+        !allHistoryBySong[key]
+      ) {
         allHistoryBySong[key] =
           [];
       }
@@ -858,9 +1836,11 @@ export async function fetchWeeklyChartData(
       );
     }
 
-    for (const key of Object.keys(
-      allHistoryBySong
-    )) {
+    for (
+      const key of Object.keys(
+        allHistoryBySong
+      )
+    ) {
       allHistoryBySong[key].sort(
         (a, b) =>
           parseChartDate(
@@ -872,20 +1852,23 @@ export async function fetchWeeklyChartData(
       );
     }
 
-    const entriesByWeek: Record<
-      string,
-      WeeklyChartEntry[]
-    > = {};
+    const entriesByWeek:
+      Record<
+        string,
+        WeeklyChartEntry[]
+      > = {};
 
-    const weeksAtNumberOneByWeek: Record<
-      string,
-      number
-    > = {};
+    const weeksAtNumberOneByWeek:
+      Record<
+        string,
+        number
+      > = {};
 
-    const cumulativeNumberOneWeeks: Record<
-      string,
-      number
-    > = {};
+    const cumulativeNumberOneWeeks:
+      Record<
+        string,
+        number
+      > = {};
 
     const chronologicalWeeks =
       [...availableWeeks].sort(
@@ -894,7 +1877,9 @@ export async function fetchWeeklyChartData(
           parseChartDate(b)
       );
 
-    for (const currentWeek of chronologicalWeeks) {
+    for (
+      const currentWeek of chronologicalWeeks
+    ) {
       const currentRows =
         groupedRows[
           currentWeek
@@ -909,20 +1894,29 @@ export async function fetchWeeklyChartData(
       /*
        * Update cumulative #1 total.
        */
-      for (const row of sortedRows) {
-        if (row.rank !== 1) {
+      for (
+        const row of sortedRows
+      ) {
+        if (
+          row.rank !== 1
+        ) {
           continue;
         }
 
-        const key = songKey(
-          row.title,
-          row.artist
-        );
+        const key =
+          songKey(
+            row.title,
+            row.artist
+          );
 
-        cumulativeNumberOneWeeks[key] =
-          (cumulativeNumberOneWeeks[
-            key
-          ] ?? 0) + 1;
+        cumulativeNumberOneWeeks[
+          key
+        ] =
+          (
+            cumulativeNumberOneWeeks[
+              key
+            ] ?? 0
+          ) + 1;
       }
 
       /*
@@ -931,7 +1925,9 @@ export async function fetchWeeklyChartData(
       entriesByWeek[
         currentWeek
       ] = sortedRows.map(
-        (row) => {
+        (
+          row
+        ) => {
           const key =
             songKey(
               row.title,
@@ -950,18 +1946,24 @@ export async function fetchWeeklyChartData(
 
           const priorHistory =
             history.filter(
-              (historyRow) =>
+              (
+                historyRow
+              ) =>
                 parseChartDate(
                   historyRow.week
-                ) < currentDate
+                ) <
+                currentDate
             );
 
           const currentHistory =
             history.filter(
-              (historyRow) =>
+              (
+                historyRow
+              ) =>
                 parseChartDate(
                   historyRow.week
-                ) <= currentDate
+                ) <=
+                currentDate
             );
 
           const previousChartWeekIndex =
@@ -970,7 +1972,8 @@ export async function fetchWeeklyChartData(
             ) - 1;
 
           const previousChartWeek =
-            previousChartWeekIndex >= 0
+            previousChartWeekIndex >=
+            0
               ? chronologicalWeeks[
                   previousChartWeekIndex
                 ]
@@ -979,7 +1982,9 @@ export async function fetchWeeklyChartData(
           const previousWeek =
             previousChartWeek
               ? history.find(
-                  (historyRow) =>
+                  (
+                    historyRow
+                  ) =>
                     historyRow.week ===
                     previousChartWeek
                 )
@@ -1020,12 +2025,16 @@ export async function fetchWeeklyChartData(
             );
 
           return {
-            rank: row.rank,
-            title: row.title,
-            artist: row.artist,
+            rank:
+              row.rank,
+            title:
+              row.title,
+            artist:
+              row.artist,
             artwork:
               row.artwork,
-            week: currentWeek,
+            week:
+              currentWeek,
             points:
               row.points,
             lastWeekRank,
@@ -1111,9 +2120,9 @@ export async function fetchWeeklyChartData(
     return {
       week: '',
       displayWeek: 'UNKNOWN',
-      availableWeeks: [],
       entries: [],
       entriesByWeek: {},
+      availableWeeks: [],
       weeksAtNumberOne: 0,
       weeksAtNumberOneByWeek: {},
     };
