@@ -787,7 +787,7 @@ function isChristmasRecurrentSong(
     ) ||
     normalizedKey ===
       songKey(
-        'Rockin Around the Christmas Tree',
+        'Rockin Around The Christmas The Tree',
         'Brenda Lee'
       )
   );
@@ -1098,7 +1098,7 @@ export function calculateRecurrentChart(
            * used to prevent recurrent status.
            */
           eligible =
-            previousEntry.weeksOnChart >
+            previousEntry.weeksOnChart >=
               20 ||
             isRecurrentEligibleModern(
               previousEntry
