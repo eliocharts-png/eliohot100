@@ -28,6 +28,15 @@ type ChartData = {
   entries: ChartEntry[];
 };
 
+type NumberOneArchiveSong = {
+  title: string;
+  artist: string;
+  artwork?: string;
+  firstNo1: string;
+  lastNo1: string;
+  totalWeeksAtNo1: number;
+};
+
 const GOAT_CHART_TITLES = [
   'Greatest of All-Time',
   'Greatest of All-Time Filipino Songs',
@@ -225,6 +234,46 @@ export default function HomePage() {
       >
     > | null
   >(null);
+
+    /* =========================================================
+     EVERY NO. 1 ARCHIVE
+  ========================================================= */
+
+  const [numberOneArchive, setNumberOneArchive] =
+    useState<NumberOneArchiveSong[]>([]);
+
+  useEffect(() => {
+    async function loadNumberOneArchive() {
+      try {
+        const response = await fetch('/api/no1-history');
+
+        if (!response.ok) {
+          throw new Error('Failed to load No. 1 archive');
+        }
+
+        const data: { songs?: NumberOneArchiveSong[] } =
+          await response.json();
+
+        setNumberOneArchive(data.songs ?? []);
+      } catch (error) {
+        console.error('Failed to load No. 1 archive:', error);
+      }
+    }
+
+    void loadNumberOneArchive();
+  }, []);
+
+  const latestNumberOneSongs = useMemo(
+    () =>
+      numberOneArchive
+        .map((song, index) => ({
+          ...song,
+          ordinal: index + 1,
+        }))
+        .slice(-5)
+        .reverse(),
+    [numberOneArchive]
+  );
 
   /* =========================================================
      RECURRENT CHART
@@ -823,7 +872,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-black">
 
-      <div className="pt-[3.8rem]">
+      <div>
 
         <div className="mx-auto max-w-[1360px] px-3 sm:px-6">
 
@@ -835,7 +884,7 @@ export default function HomePage() {
 
               <div className="h-full min-h-full w-full bg-black px-6 pb-10 pt-8">
 
-                <div className="sticky top-[4.5rem]">
+                <div className="homepage-sidebar-sticky sticky top-[4.5rem]">
 
                   <p className="text-center font-brown-bold text-xs uppercase tracking-[0.18em] text-white">
                     TOP ARTISTS
@@ -1292,6 +1341,98 @@ export default function HomePage() {
                         }
                       />
                     )}
+
+                                      {/* EVERY NO. 1 ARCHIVE */}
+
+                  {numberOneArchive.length > 0 && (
+                    <section className="w-full bg-black px-4 py-5 sm:px-6 sm:py-7">
+                      <div className="flex items-center justify-between gap-3">
+                        <h2
+                          className="text-[#0050FF]"
+                          style={{
+                            fontFamily:
+                              "'Crystal Ultra Condensed Bold', sans-serif",
+                            fontSize:
+                              'clamp(1.7rem, 3.5vw, 3rem)',
+                            fontWeight: 700,
+                            letterSpacing: '0.045em',
+                            lineHeight: 1,
+                          }}
+                        >
+                          EVERY NO. 1 ARCHIVE
+                        </h2>
+
+                        <a
+                          href="/no1-history"
+                          aria-label="View every No. 1 song"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center text-[#0050FF] transition-transform hover:translate-x-1 sm:h-11 sm:w-11"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-6 w-6 sm:h-8 sm:w-8"
+                            aria-hidden="true"
+                          >
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </a>
+                      </div>
+
+                      <div className="mt-5 grid grid-cols-5 gap-2 sm:mt-7 sm:gap-4">
+                        {latestNumberOneSongs.map((song) => {
+                          const ordinal = song.ordinal;
+                          const suffix =
+                            ordinal % 100 >= 11 &&
+                            ordinal % 100 <= 13
+                              ? 'th'
+                              : ordinal % 10 === 1
+                                ? 'st'
+                                : ordinal % 10 === 2
+                                  ? 'nd'
+                                  : ordinal % 10 === 3
+                                    ? 'rd'
+                                    : 'th';
+
+                          return (
+                            <a
+                              key={`${song.title}-${song.artist}`}
+                              href="/no1-history"
+                              aria-label={`${ordinal}${suffix} No. 1: ${song.title} by ${song.artist}`}
+                              className="group min-w-0"
+                            >
+                              <div className="aspect-square w-full overflow-hidden bg-white/10">
+                                {song.artwork && (
+                                  <img
+                                    src={song.artwork}
+                                    alt={`${song.title} artwork`}
+                                    loading="lazy"
+                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  />
+                                )}
+                              </div>
+
+                              <p className="mt-2 font-brown-bold text-sm leading-none text-[#0050FF] sm:mt-3 sm:text-lg">
+                                {ordinal}
+                                {suffix}
+                              </p>
+
+                              <p className="mt-1 line-clamp-2 font-brown-bold text-[0.65rem] leading-tight text-white sm:text-sm">
+                                {song.title}
+                              </p>
+
+                              <p className="mt-1 line-clamp-1 font-brown-regular text-[0.6rem] leading-tight text-white/55 sm:text-xs">
+                                {song.artist}
+                              </p>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
 
                   {/* CHART BEAT */}
 
