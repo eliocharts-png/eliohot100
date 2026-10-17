@@ -280,7 +280,7 @@ export default function SiteHeader() {
    * ===================================================== */
 
   return (
-    <nav className="fixed left-0 right-0 top-0 z-[100] bg-black">
+    <nav className="sticky top-0 z-[100] bg-black">
 
       <div className="mx-auto flex min-h-[3.8rem] max-w-7xl items-center px-4 sm:px-6 lg:px-8">
 

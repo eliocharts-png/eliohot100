@@ -625,7 +625,7 @@ export default function WeeklyChartDetail({
                   className={`flex h-8 w-8 items-center justify-center border transition-all duration-150 sm:h-9 sm:w-9 ${
                     isActive
                       ? 'border-[#0050FF] bg-[#0050FF] text-white'
-                      : 'border-black/10 bg-white text-black/45 hover:border-black/30 hover:bg-black/[0.03] hover:text-black'
+                      : 'border-black/10 bg-white text-black/45 hover:border-black/30 hover:bg-black/[0.03] hover:text-black dark:border-[#0050FF]/40 dark:bg-[#0050FF]/10 dark:text-[#0050FF] dark:hover:border-[#0050FF] dark:hover:bg-[#0050FF]/20 dark:hover:text-[#0050FF]'
                   }`}
                 >
                   <FilterIcon

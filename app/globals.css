@@ -414,3 +414,729 @@ html.dark .chart-loading-shimmer {
     opacity: 1;
   }
 }
+
+/* ECA 2026 promotional banner */
+
+.eca-promo {
+  position: relative;
+  z-index: 110;
+  width: 100%;
+  overflow: hidden;
+  color: #111;
+  background: #e9bd39;
+  font-family: var(--font-gotham-regular), sans-serif;
+}
+
+.eca-promo a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.eca-promo-hero {
+  position: relative;
+  display: flex;
+  min-height: 174px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  overflow: hidden;
+  padding: 22px max(24px, calc((100vw - 1280px) / 2));
+}
+
+.eca-promo-collage {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 48%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.eca-promo-collage::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent 45%,
+    rgba(233, 189, 57, 0.35) 66%,
+    #e9bd39 100%
+  );
+}
+
+.eca-promo-portrait {
+  position: absolute;
+  top: -20%;
+  width: 34%;
+  height: 140%;
+  overflow: hidden;
+  transform: skewX(-9deg) rotate(-3deg);
+  border-left: 3px solid rgba(233, 189, 57, 0.8);
+  border-right: 3px solid rgba(233, 189, 57, 0.8);
+}
+
+.eca-promo-portrait img {
+  width: 130%;
+  height: 100%;
+  object-fit: cover;
+  transform: skewX(9deg) scale(1.12);
+  filter: saturate(0.88);
+}
+
+.eca-promo-portrait.portrait-one {
+  left: -5%;
+}
+
+.eca-promo-portrait.portrait-two {
+  left: 22%;
+  z-index: 1;
+}
+
+.eca-promo-portrait.portrait-three {
+  left: 49%;
+  z-index: 2;
+}
+
+.eca-promo-hero-copy {
+  position: relative;
+  z-index: 3;
+  width: min(48%, 590px);
+  margin-right: auto;
+  margin-left: 43%;
+}
+
+.eca-promo-hero-kicker,
+.eca-promo-eyebrow {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.eca-promo-hero-copy h2 {
+  margin: 5px 0 7px;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: clamp(23px, 3vw, 39px);
+  font-weight: 900;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.eca-promo-hero-copy p {
+  margin: 0;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+}
+
+.eca-promo-cta {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 19px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  background: #111;
+  color: #fff !important;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.eca-promo a:hover .eca-promo-cta {
+  transform: translateY(-1px);
+  background: transparent;
+  color: #111 !important;
+}
+
+.eca-promo-odds {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) minmax(0, 5fr) auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 112px;
+  padding: 16px max(24px, calc((100vw - 1280px) / 2));
+}
+
+.eca-promo-category {
+  min-width: 0;
+}
+
+.eca-promo-category-title {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: clamp(12px, 1.2vw, 16px);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.eca-promo-contenders {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.eca-promo-contender {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 5px;
+  min-width: 0;
+  padding-left: 9px;
+  border-left: 1px solid rgba(17, 17, 17, 0.25);
+}
+
+.eca-promo-rank {
+  grid-row: 1 / 3;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.eca-promo-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.eca-promo-title {
+  overflow: hidden;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eca-promo-artist {
+  overflow: hidden;
+  margin-top: 3px;
+  font-size: 9px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eca-promo-metrics {
+  display: flex;
+  grid-column: 2;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.eca-promo-percentage {
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.eca-promo-change {
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.eca-promo-change.up {
+  color: #175c29;
+}
+
+.eca-promo-change.down {
+  color: #8b1e19;
+}
+
+.eca-promo-change.flat {
+  color: #49402a;
+}
+
+.eca-promo-loading {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .eca-promo-hero {
+    min-height: 158px;
+    gap: 12px;
+    padding: 18px 20px;
+  }
+
+  .eca-promo-collage {
+    width: 42%;
+  }
+
+  .eca-promo-hero-copy {
+    width: 48%;
+    margin-left: 36%;
+  }
+
+  .eca-promo-hero-copy h2 {
+    font-size: clamp(20px, 3.2vw, 30px);
+  }
+
+  .eca-promo-hero-copy p {
+    font-size: 9px;
+  }
+
+  .eca-promo-cta {
+    gap: 7px;
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 9px;
+  }
+
+  .eca-promo-odds {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+
+  .eca-promo-category {
+    grid-column: 1 / -1;
+  }
+
+  .eca-promo-contenders {
+    grid-template-columns: repeat(5, minmax(100px, 1fr));
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .eca-promo-odds > .eca-promo-cta {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .eca-promo-hero {
+    min-height: 146px;
+    align-items: center;
+    gap: 7px;
+    padding: 14px 12px;
+  }
+
+  .eca-promo-collage {
+    width: 39%;
+  }
+
+  .eca-promo-collage::after {
+    background: linear-gradient(
+      90deg,
+      transparent 25%,
+      rgba(233, 189, 57, 0.45) 57%,
+      #e9bd39 100%
+    );
+  }
+
+  .eca-promo-portrait {
+    width: 43%;
+  }
+
+  .eca-promo-portrait.portrait-two {
+    left: 24%;
+  }
+
+  .eca-promo-portrait.portrait-three {
+    left: 51%;
+  }
+
+  .eca-promo-hero-copy {
+    width: 58%;
+    margin-left: 29%;
+  }
+
+  .eca-promo-hero-kicker {
+    font-size: 7px;
+  }
+
+  .eca-promo-hero-copy h2 {
+    margin: 5px 0;
+    font-size: clamp(17px, 4.7vw, 24px);
+  }
+
+  .eca-promo-hero-copy p {
+    font-size: 7px;
+    line-height: 1.5;
+  }
+
+  .eca-promo-hero > .eca-promo-cta {
+    align-self: flex-end;
+    margin-left: -5px;
+    padding: 0 9px;
+    font-size: 8px;
+  }
+
+  .eca-promo-odds {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .eca-promo-category-title {
+    font-size: 13px;
+  }
+
+  .eca-promo-contenders {
+    grid-template-columns: repeat(5, minmax(112px, 1fr));
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 7px;
+  }
+
+  .eca-promo-odds > .eca-promo-cta {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    padding: 0 10px;
+    font-size: 8px;
+  }
+
+  .eca-promo-contender {
+    padding-left: 6px;
+  }
+
+  .eca-promo-title {
+    font-size: 10px;
+  }
+
+  .eca-promo-artist {
+    font-size: 8px;
+  }
+
+  .eca-promo-percentage {
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eca-promo-cta {
+    transition: none;
+  }
+}
+
+
+/* Compact ECA banner shown while scrolling down */
+.eca-compact-promo {
+  position: fixed;
+  top: 3.8rem;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  height: 48px;
+  overflow: hidden;
+  background: #e9bd39;
+  color: #111;
+  font-family: var(--font-gotham-regular), sans-serif;
+  transform: translateY(-110%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 180ms ease, visibility 180ms ease;
+}
+
+.eca-compact-promo.is-visible {
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.eca-compact-promo-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  padding: 0 24px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.eca-compact-label,
+.eca-compact-category,
+.eca-compact-cta {
+  flex-shrink: 0;
+  font-family: var(--font-gotham-black), sans-serif;
+  font-size: 10px;
+}
+
+.eca-compact-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.eca-compact-nominees {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.eca-compact-nominee {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+}
+
+.eca-compact-nominee strong {
+  font-family: var(--font-gotham-black), sans-serif;
+}
+
+.eca-compact-cta {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .eca-compact-promo {
+    height: 42px;
+  }
+
+  .eca-compact-promo-link {
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .eca-compact-category {
+    display: none;
+  }
+
+  .eca-compact-nominees {
+    gap: 12px;
+  }
+
+  .eca-compact-nominee {
+    font-size: 9px;
+  }
+
+  .eca-compact-nominee:nth-child(n + 3) {
+    display: none;
+  }
+
+  .eca-compact-cta {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eca-compact-promo {
+    transition: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  html.eca-compact-visible .homepage-sidebar-sticky {
+    top: calc(3.8rem + 48px + 1rem);
+  }
+}
+
+/* Awards predictions page: dark mode */
+html.dark .predictions-page {
+  background: #101010;
+  color: #f5f5f5;
+}
+
+html.dark .predictions-page .predictions-intro,
+html.dark .predictions-page .predictions-footer {
+  border-color: #303030;
+}
+
+html.dark .predictions-page .predictions-eyebrow,
+html.dark .predictions-page .predictions-description {
+  color: #aaa;
+}
+
+html.dark .predictions-page .predictions-back-button {
+  background: #181818;
+  color: #e6c878;
+  border-color: #c5a34f;
+}
+
+html.dark .predictions-page .prediction-category-card {
+  background: #101010;
+  border-color: #c5a34f;
+}
+
+/* Gold category headers with black text */
+html.dark .predictions-page .prediction-category-header {
+  background: #e6c878;
+  color: #111;
+}
+
+html.dark .predictions-page .prediction-category-header button {
+  background: transparent;
+  color: #111;
+  border-color: #111;
+}
+
+html.dark .predictions-page .prediction-category-header button:hover {
+  background: #111;
+  color: #e6c878;
+}
+
+/* Black contender area with gold text */
+html.dark .predictions-page .prediction-table-head {
+  color: #c5a34f;
+  border-color: #383838;
+}
+
+html.dark .predictions-page .prediction-odds-row {
+  border-color: #303030;
+}
+
+html.dark .predictions-page .prediction-odds-rank,
+html.dark .predictions-page .prediction-odds-artist {
+  color: #b5b5b5;
+}
+
+html.dark .predictions-page .prediction-odds-title,
+html.dark .predictions-page .prediction-odds-percentage {
+  color: #e6c878;
+}
+
+html.dark .predictions-page .prediction-winner-star {
+  color: #e6c878;
+}
+
+/* Keep progress bars gold */
+html.dark .predictions-page .prediction-odds-bar {
+  background: #383838;
+}
+
+html.dark .predictions-page .prediction-odds-bar-fill {
+  background: #c5a34f;
+}
+
+/* Preserve percentage change colors */
+html.dark .predictions-page .prediction-odds-change.is-up {
+  color: #35c979;
+}
+
+html.dark .predictions-page .prediction-odds-change.is-down {
+  color: #ff6262;
+}
+
+html.dark .predictions-page .prediction-odds-change.is-flat {
+  color: #999;
+}
+
+html.dark .predictions-page .prediction-view-all {
+  background: #181818;
+  color: #e6c878;
+  border-color: #383838;
+}
+
+html.dark .predictions-page .prediction-view-all:hover {
+  background: #292929;
+  color: #f4dc91;
+}
+
+html.dark .predictions-page .prediction-empty {
+  color: #f5f5f5;
+}
+
+html.dark .predictions-page .prediction-empty > span:last-child {
+  color: #aaa;
+}
+
+html.dark .predictions-page .prediction-odds-image,
+html.dark .predictions-page .prediction-odds-image-placeholder {
+  background: #242424;
+  color: #aaa;
+}
+
+html.dark .predictions-page input,
+html.dark .predictions-page select,
+html.dark .predictions-page textarea {
+  background: #181818;
+  color: #f5f5f5;
+  border-color: #444;
+}
+
+html.dark .predictions-page input::placeholder,
+html.dark .predictions-page textarea::placeholder {
+  color: #888;
+}
+
+html.dark .predictions-page .prediction-empty,
+html.dark .predictions-page .prediction-note {
+  border-color: #383838;
+}
+
+/* No. 1 History page background */
+html:not(.dark) .no1-history-page {
+  background-color: #ffffff !important;
+  color: #000000;
+}
+
+html.dark .no1-history-page {
+  background-color: #000000 !important;
+  color: #ffffff;
+}
+
+/* No. 1 History description: readable in light mode */
+html:not(.dark) .no1-history-page > p {
+  color: #000000 !important;
+}
+
+/* No. 1 History: enforce readable text colors */
+html:not(.dark) .no1-history-page,
+html:not(.dark) .no1-history-page p,
+html:not(.dark) .no1-history-page h1,
+html:not(.dark) .no1-history-page h2,
+html:not(.dark) .no1-history-page h3,
+html:not(.dark) .no1-history-page span,
+html:not(.dark) .no1-history-page td,
+html:not(.dark) .no1-history-page th,
+html:not(.dark) .no1-history-page label {
+  color: #000000 !important;
+}
+
+html.dark .no1-history-page {
+  color: #ffffff;
+}
+
+/* No. 1 History search bar: light mode */
+html:not(.dark) .no1-history-page input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #0050FF !important;
+}
+
+html:not(.dark) .no1-history-page input::placeholder {
+  color: #666666 !important;
+  opacity: 1;
+}
+
+html:not(.dark) .no1-history-page input:focus {
+  outline: none;
+  border-color: #0050FF !important;
+  box-shadow: 0 0 0 1px #0050FF;
+}
+
+/* No. 1 History: keep artwork overlay text white in light mode */
+html:not(.dark) .no1-history-page .group .absolute,
+html:not(.dark) .no1-history-page .group .absolute * {
+  color: #ffffff !important;
+}
