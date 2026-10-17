@@ -1629,16 +1629,10 @@ export default function AwardsPredictionsPage() {
                             Number(contender.appearances) || 0
                           );
 
-                          const percentage =
-                            submissionCount > 0
-                              ? Math.max(
-                                  0,
-                                  Math.min(
-                                    100,
-                                    (appearances / submissionCount) * 100
-                                  )
-                                )
-                              : 0;
+                          const percentage = Math.max(
+  0,
+  Math.min(100, Number(contender.odds) || 0)
+);
 
                           const change =
                             typeof contender.change === 'number' &&
