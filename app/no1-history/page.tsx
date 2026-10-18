@@ -109,7 +109,8 @@ export default function No1HistoryPage() {
             Every song that has reached the top of the Elio Charts Hot 100,
             ordered by its first week at No. 1.
           </p>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+                    {!selectedSong && (
+            <div className="mt-5 flex flex-wrap items-center gap-3">
             <input
               type="search"
               value={search}
@@ -128,6 +129,7 @@ export default function No1HistoryPage() {
               </button>
             )}
           </div>
+          )}
         </header>
 
         {selectedSong ? (

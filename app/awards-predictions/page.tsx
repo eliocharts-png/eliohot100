@@ -815,6 +815,42 @@ async function loadBestNewArtistCandidates(): Promise<Candidate[]> {
   });
 }
 
+async function loadHot100SongCandidates(): Promise<Candidate[]> {
+  const response = await fetch(HOT_100_CSV, { cache: 'no-store' });
+
+  if (!response.ok) {
+    throw new Error(`Unable to load Hot 100 history (${response.status}).`);
+  }
+
+  const parsed = Papa.parse<string[]>(await response.text(), {
+    header: false,
+    skipEmptyLines: true,
+  });
+
+  const unique = new Map<string, Candidate>();
+
+  for (const row of parsed.data) {
+    const content = String(row[2] ?? '').trim();
+    const parts = content.split(/\r?\n/).map((part) => part.trim()).filter(Boolean);
+
+    if (parts.length < 2) continue;
+
+    const title = parts[0];
+    const subtitle = parts.slice(1).join(' ');
+    const key = `${title}\n${subtitle}`.toLocaleLowerCase();
+
+    if (!unique.has(key)) {
+      unique.set(key, {
+        id: `chart-song-${unique.size}`,
+        title,
+        subtitle,
+      });
+    }
+  }
+
+  return [...unique.values()];
+}
+
 function getCandidateList(
   categoryId: CategoryId,
   candidateLists: Record<CategoryId, Candidate[]>
@@ -903,6 +939,7 @@ export default function AwardsPredictionsPage() {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newArtists, setNewArtists] = useState<Candidate[]>([]);
+  const [chartSongs, setChartSongs] = useState<Candidate[]>(songs);
   const [isLoadingNewArtists, setIsLoadingNewArtists] = useState(true);
   const [newArtistError, setNewArtistError] = useState('');
   const [oddsByCategory, setOddsByCategory] = useState<
@@ -919,6 +956,22 @@ export default function AwardsPredictionsPage() {
     Record<string, boolean>
   >({});
   const [locked, setLocked] = useState<Partial<Record<CategoryId, boolean>>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadHot100SongCandidates()
+      .then((result) => {
+        if (!cancelled) setChartSongs(result);
+      })
+      .catch((error) => {
+        console.error('Unable to load Hot 100 song candidates:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -2512,6 +2565,42 @@ export default function AwardsPredictionsPage() {
             font-size: 8px;
           }
         }
+
+      @media (prefers-color-scheme: dark) {
+        .prediction-form {
+          background: #161616;
+          border-color: #333;
+          color: #f5f5f5;
+        }
+        .prediction-form-description { color: #b5b5b5; }
+        .prediction-slot { border-top-color: #333; }
+        .prediction-slot-number {
+          background: #302a1c;
+          color: #e6c878;
+        }
+        .prediction-slot-content label,
+        .prediction-winner-label { color: #aaa; }
+        .prediction-slot-content input,
+        .prediction-winner-select {
+          background: #222;
+          color: #f5f5f5;
+          border-color: #444;
+          color-scheme: dark;
+        }
+        .prediction-slot-content input::placeholder { color: #888; }
+        .prediction-winner-section {
+          background: #201e18;
+          border-color: #51472c;
+        }
+        .prediction-winner-heading h4 { color: #f5f5f5; }
+        .prediction-winner-heading p { color: #aaa; }
+        .prediction-winner-select:disabled {
+          background: #292929;
+          color: #888;
+        }
+        .prediction-remove { color: #bbb; }
+      }
+
       `}</style>
     </main>
   );

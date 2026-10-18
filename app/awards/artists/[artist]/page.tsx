@@ -1426,8 +1426,8 @@ export default function AwardsArtistPage() {
    * ===================================================== */
 
   return (
-    <main className="min-h-screen bg-white text-black">
-      <div className="pt-[3.8rem]">
+    <main className="awards-artist-page min-h-screen bg-white text-black">
+      <div>
 
         {/* =================================================
          * HERO

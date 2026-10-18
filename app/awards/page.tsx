@@ -928,7 +928,7 @@ function NomineeCard({
 
   return (
     <div className="group min-w-0 cursor-pointer">
-      <div className="overflow-hidden bg-white">
+      <div className="awards-home-nominee overflow-hidden bg-white">
 
         {/* IMAGE */}
 
@@ -988,7 +988,7 @@ function NomineeCard({
             group-hover:bg-[#0050FF]/20
           "
         >
-          <p className="font-brown-bold text-base leading-tight text-black sm:text-lg">
+          <p className="awards-nominee-title font-brown-bold text-base leading-tight text-black sm:text-lg">
             {artistBased ? (
               <ArtistLink
                 artist={title}
@@ -999,7 +999,7 @@ function NomineeCard({
           </p>
 
           {artist && (
-            <p className="mt-1 font-brown-regular text-sm leading-tight text-black/55 sm:text-base">
+            <p className="awards-nominee-artist mt-1 font-brown-regular text-sm leading-tight text-black/55 sm:text-base">
               <ArtistCredit
                 artistCredit={artist}
               />
@@ -1438,32 +1438,17 @@ function AwardsContent() {
     years.length - 5;
 
   function moveYearsLeft() {
-    setYearStartIndex(
-      (current) => {
-        if (current <= 0) {
-          return 0;
-        }
-
-        return current - 1;
-      }
+    setYearStartIndex((current) =>
+      Math.max(0, current - 1)
     );
   }
 
   function moveYearsRight() {
-    setYearStartIndex(
-      (current) => {
-        const maxStart =
-          years.length - 5;
-
-        if (
-          current >=
-          maxStart
-        ) {
-          return maxStart;
-        }
-
-        return current + 1;
-      }
+    setYearStartIndex((current) =>
+      Math.min(
+        Math.max(0, years.length - 5),
+        current + 1
+      )
     );
   }
 
@@ -1646,40 +1631,24 @@ function AwardsContent() {
    * ======================================================= */
 
   useEffect(() => {
-    const selectedIndex =
-      years.indexOf(
-        selectedYear
-      );
+  const selectedIndex = years.indexOf(selectedYear);
 
-    if (
-      selectedIndex === -1
-    ) {
-      return;
+  if (selectedIndex === -1) return;
+
+  setYearStartIndex((current) => {
+    const maxStart = Math.max(0, years.length - 5);
+
+    if (selectedIndex < current) {
+      return selectedIndex;
     }
 
-    if (
-      selectedIndex <
-      yearStartIndex
-    ) {
-      setYearStartIndex(
-        selectedIndex
-      );
-    } else if (
-      selectedIndex >=
-      yearStartIndex + 5
-    ) {
-      setYearStartIndex(
-        Math.min(
-          years.length - 5,
-          selectedIndex - 4
-        )
-      );
+    if (selectedIndex >= current + 5) {
+      return Math.min(maxStart, selectedIndex - 4);
     }
-  }, [
-    selectedYear,
-    years,
-    yearStartIndex,
-  ]);
+
+    return current;
+  });
+}, [selectedYear, years]);
 
   /* =======================================================
    * SCROLL TO SELECTED CATEGORY
@@ -1818,6 +1787,7 @@ function AwardsContent() {
                   !canMoveLeft
                 }
                 className={`
+                  awards-year-arrow
                   flex
                   h-12
                   w-8
@@ -1860,12 +1830,14 @@ function AwardsContent() {
                       <button
                         key={year}
                         type="button"
+                        aria-pressed={selectedYear === year}
                         onClick={() =>
                           selectYear(
                             year
                           )
                         }
-                        className={`
+                        className={` 
+                          awards-year-label
                           relative
                           shrink-0
                           px-1
@@ -1920,6 +1892,7 @@ function AwardsContent() {
                   !canMoveRight
                 }
                 className={`
+                  awards-year-arrow
                   flex
                   h-12
                   w-8

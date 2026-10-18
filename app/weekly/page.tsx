@@ -1,8 +1,13 @@
+import type { Metadata } from 'next';
 import WeeklyChartDetail from '@/components/WeeklyChartDetail';
 import {
   fetchWeeklyChartData,
   sheetSources,
 } from '@/lib/chartData';
+
+export const metadata: Metadata = {
+  title: 'Hot 100',
+};
 import type { WeeklyChartPayload } from '@/types';
 
 export const revalidate = 300;

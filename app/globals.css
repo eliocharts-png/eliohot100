@@ -1140,3 +1140,82 @@ html:not(.dark) .no1-history-page .group .absolute,
 html:not(.dark) .no1-history-page .group .absolute * {
   color: #ffffff !important;
 }
+/* ECA artist detail page: dark mode */
+html.dark .awards-artist-page {
+  color: #f5f5f5;
+}
+
+html.dark .awards-artist-page .text-black\/40,
+html.dark .awards-artist-page .text-black\/35,
+html.dark .awards-artist-page .text-black\/30 {
+  color: #a1a1aa;
+}
+
+html.dark .awards-artist-page .text-black\/65 {
+  color: #d4d4d8;
+}
+
+/* Winner nomination highlights */
+html.dark .awards-artist-page .bg-\[\#EAF4FF\] {
+  background-color: #172b45;
+}
+
+html.dark .awards-artist-page .bg-\[\#EAF4FF\] .text-\[\#0050FF\] {
+  color: #8ab4ff;
+}
+
+/* Keep nominee rows readable */
+html.dark .awards-artist-page .bg-white {
+  background-color: #171717;
+}
+
+/* Subtle hover state */
+html.dark .awards-artist-page button:hover,
+html.dark .awards-artist-page [role="button"]:hover {
+  color: inherit;
+}
+/* ECA awards home page dark mode */
+html.dark .awards-home-nominee .awards-nominee-title {
+  color: #f5f5f5;
+}
+
+html.dark .awards-home-nominee .awards-nominee-artist {
+  color: #c4c4cc;
+}
+
+/* Year selector */
+html.dark .awards-home-page .awards-year-label {
+  color: #c4c4cc;
+}
+
+
+/* ECA awards year selector dark mode */
+html.dark button.awards-year-label {
+  color: #c4c4cc;
+}
+
+html.dark button.awards-year-label[aria-pressed="true"] {
+  color: #70a5ff;
+}
+
+html.dark button.awards-year-arrow {
+  color: #e5e7eb;
+}
+
+html.dark button.awards-year-arrow:disabled {
+  color: #52525b;
+}
+
+
+/* Weekly chart tooltip theme */
+:root {
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e5e7eb;
+  --chart-tooltip-text: #111111;
+}
+
+html.dark {
+  --chart-tooltip-bg: #171717;
+  --chart-tooltip-border: #404040;
+  --chart-tooltip-text: #f5f5f5;
+}

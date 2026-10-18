@@ -1,3 +1,8 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Chart Beat',
+};
 export const dynamic = 'force-dynamic';
 
 import {

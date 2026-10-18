@@ -440,6 +440,8 @@ export default function ArtistPage() {
       artistParam ?? ''
     );
 
+
+
   const [data, setData] =
     useState<ArtistResponse | null>(
       null

@@ -32,7 +32,10 @@ const gothamRegular = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Elio Charts',
+  title: {
+    default: 'Elio Charts',
+    template: '%s | Elio Charts',
+  },
   description: 'Personal charts by Elio',
   icons: {
     icon: '/favicon.png',

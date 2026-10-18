@@ -131,7 +131,7 @@ async function getNumberOneSongs(): Promise<NumberOneSong[]> {
     const week = row[0]?.trim() ?? '';
     const rank = Number(row[1]?.trim() ?? 0);
     const content = row[2]?.trim() ?? '';
-    const pointsValue = Number(row[3]?.trim() ?? 0);
+    const pointsValue = Number((row[3] ?? '').trim().replace(/,/g, ''));
     const artwork = row[10]?.trim() ?? '';
 
     if (!week || !parseDate(week) || rank <= 0 || !content) {
