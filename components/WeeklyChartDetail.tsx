@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -239,6 +239,64 @@ export default function WeeklyChartDetail({
 
   const [activeFilter, setActiveFilter] =
     useState<ChartFilter>('all');
+
+  const [destinationRank, setDestinationRank] =
+    useState<number | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(
+      window.location.search
+    );
+    const rankParam = params.get('rank');
+    const targetRank = rankParam
+      ? Number(rankParam)
+      : null;
+
+    if (
+      targetRank !== null &&
+      Number.isInteger(targetRank) &&
+      targetRank > 0
+    ) {
+      setDestinationRank(targetRank);
+      setActiveFilter('all');
+
+      requestAnimationFrame(() => {
+        const matchingRows = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '[data-chart-rank]'
+          )
+        );
+
+        const target = matchingRows.find(
+          (element) =>
+            element.dataset.chartRank ===
+              String(targetRank) &&
+            element.getClientRects().length > 0
+        );
+
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+
+          target.classList.add(
+            'ring-2',
+            'ring-[#0050FF]',
+            'bg-[#0050FF]/10'
+          );
+
+          window.setTimeout(() => {
+            target.classList.remove(
+              'ring-2',
+              'ring-[#0050FF]',
+              'bg-[#0050FF]/10'
+            );
+          }, 3500);
+        }
+      });
+    }
+  }, []);
 
   const toggleHistory = (
     rank: number
@@ -885,9 +943,32 @@ export default function WeeklyChartDetail({
                     return data;
                   })();
 
+                  const handleChartPointClick = (
+                    point: {
+                      week?: string;
+                      rank?: number | null;
+                    }
+                  ) => {
+                    if (
+                      !point.week ||
+                      point.rank == null
+                    ) {
+                      return;
+                    }
+
+                    const params = new URLSearchParams({
+                      week: point.week,
+                      rank: String(point.rank),
+                    });
+
+                    window.location.href =
+                      `/weekly?${params.toString()}`;
+                  };
+
                   return (
                     <div
                       key={`${entry.rank}-${entry.title}-${entry.artist}`}
+                      data-chart-rank={entry.rank}
                       className="group border-y border-black/10 transition-colors duration-150 first:border-t-0 hover:border-[#0050FF]"
                     >
 
@@ -1348,6 +1429,23 @@ export default function WeeklyChartDetail({
                                     left: 0,
                                     bottom: 10,
                                   }}
+                                  onClick={(state) => {
+                                    const chartState = state as unknown as {
+                                      activePayload?: Array<{
+                                        payload?: {
+                                          week?: string;
+                                          rank?: number | null;
+                                        };
+                                      }>;
+                                    } | null;
+
+                                    const point =
+                                      chartState?.activePayload?.[0]?.payload;
+
+                                    if (point?.week && point.rank != null) {
+                                      handleChartPointClick(point);
+                                    }
+                                  }}
                                 >
 
                                   <CartesianGrid
@@ -1385,6 +1483,18 @@ export default function WeeklyChartDetail({
                                   />
 
                                   <Tooltip
+                                    contentStyle={{
+                                      backgroundColor: 'var(--chart-tooltip-bg, #ffffff)',
+                                      border: '1px solid var(--chart-tooltip-border, #e5e7eb)',
+                                      borderRadius: '0px',
+                                      color: 'var(--chart-tooltip-text, #111111)',
+                                    }}
+                                    labelStyle={{
+                                      color: '#0050FF',
+                                    }}
+                                    itemStyle={{
+                                      color: '#0050FF',
+                                    }}
                                     formatter={(value) => [
                                       `#${value}`,
                                       'Rank',
@@ -1401,13 +1511,63 @@ export default function WeeklyChartDetail({
                                     dataKey="rank"
                                     stroke="#0050FF"
                                     strokeWidth={3}
-                                    dot={{
-                                      r: 3,
-                                      fill: '#0050FF',
-                                      stroke: '#0050FF',
+                                    dot={(props) => {
+                                      const point = props.payload as {
+                                        week?: string;
+                                        rank?: number | null;
+                                      };
+
+                                      if (
+                                        !point.week ||
+                                        point.rank == null
+                                      ) {
+                                        return <g />;
+                                      }
+
+                                      return (
+                                        <circle
+                                          cx={props.cx}
+                                          cy={props.cy}
+                                          r={3}
+                                          fill="#0050FF"
+                                          stroke="#0050FF"
+                                          style={{
+                                            cursor: 'pointer',
+                                          }}
+                                          onClick={() =>
+                                            handleChartPointClick(point)
+                                          }
+                                        />
+                                      );
                                     }}
-                                    activeDot={{
-                                      r: 5,
+                                    activeDot={(props) => {
+                                      const point = props.payload as {
+                                        week?: string;
+                                        rank?: number | null;
+                                      };
+
+                                      if (
+                                        !point.week ||
+                                        point.rank == null
+                                      ) {
+                                        return <g />;
+                                      }
+
+                                      return (
+                                        <circle
+                                          cx={props.cx}
+                                          cy={props.cy}
+                                          r={5}
+                                          fill="#0050FF"
+                                          stroke="#0050FF"
+                                          style={{
+                                            cursor: 'pointer',
+                                          }}
+                                          onClick={() =>
+                                            handleChartPointClick(point)
+                                          }
+                                        />
+                                      );
                                     }}
                                   />
 
