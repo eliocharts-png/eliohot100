@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ChartEntry } from '@/types';
@@ -22,9 +23,7 @@ function ChartSectionSkeleton({
   headerTitle?: string;
 }) {
   const displayTitle =
-    title === 'Year-End'
-      ? 'YEAR-END CHARTS'
-      : title;
+    title === 'Year-End' ? 'YEAR-END CHARTS' : title;
 
   return (
     <section className="space-y-4 sm:space-y-6">
@@ -36,33 +35,37 @@ function ChartSectionSkeleton({
             </span>
           )}
 
-          <span className="block text-[1rem] tracking-[0.1em] sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]">
+          <span
+            className="block"
+            style={{
+              fontFamily: "'Crystal Ultra Condensed Bold', sans-serif",
+              fontSize: 'clamp(1.7rem, 3.5vw, 3rem)',
+              fontWeight: 700,
+              letterSpacing: '0.045em',
+              lineHeight: 1,
+            }}
+          >
             {headerTitle ?? displayTitle}
           </span>
         </h2>
 
-        <div className="ml-3 h-3 w-20 animate-pulse bg-white/30 sm:ml-6 sm:h-4 sm:w-28" />
+        <div className="ml-3 h-3 w-9 animate-pulse bg-white/30 sm:ml-6 sm:h-4 sm:w-11" />
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
           <article
             key={`skeleton-${index}`}
-            className={`min-w-0 ${
-              index >= 3 ? 'hidden lg:block' : ''
-            }`}
+            className={`min-w-0 ${index >= 3 ? 'hidden lg:block' : ''}`}
           >
             <div className="relative">
               <div className="aspect-square w-full animate-pulse bg-black/[0.08]" />
-
               <div className="absolute bottom-0 left-0 h-7 w-[1.9rem] animate-pulse bg-[#0050FF]/70 sm:h-10 sm:w-[2.75rem]" />
             </div>
 
             <div className="mt-2 min-w-0 sm:mt-3">
               <div className="h-3.5 w-[85%] animate-pulse bg-black/[0.08] sm:h-5" />
-
               <div className="mt-1 h-3.5 w-[65%] animate-pulse bg-black/[0.08] sm:h-5" />
-
               <div className="mt-1.5 h-2.5 w-[55%] animate-pulse bg-black/[0.05] sm:mt-2 sm:h-4" />
             </div>
           </article>
@@ -80,10 +83,7 @@ export default function ChartSection({
   headerEyebrow,
   headerTitle,
 }: ChartSectionProps) {
-  const isDesktop = useMediaQuery(
-    '(min-width: 1024px)',
-    false
-  );
+  const isDesktop = useMediaQuery('(min-width: 1024px)', false);
 
   const isTabletLandscape = useMediaQuery(
     '(orientation: landscape) and (min-width: 768px)',
@@ -96,9 +96,7 @@ export default function ChartSection({
       : entries.slice(0, 3);
 
   const displayTitle =
-    title === 'Year-End'
-      ? 'YEAR-END CHARTS'
-      : title;
+    title === 'Year-End' ? 'YEAR-END CHARTS' : title;
 
   if (loading) {
     return (
@@ -112,25 +110,26 @@ export default function ChartSection({
 
   return (
     <section className="space-y-4 sm:space-y-6">
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
+      {/* HEADER */}
 
       <div className="flex min-h-[3rem] w-full items-center bg-[#0050FF] px-3 py-2.5 sm:min-h-[4.5rem] sm:px-6 sm:py-3">
         <h2 className="min-w-0 flex-1 font-brown-bold uppercase leading-none text-white">
-          {/* FIXED EYEBROW */}
-
           {headerEyebrow && (
             <span className="block text-[0.45rem] tracking-[0.12em] sm:text-[0.85rem] sm:tracking-[0.16em] lg:text-[1rem]">
               {headerEyebrow}
             </span>
           )}
 
-          {/* ROTATING TITLE */}
-
           <span
             key={headerTitle}
-            className="goat-header-blur block text-[1rem] tracking-[0.1em] sm:text-[2.15rem] sm:tracking-[0.18em] lg:text-[2.5rem]"
+            className="goat-header-blur block"
+            style={{
+              fontFamily: "'Crystal Ultra Condensed Bold', sans-serif",
+              fontSize: 'clamp(1.7rem, 3.5vw, 3rem)',
+              fontWeight: 700,
+              letterSpacing: '0.045em',
+              lineHeight: 1,
+            }}
           >
             {headerTitle ?? displayTitle}
           </span>
@@ -138,15 +137,25 @@ export default function ChartSection({
 
         <a
           href={href}
-          className="ml-3 flex-shrink-0 whitespace-nowrap text-[0.55rem] font-brown-regular uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-70 sm:ml-6 sm:text-base sm:tracking-[0.2em]"
+          aria-label={`View ${displayTitle} chart`}
+          className="ml-3 flex h-9 w-9 shrink-0 items-center justify-center text-white transition-transform hover:translate-x-1 sm:ml-6 sm:h-11 sm:w-11"
         >
-          VIEW CHART →
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6 sm:h-8 sm:w-8"
+            aria-hidden="true"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </a>
       </div>
 
-      {/* =====================================================
-          CHART ENTRIES
-      ====================================================== */}
+      {/* CHART ENTRIES */}
 
       <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5">
         {displayedEntries.map((entry) => (
@@ -154,26 +163,32 @@ export default function ChartSection({
             key={`${entry.rank}-${entry.title}-${entry.artist}`}
             className="min-w-0"
           >
-            {/* ARTWORK */}
+            {/* CLICKABLE ARTWORK */}
 
             <div className="relative">
-              {entry.artwork ? (
-                <img
-                  key={`${entry.title}-${entry.artist}-artwork`}
-                  src={entry.artwork}
-                  alt={`${entry.title} artwork`}
-                  className="goat-artwork-blur block aspect-square w-full object-cover"
-                />
-              ) : (
-                <div
-                  key={`${entry.title}-${entry.artist}-placeholder`}
-                  className="goat-artwork-blur aspect-square w-full bg-black/5"
-                />
-              )}
+              <a
+                href={href}
+                aria-label={`View ${displayTitle} chart featuring ${entry.title} by ${entry.artist}`}
+                className="group block overflow-hidden"
+              >
+                {entry.artwork ? (
+                  <img
+                    key={`${entry.title}-${entry.artist}-artwork`}
+                    src={entry.artwork}
+                    alt={`${entry.title} artwork`}
+                    className="goat-artwork-blur block aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div
+                    key={`${entry.title}-${entry.artist}-placeholder`}
+                    className="goat-artwork-blur aspect-square w-full bg-black/5 transition-transform duration-300 group-hover:scale-105"
+                  />
+                )}
+              </a>
 
               {/* RANK BADGE */}
 
-              <div className="absolute bottom-0 left-0 flex h-7 min-w-[1.9rem] items-center justify-center bg-[#0050FF] px-1.5 font-brown-bold text-[0.85rem] leading-none text-white sm:h-10 sm:min-w-[2.75rem] sm:px-2 sm:text-lg">
+              <div className="pointer-events-none absolute bottom-0 left-0 flex h-7 min-w-[1.9rem] items-center justify-center bg-[#0050FF] px-1.5 font-brown-bold text-[0.85rem] leading-none text-white sm:h-10 sm:min-w-[2.75rem] sm:px-2 sm:text-lg">
                 {entry.rank}
               </div>
             </div>

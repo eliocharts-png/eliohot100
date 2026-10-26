@@ -614,37 +614,96 @@ export default function WeeklyChartDetail({
         </h1>
       </div>
 
+      
       {/* =========================================
-          DATE SELECTOR
+          DATE SELECTOR + WEEK NAVIGATION
       ========================================== */}
 
-      <div className="flex items-center justify-center bg-white px-4 py-3">
+      <div className="flex items-center justify-center gap-2 bg-white px-4 py-3">
+        {/* PREVIOUS WEEK */}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (previousWeek) {
+              setSelectedWeek(previousWeek);
+              setActiveFilter('all');
+              setExpandedHistory(null);
+            }
+          }}
+          disabled={!previousWeek}
+          aria-label="Previous week's chart"
+          title="Previous week"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-black/10 bg-white text-black transition-colors hover:border-[#0050FF] hover:text-[#0050FF] disabled:cursor-not-allowed disabled:opacity-25"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path d="m14.5 5-7 7 7 7" />
+          </svg>
+        </button>
+
+        {/* WEEK DROPDOWN */}
+
         <select
           value={selectedWeek}
           onChange={(event) => {
-            setSelectedWeek(
-              event.target.value
-            );
-
+            setSelectedWeek(event.target.value);
             setActiveFilter('all');
             setExpandedHistory(null);
           }}
-          className="cursor-pointer appearance-none rounded-none bg-black px-5 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.2em] text-white outline-none sm:text-sm"
+          className="min-w-0 cursor-pointer appearance-none rounded-none bg-black px-4 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.15em] text-white outline-none sm:px-5 sm:text-sm sm:tracking-[0.2em]"
         >
-          {availableWeeks.map(
-            (weekOption) => (
-              <option
-                key={weekOption}
-                value={weekOption}
-              >
-                {formatDateLabel(
-                  weekOption
-                )}
-              </option>
-            )
-          )}
+          {availableWeeks.map((weekOption) => (
+            <option key={weekOption} value={weekOption}>
+              {formatDateLabel(weekOption)}
+            </option>
+          ))}
         </select>
+
+        {/* NEXT WEEK */}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (selectedWeekIndex > 0) {
+              const nextWeek =
+                availableWeeks[selectedWeekIndex - 1];
+
+              setSelectedWeek(nextWeek);
+              setActiveFilter('all');
+              setExpandedHistory(null);
+            }
+          }}
+          disabled={selectedWeekIndex <= 0}
+          aria-label="Next week's chart"
+          title="Next week"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-black/10 bg-white text-black transition-colors hover:border-[#0050FF] hover:text-[#0050FF] disabled:cursor-not-allowed disabled:opacity-25"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path d="m9.5 5 7 7-7 7" />
+          </svg>
+        </button>
       </div>
+
 
       {/* =========================================
           CHART FILTER / SORT CONTROLS
@@ -680,11 +739,13 @@ export default function WeeklyChartDetail({
                   title={
                     filter.label
                   }
-                  className={`flex h-8 w-8 items-center justify-center border transition-all duration-150 sm:h-9 sm:w-9 ${
-                    isActive
-                      ? 'border-[#0050FF] bg-[#0050FF] text-white'
-                      : 'border-black/10 bg-white text-black/45 hover:border-black/30 hover:bg-black/[0.03] hover:text-black dark:border-[#0050FF]/40 dark:bg-[#0050FF]/10 dark:text-[#0050FF] dark:hover:border-[#0050FF] dark:hover:bg-[#0050FF]/20 dark:hover:text-[#0050FF]'
-                  }`}
+                  
+className={`flex h-8 w-8 items-center justify-center border transition-all duration-150 sm:h-9 sm:w-9 ${
+  isActive
+    ? 'border-[#0050FF] bg-[#0050FF] text-white'
+    : 'border-black/10 bg-white text-black/45 hover:border-black/30 hover:bg-black/[0.03] hover:text-black dark:border-[#0050FF]/40 dark:bg-[#0050FF]/10 dark:!text-[#0050FF] dark:hover:border-[#0050FF] dark:hover:bg-[#0050FF]/20 dark:hover:!text-[#0050FF]'
+}`}
+
                 >
                   <FilterIcon
                     type={filter.id}

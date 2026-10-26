@@ -5,7 +5,6 @@ import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
-import AwardsPromoBanner from '@/components/AwardsPromoBanner';
 
 const brownBold = localFont({
   src: '../fonts/Brown-Bold.ttf',
@@ -52,8 +51,6 @@ export default function RootLayout({
       <body
         className={`${brownBold.variable} ${brownRegular.variable} ${gothamBlack.variable} ${gothamRegular.variable}`}
       >
-        
-        <AwardsPromoBanner />
         <SiteHeader />
 
         {children}
