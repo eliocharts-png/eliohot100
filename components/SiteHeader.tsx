@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -19,27 +20,16 @@ function parseArtists(csv: string): string[] {
   });
 
   if (parsed.errors.length > 0) {
-    console.warn(
-      '[SITE HEADER] CSV parsing warnings:',
-      parsed.errors
-    );
+    console.warn('[SITE HEADER] CSV parsing warnings:', parsed.errors);
   }
 
   const rows = parsed.data;
 
-  console.log(
-    `[SITE HEADER] Artist CSV rows loaded: ${rows.length}`
-  );
+  console.log(`[SITE HEADER] Artist CSV rows loaded: ${rows.length}`);
 
   const artists = rows
     .slice(2)
-    .map((row) => {
-      return (
-        row[0]
-          ?.replace(/^\uFEFF/, '')
-          .trim() ?? ''
-      );
-    })
+    .map((row) => row[0]?.replace(/^\uFEFF/, '').trim() ?? '')
     .filter((artist) => artist.length > 0);
 
   /*
@@ -52,11 +42,7 @@ function parseArtists(csv: string): string[] {
   for (const artist of artists) {
     const normalized = normalizeArtist(artist);
 
-    if (!normalized) {
-      continue;
-    }
-
-    if (seen.has(normalized)) {
+    if (!normalized || seen.has(normalized)) {
       continue;
     }
 
@@ -69,10 +55,7 @@ function parseArtists(csv: string): string[] {
   );
 
   if (uniqueArtists.length > 0) {
-    console.log(
-      '[SITE HEADER] First artists:',
-      uniqueArtists.slice(0, 10)
-    );
+    console.log('[SITE HEADER] First artists:', uniqueArtists.slice(0, 10));
   }
 
   return uniqueArtists;
@@ -83,10 +66,7 @@ function parseArtists(csv: string): string[] {
  * ======================================================= */
 
 function normalizeArtist(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 /* =========================================================
@@ -94,20 +74,11 @@ function normalizeArtist(value: string): string {
  * ======================================================= */
 
 export default function SiteHeader() {
-  const [artists, setArtists] =
-    useState<string[]>([]);
-
-  const [search, setSearch] =
-    useState('');
-
-  const [searchOpen, setSearchOpen] =
-    useState(false);
-
-  const [artistsLoading, setArtistsLoading] =
-    useState(true);
-
-  const [mobileMenuOpen, setMobileMenuOpen] =
-    useState(false);
+  const [artists, setArtists] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [artistsLoading, setArtistsLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   /* =======================================================
    * LOAD ARTISTS
@@ -120,47 +91,34 @@ export default function SiteHeader() {
       try {
         setArtistsLoading(true);
 
-        console.log(
-          '[SITE HEADER] Loading artist list...'
-        );
+        console.log('[SITE HEADER] Loading artist list...');
 
         const response = await fetch(
           `${ARTISTS_CSV_URL}&_=${Date.now()}`,
-          {
-            cache: 'no-store',
-          }
+          { cache: 'no-store' }
         );
 
         if (!response.ok) {
-          throw new Error(
-            `Artists request failed: ${response.status}`
-          );
+          throw new Error(`Artists request failed: ${response.status}`);
         }
 
-        const csv =
-          await response.text();
+        const csv = await response.text();
 
         if (!csv.trim()) {
-          throw new Error(
-            'Artists CSV is empty'
-          );
+          throw new Error('Artists CSV is empty');
         }
 
         console.log(
           `[SITE HEADER] Artist CSV received: ${csv.length} characters`
         );
 
-        const artistList =
-          parseArtists(csv);
+        const artistList = parseArtists(csv);
 
         if (!cancelled) {
           setArtists(artistList);
         }
       } catch (error) {
-        console.error(
-          '[SITE HEADER] Failed to load artists:',
-          error
-        );
+        console.error('[SITE HEADER] Failed to load artists:', error);
 
         if (!cancelled) {
           setArtists([]);
@@ -183,51 +141,30 @@ export default function SiteHeader() {
    * FILTER + ALPHABETIZE SEARCH RESULTS
    * ===================================================== */
 
-  const filteredArtists =
-    useMemo(() => {
-      const query =
-        normalizeArtist(search);
+  const filteredArtists = useMemo(() => {
+    const query = normalizeArtist(search);
 
-      if (!query) {
-        return [];
-      }
+    if (!query) {
+      return [];
+    }
 
-      return artists
-        .filter((artist) =>
-          normalizeArtist(
-            artist
-          ).includes(query)
-        )
-        .sort((a, b) =>
-          a.localeCompare(
-            b,
-            undefined,
-            {
-              sensitivity: 'base',
-            }
-          )
-        )
-        .slice(0, 20);
-    }, [
-      artists,
-      search,
-    ]);
+    return artists
+      .filter((artist) => normalizeArtist(artist).includes(query))
+      .sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' })
+      )
+      .slice(0, 20);
+  }, [artists, search]);
 
   const showResults =
-    searchOpen &&
-    search.trim().length > 0 &&
-    !artistsLoading;
+    searchOpen && search.trim().length > 0 && !artistsLoading;
 
   /* =======================================================
    * SEARCH RESULT LINK
    * ===================================================== */
 
-  function artistHref(
-    artist: string
-  ): string {
-    return `/artists/${encodeURIComponent(
-      artist
-    )}`;
+  function artistHref(artist: string): string {
+    return `/artists/${encodeURIComponent(artist)}`;
   }
 
   /* =======================================================
@@ -261,16 +198,8 @@ export default function SiteHeader() {
         className="h-4 w-4 sm:h-[18px] sm:w-[18px]"
         aria-hidden="true"
       >
-        <circle
-          cx="11"
-          cy="11"
-          r="6.5"
-        />
-
-        <path
-          d="M16 16L21 21"
-          strokeLinecap="round"
-        />
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M16 16L21 21" strokeLinecap="round" />
       </svg>
     );
   }
@@ -281,56 +210,36 @@ export default function SiteHeader() {
 
   return (
     <nav className="sticky top-0 z-[100] bg-black">
-
       <div className="mx-auto flex min-h-[3.8rem] max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-
-        {/* =================================================
-         * MOBILE MENU BUTTON
-         * ================================================= */}
+        {/* MOBILE MENU BUTTON */}
 
         <button
           type="button"
           aria-label={
-            mobileMenuOpen
-              ? 'Close navigation menu'
-              : 'Open navigation menu'
+            mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'
           }
           aria-expanded={mobileMenuOpen}
-          onClick={() =>
-            setMobileMenuOpen(
-              (open) => !open
-            )
-          }
+          onClick={() => setMobileMenuOpen((open) => !open)}
           className="mr-3 flex h-8 w-8 shrink-0 flex-col items-center justify-center gap-[4px] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF] lg:hidden"
         >
           <span
             className={`block h-[1.5px] w-5 bg-current transition-transform duration-150 ${
-              mobileMenuOpen
-                ? 'translate-y-[5.5px] rotate-45'
-                : ''
+              mobileMenuOpen ? 'translate-y-[5.5px] rotate-45' : ''
             }`}
           />
-
           <span
             className={`block h-[1.5px] w-5 bg-current transition-opacity duration-150 ${
-              mobileMenuOpen
-                ? 'opacity-0'
-                : 'opacity-100'
+              mobileMenuOpen ? 'opacity-0' : 'opacity-100'
             }`}
           />
-
           <span
             className={`block h-[1.5px] w-5 bg-current transition-transform duration-150 ${
-              mobileMenuOpen
-                ? '-translate-y-[5.5px] -rotate-45'
-                : ''
+              mobileMenuOpen ? '-translate-y-[5.5px] -rotate-45' : ''
             }`}
           />
         </button>
 
-        {/* =================================================
-         * ELIO CHARTS
-         * ================================================= */}
+        {/* ELIO CHARTS */}
 
         <a
           href="/"
@@ -343,12 +252,9 @@ export default function SiteHeader() {
           ELIO CHARTS
         </a>
 
-        {/* =================================================
-         * DESKTOP NAVIGATION
-         * ================================================= */}
+        {/* DESKTOP NAVIGATION */}
 
         <div className="ml-auto hidden items-center gap-5 lg:flex">
-
           <a
             href="/weekly"
             className="font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
@@ -377,18 +283,14 @@ export default function SiteHeader() {
             YEAR-END
           </a>
 
-          {/* =================================================
-           * DECADE-END DROPDOWN
-           * ================================================= */}
+          {/* DECADE-END DROPDOWN */}
 
           <div className="group relative">
-
             <a
               href="/decade-end"
               className="flex items-center gap-1 font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
             >
               DECADE-END
-
               <svg
                 viewBox="0 0 10 6"
                 fill="none"
@@ -406,11 +308,7 @@ export default function SiteHeader() {
             </a>
 
             <div className="invisible absolute left-1/2 top-full z-[120] w-48 -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-
               <div className="border border-white/10 bg-black shadow-xl">
-
-                {/* Official List */}
-
                 <div className="border-b border-white/10 px-4 py-2.5">
                   <span className="font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white">
                     Official List
@@ -431,33 +329,24 @@ export default function SiteHeader() {
                   2020s
                 </a>
 
-                {/* Breakdown List */}
-
                 <a
                   href="/decade-end/breakdown"
                   className="block px-4 py-2.5 font-brown-bold text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
                 >
                   BREAKDOWN LIST
                 </a>
-
               </div>
-
             </div>
-
           </div>
 
-          {/* =================================================
-           * GREATEST OF ALL TIME DROPDOWN
-           * ================================================= */}
+          {/* GREATEST OF ALL TIME DROPDOWN */}
 
           <div className="group relative">
-
             <a
               href="/goat"
               className="flex items-center gap-1 font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
             >
               GREATEST OF ALL TIME
-
               <svg
                 viewBox="0 0 10 6"
                 fill="none"
@@ -475,16 +364,21 @@ export default function SiteHeader() {
             </a>
 
             <div className="invisible absolute left-1/2 top-full z-[120] w-56 -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-
               <div className="border border-white/10 bg-black shadow-xl">
-
-                {/* Official List */}
-
                 <div className="border-b border-white/10 px-4 py-2.5">
                   <span className="font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white">
                     Official List
                   </span>
                 </div>
+
+                {/* NEW: HOT 100 ARTISTS */}
+
+                <a
+                  href="/goat/artists"
+                  className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  Hot 100 Artists
+                </a>
 
                 <a
                   href="/goat"
@@ -513,16 +407,11 @@ export default function SiteHeader() {
                 >
                   Female Songs
                 </a>
-
               </div>
-
             </div>
-
           </div>
 
-          {/* =================================================
-           * AWARDS
-           * ================================================= */}
+          {/* AWARDS */}
 
           <a
             href="/awards"
@@ -531,9 +420,7 @@ export default function SiteHeader() {
             AWARDS
           </a>
 
-          {/* =================================================
-           * RECORDS
-           * ================================================= */}
+          {/* RECORDS */}
 
           <a
             href="/records"
@@ -542,21 +429,14 @@ export default function SiteHeader() {
             RECORDS
           </a>
 
-          {/* =================================================
-           * DESKTOP SEARCH BUTTON
-           * ================================================= */}
+          {/* DESKTOP SEARCH BUTTON */}
 
           <div className="relative ml-1">
-
             <button
               type="button"
               aria-label="Search artists"
               aria-expanded={searchOpen}
-              onClick={() =>
-                setSearchOpen(
-                  (open) => !open
-                )
-              }
+              onClick={() => setSearchOpen((open) => !open)}
               className="flex h-8 w-8 items-center justify-center border border-white/60 bg-black text-white transition-colors duration-150 hover:border-[#0050FF] hover:text-[#0050FF] active:border-[#0050FF] active:text-[#0050FF]"
             >
               <SearchIcon />
@@ -564,15 +444,10 @@ export default function SiteHeader() {
 
             {searchOpen && (
               <div className="absolute right-0 top-full z-[110] mt-1 w-52">
-
                 <input
                   type="text"
                   value={search}
-                  onChange={(event) =>
-                    setSearch(
-                      event.target.value
-                    )
-                  }
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="SEARCH ARTIST"
                   autoComplete="off"
                   autoFocus
@@ -581,65 +456,43 @@ export default function SiteHeader() {
 
                 {showResults && (
                   <div className="mt-1 max-h-80 overflow-y-auto border border-black/10 bg-white shadow-lg">
-
                     {filteredArtists.length > 0 ? (
-                      filteredArtists.map(
-                        (artist) => (
-                          <a
-                            key={artist}
-                            href={artistHref(
-                              artist
-                            )}
-                            onClick={() => {
-                              closeSearch();
-                            }}
-                            className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
-                          >
-                            {artist}
-                          </a>
-                        )
-                      )
+                      filteredArtists.map((artist) => (
+                        <a
+                          key={artist}
+                          href={artistHref(artist)}
+                          onClick={closeSearch}
+                          className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
+                        >
+                          {artist}
+                        </a>
+                      ))
                     ) : (
                       <div className="px-3 py-3">
-
                         <p className="font-brown-regular text-xs uppercase tracking-[0.12em] text-black/50">
                           NO ARTISTS FOUND
                         </p>
-
                       </div>
                     )}
-
                   </div>
                 )}
-
               </div>
             )}
-
           </div>
 
-          {/* =================================================
-           * DESKTOP DARK MODE TOGGLE
-           * ================================================= */}
+          {/* DESKTOP DARK MODE TOGGLE */}
 
           <ThemeToggle />
-
         </div>
 
-        {/* =================================================
-         * MOBILE SEARCH BUTTON
-         * ================================================= */}
+        {/* MOBILE SEARCH BUTTON */}
 
         <div className="relative ml-auto lg:hidden">
-
           <button
             type="button"
             aria-label="Search artists"
             aria-expanded={searchOpen}
-            onClick={() =>
-              setSearchOpen(
-                (open) => !open
-              )
-            }
+            onClick={() => setSearchOpen((open) => !open)}
             className="flex h-8 w-8 items-center justify-center border border-white/60 bg-black text-white transition-colors duration-150 hover:border-[#0050FF] hover:text-[#0050FF] active:border-[#0050FF] active:text-[#0050FF] sm:h-9 sm:w-9"
           >
             <SearchIcon />
@@ -647,15 +500,10 @@ export default function SiteHeader() {
 
           {searchOpen && (
             <div className="absolute right-0 top-full z-[110] mt-1 w-52 sm:w-60">
-
               <input
                 type="text"
                 value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="SEARCH ARTIST"
                 autoComplete="off"
                 autoFocus
@@ -664,63 +512,43 @@ export default function SiteHeader() {
 
               {showResults && (
                 <div className="mt-1 max-h-72 overflow-y-auto border border-black/10 bg-white shadow-lg">
-
                   {filteredArtists.length > 0 ? (
-                    filteredArtists.map(
-                      (artist) => (
-                        <a
-                          key={artist}
-                          href={artistHref(
-                            artist
-                          )}
-                          onClick={() => {
-                            closeSearch();
-                          }}
-                          className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
-                        >
-                          {artist}
-                        </a>
-                      )
-                    )
+                    filteredArtists.map((artist) => (
+                      <a
+                        key={artist}
+                        href={artistHref(artist)}
+                        onClick={closeSearch}
+                        className="block border-b border-black/10 px-3 py-2 text-left font-brown-regular text-xs text-black transition-colors duration-150 hover:bg-[#0050FF] hover:text-white active:bg-[#0050FF] active:text-white last:border-b-0"
+                      >
+                        {artist}
+                      </a>
+                    ))
                   ) : (
                     <div className="px-3 py-3">
-
                       <p className="font-brown-regular text-xs uppercase tracking-[0.12em] text-black/50">
                         NO ARTISTS FOUND
                       </p>
-
                     </div>
                   )}
-
                 </div>
               )}
-
             </div>
           )}
-
         </div>
 
-        {/* =================================================
-         * MOBILE DARK MODE TOGGLE
-         * ================================================= */}
+        {/* MOBILE DARK MODE TOGGLE */}
 
         <div className="ml-2 lg:hidden">
           <ThemeToggle />
         </div>
-
       </div>
 
-      {/* =====================================================
-       * MOBILE NAVIGATION MENU
-       * ===================================================== */}
+      {/* MOBILE NAVIGATION MENU */}
 
       {mobileMenuOpen && (
         <div className="border-t border-white/10 bg-black lg:hidden">
-
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-
             <div className="flex flex-col">
-
               <a
                 href="/weekly"
                 onClick={closeMobileMenu}
@@ -753,18 +581,14 @@ export default function SiteHeader() {
                 YEAR-END
               </a>
 
-              {/* =================================================
-               * MOBILE DECADE-END
-               * ================================================= */}
+              {/* MOBILE DECADE-END */}
 
               <div className="border-b border-white/10">
-
                 <div className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white">
                   DECADE-END
                 </div>
 
                 <div className="pb-3 pl-4">
-
                   <div className="mb-2 font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white/60">
                     Official List
                   </div>
@@ -792,26 +616,30 @@ export default function SiteHeader() {
                   >
                     BREAKDOWN LIST
                   </a>
-
                 </div>
-
               </div>
 
-              {/* =================================================
-               * MOBILE GREATEST OF ALL TIME
-               * ================================================= */}
+              {/* MOBILE GREATEST OF ALL TIME */}
 
               <div className="border-b border-white/10">
-
                 <div className="py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white">
                   GREATEST OF ALL TIME
                 </div>
 
                 <div className="pb-3 pl-4">
-
                   <div className="mb-2 font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white/60">
                     Official List
                   </div>
+
+                  {/* NEW: HOT 100 ARTISTS */}
+
+                  <a
+                    href="/goat/artists"
+                    onClick={closeMobileMenu}
+                    className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    Hot 100 Artists
+                  </a>
 
                   <a
                     href="/goat"
@@ -844,14 +672,10 @@ export default function SiteHeader() {
                   >
                     Female Songs
                   </a>
-
                 </div>
-
               </div>
 
-              {/* =================================================
-               * MOBILE AWARDS
-               * ================================================= */}
+              {/* MOBILE AWARDS */}
 
               <a
                 href="/awards"
@@ -861,9 +685,7 @@ export default function SiteHeader() {
                 AWARDS
               </a>
 
-              {/* =================================================
-               * MOBILE RECORDS
-               * ================================================= */}
+              {/* MOBILE RECORDS */}
 
               <a
                 href="/records"
@@ -872,14 +694,10 @@ export default function SiteHeader() {
               >
                 RECORDS
               </a>
-
             </div>
-
           </div>
-
         </div>
       )}
-
     </nav>
   );
 }
