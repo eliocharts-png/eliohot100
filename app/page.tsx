@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
@@ -20,15 +19,6 @@ import type { ChartEntry } from '@/types';
 
 const ARTISTS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
-
-const ALBUM_SPREADSHEET_ID =
-  '1hwXa1A9lpc8dti9kcnUK3p_pYmL4JmyHtAaPPL6S3s4';
-
-const ALBUM_WEEKLY_CSV_URL =
-  `https://docs.google.com/spreadsheets/d/${ALBUM_SPREADSHEET_ID}/export?format=csv&gid=709193280`;
-
-const ALBUM_ARTWORK_CSV_URL =
-  `https://docs.google.com/spreadsheets/d/${ALBUM_SPREADSHEET_ID}/export?format=csv&gid=1763528492`;
 
 type ChartData = {
   title: string;
@@ -68,65 +58,6 @@ function parseArtists(csv: string): string[] {
 
 function normalizeArtist(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
-function normalizeAlbumText(value: string): string {
-  return value
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/&/g, 'and')
-    .replace(/[’‘]/g, "'")
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .replace(/\s+/g, ' ');
-}
-
-function albumKey(title: string, artist: string): string {
-  return `${normalizeAlbumText(title)}::${normalizeAlbumText(artist)}`;
-}
-
-function normalizeAlbumWeek(value: string): string {
-  const trimmed = value.trim();
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  const match = trimmed.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/,
-  );
-
-  if (match) {
-    const month = Number(match[1]);
-    const day = Number(match[2]);
-    let year = Number(match[3]);
-
-    if (year < 100) {
-      year += year >= 70 ? 1900 : 2000;
-    }
-
-    const date = new Date(Date.UTC(year, month - 1, day));
-
-    if (
-      date.getUTCFullYear() === year &&
-      date.getUTCMonth() === month - 1 &&
-      date.getUTCDate() === day
-    ) {
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-  }
-
-  const date = new Date(trimmed);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return [
-    date.getUTCFullYear(),
-    String(date.getUTCMonth() + 1).padStart(2, '0'),
-    String(date.getUTCDate()).padStart(2, '0'),
-  ].join('-');
 }
 
 function getFallbackArtistImage(artistName: string): string {
@@ -257,92 +188,16 @@ export default function HomePage() {
       try {
         setTopRecordsLoading(true);
 
-        const [weeklyResponse, artworkResponse] = await Promise.all([
-          fetch(ALBUM_WEEKLY_CSV_URL, { cache: 'no-store' }),
-          fetch(ALBUM_ARTWORK_CSV_URL, { cache: 'no-store' }),
-        ]);
+        const response = await fetch('/api/albums');
 
-        if (!weeklyResponse.ok || !artworkResponse.ok) {
-          throw new Error('Unable to load TOP RECORDS spreadsheet data.');
+        if (!response.ok) {
+          throw new Error('Unable to load TOP RECORDS.');
         }
 
-        const [weeklyCSV, artworkCSV] = await Promise.all([
-          weeklyResponse.text(),
-          artworkResponse.text(),
-        ]);
-
-        if (
-          weeklyCSV.trimStart().startsWith('<!DOCTYPE html') ||
-          weeklyCSV.trimStart().startsWith('<html') ||
-          artworkCSV.trimStart().startsWith('<!DOCTYPE html') ||
-          artworkCSV.trimStart().startsWith('<html')
-        ) {
-          throw new Error(
-            'The TOP RECORDS spreadsheet returned a webpage instead of CSV data.',
-          );
-        }
-
-        const weeklyRows = Papa.parse<string[]>(weeklyCSV, {
-          header: false,
-          skipEmptyLines: true,
-        }).data;
-
-        const artworkRows = Papa.parse<string[]>(artworkCSV, {
-          header: false,
-          skipEmptyLines: true,
-        }).data;
-
-        const artworkByAlbum = new Map<string, string>();
-
-        for (const row of artworkRows) {
-          const title = (row[1] ?? '').split(/\r?\n/)[0]?.trim() ?? '';
-          const artwork = (row[2] ?? '').trim();
-          const artist = (row[3] ?? '').trim();
-
-          if (title && artist && artwork) {
-            artworkByAlbum.set(albumKey(title, artist), artwork);
-          }
-        }
-
-        const weeklyEntries = weeklyRows
-          .map((row) => ({
-            week: normalizeAlbumWeek(row[0] ?? ''),
-            rank: Number((row[1] ?? '').replace(/,/g, '').trim()),
-            title: (row[2] ?? '').trim(),
-            artist: (row[4] ?? '').trim(),
-          }))
-          .filter(
-            (row) =>
-              row.week !== '' &&
-              Number.isFinite(row.rank) &&
-              row.rank > 0 &&
-              row.title !== '' &&
-              row.artist !== '',
-          );
-
-        if (weeklyEntries.length === 0) {
-          throw new Error('No valid TOP RECORDS chart rows were found.');
-        }
-
-        const latestWeek = weeklyEntries.reduce(
-          (latest, entry) => (entry.week > latest ? entry.week : latest),
-          '',
-        );
-
-        const latestEntries = weeklyEntries
-          .filter((entry) => entry.week === latestWeek)
-          .sort((a, b) => a.rank - b.rank)
-          .map((entry) => ({
-            rank: entry.rank,
-            title: entry.title,
-            artist: entry.artist,
-            artwork: artworkByAlbum.get(
-              albumKey(entry.title, entry.artist),
-            ),
-          }));
+        const data = await response.json();
 
         if (!cancelled) {
-          setTopRecords(latestEntries as ChartEntry[]);
+          setTopRecords(data.entries ?? []);
         }
       } catch (error) {
         console.error('Failed to load TOP RECORDS:', error);

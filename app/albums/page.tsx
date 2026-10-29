@@ -3,7 +3,7 @@ import { getAlbumChartData } from '@/lib/albumChartData';
 import AlbumChartDetail from '@/components/AlbumChartDetail';
 
 export const metadata = {
-  title: 'The Top Records | Elio Charts',
+  title: 'Top Records',
   description: 'Weekly album charts powered by Elio Charts.',
 };
 
