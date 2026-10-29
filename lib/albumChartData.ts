@@ -31,14 +31,19 @@ export interface AlbumWeeklyEntry {
   chartHistory: AlbumChartHistoryEntry[];
 }
 
+export interface PreviousAlbumEntry {
+  title: string;
+  artist: string;
+  points: number;
+}
+
 export interface AlbumChartPayload {
   week: string;
   displayWeek: string;
   availableWeeks: string[];
   weeksAtNumberOne: number;
   entries: AlbumWeeklyEntry[];
-  entriesByWeek: Record<string, AlbumWeeklyEntry[]>;
-  weeksAtNumberOneByWeek: Record<string, number>;
+  previousEntries: PreviousAlbumEntry[];
 }
 
 interface WeeklyRow {
@@ -91,6 +96,7 @@ function parseCSV(csv: string): string[][] {
 
   if (field !== '' || row.length > 0) {
     row.push(field);
+
     if (row.some((cell) => cell.trim() !== '')) {
       rows.push(row);
     }
@@ -117,14 +123,13 @@ function parseNumber(value: string): number {
 
 function normalizeWeek(value: string): string {
   const trimmed = value.trim();
+
   if (!trimmed) return '';
 
-  // Keep ISO-style dates unchanged.
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return trimmed;
   }
 
-  // Support dates such as 8/27/2020 or 08/27/20.
   const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
 
   if (match) {
@@ -226,15 +231,19 @@ function getArtworkRows(rows: string[][]): AlbumArtwork[] {
   return rows
     .map((row) => {
       const combinedTitle = (row[1] ?? '').trim();
-      const artwork = (row[2] ?? '').trim();
-      const artist = (row[3] ?? '').trim();
 
-      // Column B contains the album title and artist on separate lines.
-      const title = combinedTitle.split(/\r?\n/)[0]?.trim() ?? '';
-
-      return { title, artist, artwork };
+      return {
+        title: combinedTitle.split(/\r?\n/)[0]?.trim() ?? '',
+        artwork: (row[2] ?? '').trim(),
+        artist: (row[3] ?? '').trim(),
+      };
     })
-    .filter((row) => row.title !== '' && row.artist !== '' && row.artwork !== '');
+    .filter(
+      (row) =>
+        row.title !== '' &&
+        row.artist !== '' &&
+        row.artwork !== '',
+    );
 }
 
 export async function getAlbumChartData(
@@ -267,6 +276,20 @@ export async function getAlbumChartData(
     ...new Set(weekly.map((row) => row.week)),
   ].sort((a, b) => a.localeCompare(b));
 
+  const availableWeeks = [...weeksAscending].reverse();
+  const normalizedRequestedWeek = requestedWeek
+    ? normalizeWeek(requestedWeek)
+    : '';
+
+  const week =
+    normalizedRequestedWeek && weeksAscending.includes(normalizedRequestedWeek)
+      ? normalizedRequestedWeek
+      : availableWeeks[0];
+
+  const selectedIndex = weeksAscending.indexOf(week);
+  const previousChartWeek =
+    selectedIndex > 0 ? weeksAscending[selectedIndex - 1] : null;
+
   const rowsByWeek = new Map<string, WeeklyRow[]>();
 
   for (const row of weekly) {
@@ -282,115 +305,131 @@ export async function getAlbumChartData(
   const historyByAlbum = new Map<string, AlbumChartHistoryEntry[]>();
   const unitsByAlbumWeek = new Map<string, number>();
 
-  for (const week of weeksAscending) {
-    const rows = rowsByWeek.get(week) ?? [];
+  for (const row of weekly) {
+    const key = albumKey(row.title, row.artist);
+    const history = historyByAlbum.get(key) ?? [];
 
-    for (const row of rows) {
-      const key = albumKey(row.title, row.artist);
-      const history = historyByAlbum.get(key) ?? [];
-
-      history.push({ week, rank: row.rank });
-      historyByAlbum.set(key, history);
-      unitsByAlbumWeek.set(`${key}::${week}`, row.units);
-    }
+    history.push({ week: row.week, rank: row.rank });
+    historyByAlbum.set(key, history);
+    unitsByAlbumWeek.set(`${key}::${row.week}`, row.units);
   }
 
-  const entriesByWeek: Record<string, AlbumWeeklyEntry[]> = {};
-  const weeksAtNumberOneByWeek: Record<string, number> = {};
-  const firstWeekIndexByAlbum = new Map<string, number>();
+  for (const history of historyByAlbum.values()) {
+    history.sort((a, b) => a.week.localeCompare(b.week));
+  }
 
-  for (const week of weeksAscending) {
-    const weekIndex = weeksAscending.indexOf(week);
-    const rows = rowsByWeek.get(week) ?? [];
+  const selectedRows = rowsByWeek.get(week) ?? [];
+  const priorRows = previousChartWeek
+    ? rowsByWeek.get(previousChartWeek) ?? []
+    : [];
 
-    entriesByWeek[week] = rows.map((row) => {
-      const key = albumKey(row.title, row.artist);
-      const history = historyByAlbum.get(key) ?? [];
-      const albumHistory = history.filter((entry) =>
-        entry.week.localeCompare(week) <= 0,
+  // Albums appearing in the immediately preceding chart week.
+  const previousWeekAlbumKeys = new Set(
+    priorRows.map((row) => albumKey(row.title, row.artist)),
+  );
+
+  const entries: AlbumWeeklyEntry[] = selectedRows.map((row) => {
+    const key = albumKey(row.title, row.artist);
+    const completeHistory = historyByAlbum.get(key) ?? [];
+
+    // Only include appearances up to and including the selected week.
+    const historyToDate = completeHistory.filter(
+      (entry) => entry.week.localeCompare(week) <= 0,
+    );
+
+    // Prior appearance at any point before the selected week.
+    const earlierHistory = historyToDate.filter(
+      (entry) => entry.week.localeCompare(week) < 0,
+    );
+
+    const hasAnyPriorAppearance = earlierHistory.length > 0;
+
+    // Rank movement is only valid when the album was also on the
+    // immediately preceding chart. Do not compare against an older run.
+    const previousWeekEntry = previousChartWeek
+      ? earlierHistory.find((entry) => entry.week === previousChartWeek)
+      : undefined;
+
+    let movementIcon: MovementIcon;
+    let arrow: AlbumWeeklyEntry['arrow'];
+    let lastWeekRank: number | null = null;
+    let lastWeekPoints: number | undefined;
+
+    if (previousWeekAlbumKeys.has(key) && previousWeekEntry) {
+      lastWeekRank = previousWeekEntry.rank;
+      lastWeekPoints = unitsByAlbumWeek.get(
+        `${key}::${previousWeekEntry.week}`,
       );
-      const currentHistory = albumHistory[albumHistory.length - 1];
-      const previousHistory = albumHistory[albumHistory.length - 2];
 
-      if (!firstWeekIndexByAlbum.has(key)) {
-        firstWeekIndexByAlbum.set(key, weekIndex);
+      if (row.rank < previousWeekEntry.rank) {
+        movementIcon = 'up';
+        arrow = '▲';
+      } else if (row.rank > previousWeekEntry.rank) {
+        movementIcon = 'down';
+        arrow = '▼';
+      } else {
+        movementIcon = 'nonmover';
+        arrow = '→';
       }
-
-      const peakPosition = Math.min(
-        ...albumHistory.map((entry) => entry.rank),
-      );
-
-      let movementIcon: MovementIcon = 'debut';
-      let arrow: AlbumWeeklyEntry['arrow'] = 'NEW';
-
-      if (previousHistory) {
-        if (row.rank < previousHistory.rank) {
-          movementIcon = 'up';
-          arrow = '▲';
-        } else if (row.rank > previousHistory.rank) {
-          movementIcon = 'down';
-          arrow = '▼';
-        } else {
-          movementIcon = 'nonmover';
-          arrow = '→';
-        }
-      } else if (history.length > 1) {
-        // The album has appeared before, but not in the immediately
-        // preceding chart week.
-        movementIcon = 'reentry';
-        arrow = 'NEW';
-      }
-
-      return {
-        rank: row.rank,
-        title: row.title,
-        artist: row.artist,
-        artwork: artworkByAlbum.get(key),
-        week,
-        points: row.units,
-        lastWeekRank: previousHistory?.rank ?? null,
-        lastWeekPoints: previousHistory
-          ? unitsByAlbumWeek.get(`${key}::${previousHistory.week}`)
-          : undefined,
-        peakPosition,
-        weeksOnChart: albumHistory.length,
-        arrow,
-        movementIcon,
-        hasAnyPriorAppearance: Boolean(previousHistory),
-        chartHistory: albumHistory,
-      };
-    });
-
-    const numberOne = rows.find((row) => row.rank === 1);
-
-    if (numberOne) {
-      const key = albumKey(numberOne.title, numberOne.artist);
-      weeksAtNumberOneByWeek[week] = (historyByAlbum.get(key) ?? [])
-        .filter((entry) => entry.rank === 1 && entry.week.localeCompare(week) <= 0)
-        .length;
+    } else if (hasAnyPriorAppearance) {
+      // Appeared before, missed the previous chart, and returned.
+      movementIcon = 'reentry';
+      arrow = 'NEW';
     } else {
-      weeksAtNumberOneByWeek[week] = 0;
+      // No appearance before this week, even if the album appears
+      // in later weeks in the complete dataset.
+      movementIcon = 'debut';
+      arrow = 'NEW';
     }
+
+    const peakPosition = historyToDate.reduce(
+      (peak, entry) => Math.min(peak, entry.rank),
+      Infinity,
+    );
+
+    return {
+      rank: row.rank,
+      title: row.title,
+      artist: row.artist,
+      artwork: artworkByAlbum.get(key),
+      week,
+      points: row.units,
+      lastWeekRank,
+      lastWeekPoints,
+      peakPosition: Number.isFinite(peakPosition) ? peakPosition : row.rank,
+      weeksOnChart: historyToDate.length,
+      arrow,
+      movementIcon,
+      hasAnyPriorAppearance,
+      chartHistory: historyToDate,
+    };
+  });
+
+  const numberOne = selectedRows.find((row) => row.rank === 1);
+  let weeksAtNumberOne = 0;
+
+  if (numberOne) {
+    const key = albumKey(numberOne.title, numberOne.artist);
+
+    weeksAtNumberOne = (historyByAlbum.get(key) ?? []).filter(
+      (entry) =>
+        entry.rank === 1 &&
+        entry.week.localeCompare(week) <= 0,
+    ).length;
   }
 
-  // Show the newest chart week first in the week selector.
-  const availableWeeks = [...weeksAscending].reverse();
-  const normalizedRequestedWeek = requestedWeek
-    ? normalizeWeek(requestedWeek)
-    : '';
-
-  const week =
-    normalizedRequestedWeek && entriesByWeek[normalizedRequestedWeek]
-      ? normalizedRequestedWeek
-      : availableWeeks[0];
+  const previousEntries: PreviousAlbumEntry[] = priorRows.map((row) => ({
+    title: row.title,
+    artist: row.artist,
+    points: row.units,
+  }));
 
   return {
     week,
     displayWeek: displayWeekLabel(week),
     availableWeeks,
-    weeksAtNumberOne: weeksAtNumberOneByWeek[week] ?? 0,
-    entries: entriesByWeek[week] ?? [],
-    entriesByWeek,
-    weeksAtNumberOneByWeek,
+    weeksAtNumberOne,
+    entries,
+    previousEntries,
   };
 }

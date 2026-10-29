@@ -16,8 +16,6 @@ import type {
   AlbumWeeklyEntry,
 } from '@/lib/albumChartData';
 
-interface AlbumChartDetailProps extends AlbumChartPayload {}
-
 function formatShortDate(week: string): string {
   const date = new Date(
     /^\d{4}-\d{2}-\d{2}$/.test(week)
@@ -199,20 +197,26 @@ function buildChartHistory(
   return result;
 }
 
-export default function AlbumChartDetail({
-  week,
-  availableWeeks,
-  weeksAtNumberOne,
-  entries,
-  entriesByWeek,
-  weeksAtNumberOneByWeek,
-}: AlbumChartDetailProps) {
-  const [selectedWeek, setSelectedWeek] = useState(week);
+export default function AlbumChartDetail(
+  initialData: AlbumChartPayload
+) {
+  const [chartData, setChartData] =
+    useState<AlbumChartPayload>(initialData);
+
+  const [selectedWeek, setSelectedWeek] =
+    useState(initialData.week);
+
   const [expandedHistory, setExpandedHistory] =
     useState<string | null>(null);
 
-  const currentEntries =
-    entriesByWeek?.[selectedWeek] ?? entries;
+  const [isLoading, setIsLoading] = useState(false);
+
+  const {
+    availableWeeks,
+    entries: currentEntries,
+    previousEntries,
+    weeksAtNumberOne: currentWeeksAtNumberOne,
+  } = chartData;
 
   const selectedWeekIndex =
     availableWeeks.indexOf(selectedWeek);
@@ -228,21 +232,45 @@ export default function AlbumChartDetail({
       ? availableWeeks[selectedWeekIndex - 1]
       : null;
 
-  const previousEntries = previousWeek
-    ? entriesByWeek?.[previousWeek] ?? []
-    : [];
+  const currentDisplayWeek =
+    `WEEK OF ${formatFullDate(selectedWeek)}`;
 
-  const currentWeeksAtNumberOne =
-    weeksAtNumberOneByWeek?.[selectedWeek] ??
-    weeksAtNumberOne;
+  async function changeWeek(weekToSelect: string | null) {
+    if (
+      !weekToSelect ||
+      weekToSelect === selectedWeek ||
+      isLoading
+    ) {
+      return;
+    }
 
-  const currentDisplayWeek = `WEEK OF ${formatFullDate(selectedWeek)}`;
+    setIsLoading(true);
 
-  function changeWeek(weekToSelect: string | null) {
-    if (!weekToSelect) return;
+    try {
+      const response = await fetch(
+        `/api/albums?week=${encodeURIComponent(weekToSelect)}`
+      );
 
-    setSelectedWeek(weekToSelect);
-    setExpandedHistory(null);
+      if (!response.ok) {
+        throw new Error(
+          `Chart request failed: ${response.status}`
+        );
+      }
+
+      const nextData: AlbumChartPayload =
+        await response.json();
+
+      setChartData(nextData);
+      setSelectedWeek(nextData.week);
+      setExpandedHistory(null);
+    } catch (error) {
+      console.error(
+        'Failed to change album chart week:',
+        error
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function toggleHistory(entry: AlbumWeeklyEntry) {
@@ -260,7 +288,10 @@ export default function AlbumChartDetail({
       )}`;
 
     try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.share
+      ) {
         await navigator.share({
           title: 'Elio Charts Weekly Album Chart',
           text: `Elio Charts Weekly Album Chart (${currentDisplayWeek})`,
@@ -316,7 +347,7 @@ export default function AlbumChartDetail({
         <button
           type="button"
           onClick={() => changeWeek(previousWeek)}
-          disabled={!previousWeek}
+          disabled={!previousWeek || isLoading}
           aria-label="Previous week's chart"
           title="Previous week"
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-black/10 bg-white text-black transition-colors hover:border-[#0050FF] hover:text-[#0050FF] disabled:cursor-not-allowed disabled:opacity-25"
@@ -337,9 +368,12 @@ export default function AlbumChartDetail({
 
         <select
           value={selectedWeek}
-          onChange={(event) => changeWeek(event.target.value)}
+          onChange={(event) =>
+            changeWeek(event.target.value)
+          }
+          disabled={isLoading}
           aria-label="Choose chart week"
-          className="min-w-0 max-w-[calc(100%-6rem)] cursor-pointer appearance-none rounded-none bg-black px-3 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.08em] text-white outline-none sm:px-5 sm:text-sm sm:tracking-[0.12em]"
+          className="min-w-0 max-w-[calc(100%-6rem)] cursor-pointer appearance-none rounded-none bg-black px-3 py-2.5 text-center text-xs font-brown-regular uppercase tracking-[0.08em] text-white outline-none disabled:cursor-wait disabled:opacity-70 sm:px-5 sm:text-sm sm:tracking-[0.12em]"
         >
           {availableWeeks.map((weekOption) => (
             <option key={weekOption} value={weekOption}>
@@ -351,7 +385,7 @@ export default function AlbumChartDetail({
         <button
           type="button"
           onClick={() => changeWeek(nextWeek)}
-          disabled={!nextWeek}
+          disabled={!nextWeek || isLoading}
           aria-label="Next week's chart"
           title="Next week"
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-black/10 bg-white text-black transition-colors hover:border-[#0050FF] hover:text-[#0050FF] disabled:cursor-not-allowed disabled:opacity-25"
@@ -419,7 +453,10 @@ export default function AlbumChartDetail({
       {/* ALBUM CHART */}
 
       <div className="mx-auto max-w-[68rem] px-3 sm:px-6">
-        <div className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]">
+        <div
+          className="border border-black/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.08)]"
+          aria-busy={isLoading}
+        >
           {currentEntries.length > 0 ? (
             currentEntries.map((entry) => {
               const key = `${entry.title}|||${entry.artist}`;
@@ -692,7 +729,9 @@ export default function AlbumChartDetail({
                         </p>
                       </div>
 
-                      {graphData.some((point) => point.rank !== null) ? (
+                      {graphData.some(
+                        (point) => point.rank !== null
+                      ) ? (
                         <div className="h-[240px] w-full overflow-visible sm:h-[340px]">
                           <ResponsiveContainer
                             width="100%"
