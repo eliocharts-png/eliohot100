@@ -32,10 +32,6 @@ function parseArtists(csv: string): string[] {
     .map((row) => row[0]?.replace(/^\uFEFF/, '').trim() ?? '')
     .filter((artist) => artist.length > 0);
 
-  /*
-   * Remove duplicates while preserving
-   * the original spelling from the sheet.
-   */
   const uniqueArtists: string[] = [];
   const seen = new Set<string>();
 
@@ -51,7 +47,7 @@ function parseArtists(csv: string): string[] {
   }
 
   console.log(
-    `[SITE HEADER] Artists parsed from Column A: ${uniqueArtists.length}`
+    `[SITE HEADER] Artists parsed from Column A: ${uniqueArtists.length}`,
   );
 
   if (uniqueArtists.length > 0) {
@@ -95,7 +91,7 @@ export default function SiteHeader() {
 
         const response = await fetch(
           `${ARTISTS_CSV_URL}&_=${Date.now()}`,
-          { cache: 'no-store' }
+          { cache: 'no-store' },
         );
 
         if (!response.ok) {
@@ -109,7 +105,7 @@ export default function SiteHeader() {
         }
 
         console.log(
-          `[SITE HEADER] Artist CSV received: ${csv.length} characters`
+          `[SITE HEADER] Artist CSV received: ${csv.length} characters`,
         );
 
         const artistList = parseArtists(csv);
@@ -151,7 +147,7 @@ export default function SiteHeader() {
     return artists
       .filter((artist) => normalizeArtist(artist).includes(query))
       .sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: 'base' })
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
       )
       .slice(0, 20);
   }, [artists, search]);
@@ -263,10 +259,10 @@ export default function SiteHeader() {
           </a>
 
           <a
-            href="/articles"
+            href="/albums"
             className="font-brown-regular text-xs uppercase tracking-[0.08em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
           >
-            CHART BEAT
+            TOP RECORDS
           </a>
 
           <a
@@ -370,8 +366,6 @@ export default function SiteHeader() {
                     Official List
                   </span>
                 </div>
-
-                {/* NEW: HOT 100 ARTISTS */}
 
                 <a
                   href="/goat/artists"
@@ -558,11 +552,11 @@ export default function SiteHeader() {
               </a>
 
               <a
-                href="/articles"
+                href="/albums"
                 onClick={closeMobileMenu}
                 className="border-b border-white/10 py-3 font-brown-regular text-xs uppercase tracking-[0.1em] text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
               >
-                CHART BEAT
+                TOP RECORDS
               </a>
 
               <a
@@ -630,8 +624,6 @@ export default function SiteHeader() {
                   <div className="mb-2 font-brown-bold text-[0.65rem] uppercase tracking-[0.1em] text-white/60">
                     Official List
                   </div>
-
-                  {/* NEW: HOT 100 ARTISTS */}
 
                   <a
                     href="/goat/artists"
