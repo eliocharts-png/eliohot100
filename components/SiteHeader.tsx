@@ -326,7 +326,7 @@ export default function SiteHeader() {
 
                 <a
                   href="/decade-end/breakdown"
-                  className="block px-4 py-2.5 font-brown-bold text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                  className="block px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
                 >
                   BREAKDOWN LIST
                 </a>
@@ -626,7 +626,7 @@ export default function SiteHeader() {
                   <a
                     href="/decade-end/breakdown"
                     onClick={closeMobileMenu}
-                    className="block pt-2 font-brown-bold text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                    className="block pt-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
                   >
                     BREAKDOWN LIST
                   </a>
@@ -648,7 +648,7 @@ export default function SiteHeader() {
                   <a
                     href="/goat/all-time-artists"
                     onClick={closeMobileMenu}
-                    className="block py-2 font-brown-bold text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                    className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
                   >
                     Greatest of All-Time Artists
                   </a>

@@ -1281,7 +1281,7 @@ h1.font-brown-bold {
 }
 /* =========================================================
    MOBILE CHART TYPOGRAPHY
-   Match desktop sizing
+   Smaller text on mobile
    ========================================================= */
 
 @media (max-width: 639px) {
@@ -1289,31 +1289,35 @@ h1.font-brown-bold {
   /* Page titles */
   .page-title,
   h1.font-brown-bold {
-    font-size: 8.5rem !important;
+    font-size: 4.5rem !important;
   }
 
   /* Song and record titles */
   p[class~="text-4xl"],
   p[class~="sm:text-4xl"],
   p[class~="text-[0.9rem]"] {
-    font-size: 20px !important;
+    font-size: 12px !important;
+    line-height: 1.1 !important;
   }
 
   /* Artist names */
   p[class~="text-xl"][class~="font-brown-regular"],
   p[class~="text-[0.72rem]"][class~="font-brown-regular"] {
-    font-size: 16px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+    margin-top: 2px !important;
   }
 
   /* Rankings */
   p[class~="text-[3rem]"],
   p[class~="text-[1.35rem]"],
   p[class~="sm:text-[3.5rem]"] {
-    font-size: 30px !important;
+    font-size: 13px !important;
   }
 
   /* Records page titles */
   h3[class~="text-[1rem]"][class~="sm:text-[1.65rem]"] {
-    font-size: 16px !important;
+    font-size: 11px !important;
+    line-height: 1.1 !important;
   }
 }

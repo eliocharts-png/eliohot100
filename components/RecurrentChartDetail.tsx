@@ -903,7 +903,7 @@ export default function RecurrentChartDetail({
                             <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
                               LW:
                             </span>
-                            <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                            <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                               {entry.lastWeekRank ?? '—'}
                             </span>
                           </div>
@@ -912,16 +912,16 @@ export default function RecurrentChartDetail({
                             <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
                               PEAK:
                             </span>
-                            <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                            <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                               {entry.peakPosition}
                             </span>
                           </div>
 
                           <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
                             <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
-                              WEEKS ON CHART:
+                              WEEKS:
                             </span>
-                            <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                            <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                               {entry.recurrentWeeks}
                             </span>
                           </div>

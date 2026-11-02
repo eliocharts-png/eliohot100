@@ -439,7 +439,7 @@ export default function WeeklyArtistChartDetail({
                           <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
                             LW:
                           </span>
-                          <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                          <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                             {entry.lastWeekRank ?? '—'}
                           </span>
                         </div>
@@ -448,7 +448,7 @@ export default function WeeklyArtistChartDetail({
                           <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
                             PEAK:
                           </span>
-                          <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                          <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                             {entry.peakPosition}
                           </span>
                         </div>
@@ -457,7 +457,7 @@ export default function WeeklyArtistChartDetail({
                           <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
                             WEEKS:
                           </span>
-                          <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                          <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                             {entry.weeksOnChart}
                           </span>
                         </div>

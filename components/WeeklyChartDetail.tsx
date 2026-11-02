@@ -1149,7 +1149,7 @@ className={`flex h-8 w-8 items-center justify-center border transition-all durat
                                 LW:
                               </span>
 
-                              <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                              <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                                 {entry.lastWeekRank ??
                                   '—'}
                               </span>
@@ -1164,7 +1164,7 @@ className={`flex h-8 w-8 items-center justify-center border transition-all durat
                                 PEAK:
                               </span>
 
-                              <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                              <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                                 {entry.peakPosition}
                               </span>
 
@@ -1178,7 +1178,7 @@ className={`flex h-8 w-8 items-center justify-center border transition-all durat
                                 WEEKS:
                               </span>
 
-                              <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
+                              <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
                                 {entry.weeksOnChart}
                               </span>
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -347,6 +348,9 @@ export default function ArtistPage() {
   const [selectedChart, setSelectedChart] =
     useState<ChartType>('HOT 100');
 
+  const [expandedEntry, setExpandedEntry] =
+    useState<string | null>(null);
+
   useEffect(() => {
     if (!artistName) return;
 
@@ -489,6 +493,7 @@ export default function ArtistPage() {
 
   const handleChartChange = (chart: ChartType) => {
     setSelectedChart(chart);
+    setExpandedEntry(null);
   };
 
   const crystalFont = {
@@ -565,7 +570,7 @@ export default function ArtistPage() {
   return (
     <main className="min-h-screen bg-white text-black">
       {/* ARTIST HEADER */}
-      <section className="mx-auto max-w-6xl px-4 pt-24 sm:px-6 sm:pt-20">
+      <section className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 sm:pt-20">
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-6">
           {/* ARTIST IMAGE */}
           <div className="mx-auto w-[190px] shrink-0 sm:mx-0 sm:w-[220px]">
@@ -610,7 +615,7 @@ export default function ArtistPage() {
 
             {/* ARTIST NAME */}
             <h1
-              className="break-words text-left text-[48px] uppercase leading-[0.9] text-[#0050FF] sm:text-[64px]"
+              className="break-words text-left text-[38px] uppercase leading-[0.9] text-[#0050FF] sm:text-[64px]"
               style={{
                 ...crystalFont,
                 letterSpacing: '0.055em',
@@ -645,16 +650,17 @@ export default function ArtistPage() {
         <section className="mx-auto mt-10 max-w-6xl px-4 sm:px-6">
           {/* MOBILE HEADER */}
           <div className="bg-[#0050FF] px-3 py-2.5 sm:hidden">
-            <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2">
-              <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-white">
+            <div className="grid grid-cols-[minmax(0,1fr)_42px_42px_26px] items-center gap-2">
+              <p className="font-brown-bold text-[9px] uppercase tracking-[0.08em] text-white">
                 SONG
               </p>
-              <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+              <p className="text-center font-brown-bold text-[8px] uppercase leading-none text-white">
                 PEAK
               </p>
-              <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+              <p className="text-center font-brown-bold text-[8px] uppercase leading-none text-white">
                 WEEKS
               </p>
+              <span />
             </div>
           </div>
 
@@ -679,112 +685,168 @@ export default function ArtistPage() {
             </div>
           </div>
 
-          {sortedSongs.map((song) => (
-            <div
-              key={`${song.title}|||${song.artistCredit}`}
-              className="border-b border-black/10"
-            >
-              {/* MOBILE SONG ROW */}
-              <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2 px-3 py-3 sm:hidden">
-                <div className="flex min-w-0 items-center gap-3">
-                  {song.artwork ? (
-                    <img
-                      src={song.artwork}
-                      alt=""
-                      className="h-12 w-12 shrink-0 object-cover"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
-                  )}
+          {sortedSongs.map((song) => {
+            const entryKey = `song:${song.title}|||${song.artistCredit}`;
+            const isExpanded = expandedEntry === entryKey;
 
-                  <div className="min-w-0">
-                    <p className="truncate font-brown-bold text-[14px] leading-tight text-black">
-                      {song.title}
-                    </p>
-                    <p className="mt-1 truncate font-brown-regular text-[11px] leading-tight text-[#0050FF]">
-                      {song.artistCredit}
-                    </p>
+            return (
+              <div
+                key={`${song.title}|||${song.artistCredit}`}
+                className="border-b border-black/10"
+              >
+                {/* MOBILE SONG ROW */}
+                <div className="grid grid-cols-[minmax(0,1fr)_42px_42px_26px] items-center gap-2 px-3 py-3 sm:hidden">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {song.artwork ? (
+                      <img
+                        src={song.artwork}
+                        alt=""
+                        className="h-10 w-10 shrink-0 object-cover"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 shrink-0 bg-black/[0.04]" />
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="truncate font-brown-bold text-[12px] leading-tight text-black">
+                        {song.title}
+                      </p>
+                      <p className="mt-0.5 truncate font-brown-regular text-[9px] leading-tight text-[#0050FF]">
+                        {song.artistCredit}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex flex-col items-center justify-center">
-                  <p className="font-brown-bold text-lg leading-none text-black">
-                    {song.peak}
-                  </p>
-                  {song.peak === 1 && (
-                    <span className="mt-1 bg-[#0050FF] px-1.5 py-1 text-center font-brown-bold text-[8px] uppercase leading-none text-white">
-                      {song.weeksAtPeak}W
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-center font-brown-bold text-lg leading-none text-black">
-                  {song.weeksOnChart}
-                </p>
-              </div>
-
-              {/* DESKTOP SONG ROW */}
-              <div className="hidden grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2 px-3 py-3 sm:grid">
-                <div className="flex min-w-0 items-center gap-3">
-                  {song.artwork ? (
-                    <img
-                      src={song.artwork}
-                      alt=""
-                      className="h-12 w-12 shrink-0 object-cover"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
-                  )}
-
-                  <div className="min-w-0">
-                    <p className="truncate font-brown-bold text-base leading-tight text-black">
-                      {song.title}
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="font-brown-bold text-[15px] leading-none text-black">
+                      {song.peak}
                     </p>
-                    <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
-                      {song.artistCredit}
-                    </p>
+
+                    {song.peak === 1 && (
+                      <span className="mt-1 whitespace-nowrap bg-[#0050FF] px-0.5 py-1 text-center font-brown-bold text-[7px] uppercase leading-none text-white">
+                        {song.weeksAtPeak}{' '}
+                        {song.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
+                      </span>
+                    )}
                   </div>
-                </div>
 
-                <div className="flex flex-col items-center justify-center">
-                  <p className="font-brown-bold text-lg leading-none text-black">
-                    {song.peak}
+                  <p className="text-center font-brown-bold text-[15px] leading-none text-black">
+                    {song.weeksOnChart}
                   </p>
 
-                  {song.peak === 1 && (
-                    <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
-                      {song.weeksAtPeak}{' '}
-                      {song.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedEntry((current) =>
+                        current === entryKey ? null : entryKey
+                      )
+                    }
+                    aria-expanded={isExpanded}
+                    aria-label="Show song debut and peak dates"
+                    className="flex h-7 w-6 items-center justify-center font-brown-regular text-lg leading-none text-black/60"
+                  >
+                    {isExpanded ? '−' : '+'}
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push(getWeeklyChartUrl(song.debutDate))
-                  }
-                  className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                >
-                  {formatDate(song.debutDate)}
-                </button>
+                {/* MOBILE SONG DETAILS */}
+                {isExpanded && (
+                  <div className="grid grid-cols-2 gap-3 border-t border-black/10 bg-black/[0.025] px-3 py-3 sm:hidden">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(getWeeklyChartUrl(song.debutDate))
+                      }
+                      className="text-left"
+                    >
+                      <span className="block font-brown-regular text-[9px] uppercase tracking-[0.08em] text-black/40">
+                        DEBUT DATE
+                      </span>
+                      <span className="mt-1 block font-brown-regular text-[11px] text-[#0050FF] underline underline-offset-2">
+                        {formatDate(song.debutDate)}
+                      </span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push(getWeeklyChartUrl(song.peakDate))
-                  }
-                  className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                >
-                  {formatDate(song.peakDate)}
-                </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(getWeeklyChartUrl(song.peakDate))
+                      }
+                      className="text-left"
+                    >
+                      <span className="block font-brown-regular text-[9px] uppercase tracking-[0.08em] text-black/40">
+                        PEAK DATE
+                      </span>
+                      <span className="mt-1 block font-brown-regular text-[11px] text-[#0050FF] underline underline-offset-2">
+                        {formatDate(song.peakDate)}
+                      </span>
+                    </button>
+                  </div>
+                )}
 
-                <p className="text-center font-brown-regular text-base leading-none text-black">
-                  {song.weeksOnChart}
-                </p>
+                {/* DESKTOP SONG ROW */}
+                <div className="hidden grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2 px-3 py-3 sm:grid">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {song.artwork ? (
+                      <img
+                        src={song.artwork}
+                        alt=""
+                        className="h-12 w-12 shrink-0 object-cover"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="truncate font-brown-bold text-base leading-tight text-black">
+                        {song.title}
+                      </p>
+                      <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
+                        {song.artistCredit}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="font-brown-bold text-lg leading-none text-black">
+                      {song.peak}
+                    </p>
+
+                    {song.peak === 1 && (
+                      <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                        {song.weeksAtPeak}{' '}
+                        {song.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(getWeeklyChartUrl(song.debutDate))
+                    }
+                    className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                  >
+                    {formatDate(song.debutDate)}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(getWeeklyChartUrl(song.peakDate))
+                    }
+                    className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                  >
+                    {formatDate(song.peakDate)}
+                  </button>
+
+                  <p className="text-center font-brown-regular text-base leading-none text-black">
+                    {song.weeksOnChart}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
       )}
 
@@ -821,16 +883,17 @@ export default function ArtistPage() {
             <>
               {/* MOBILE ALBUM HEADER */}
               <div className="bg-[#0050FF] px-3 py-2.5 sm:hidden">
-                <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2">
-                  <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-white">
+                <div className="grid grid-cols-[minmax(0,1fr)_42px_42px_26px] items-center gap-2">
+                  <p className="font-brown-bold text-[9px] uppercase tracking-[0.08em] text-white">
                     ALBUM
                   </p>
-                  <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                  <p className="text-center font-brown-bold text-[8px] uppercase leading-none text-white">
                     PEAK
                   </p>
-                  <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                  <p className="text-center font-brown-bold text-[8px] uppercase leading-none text-white">
                     WEEKS
                   </p>
+                  <span />
                 </div>
               </div>
 
@@ -862,138 +925,168 @@ export default function ArtistPage() {
                   </p>
                 </div>
               ) : (
-                artistAlbums.map((album) => (
-                  <div
-                    key={normalize(album.title)}
-                    className="border-b border-black/10"
-                  >
-                    {/* MOBILE ALBUM ROW */}
-                    <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2 px-3 py-3 sm:hidden">
-                      <div className="flex min-w-0 items-center gap-3">
-                        {album.artwork ? (
-                          <img
-                            src={album.artwork}
-                            alt=""
-                            className="h-12 w-12 shrink-0 object-cover"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
-                        )}
+                artistAlbums.map((album) => {
+                  const entryKey = `album:${normalize(album.title)}`;
+                  const isExpanded = expandedEntry === entryKey;
 
-                        <div className="min-w-0">
-                          <p className="truncate font-brown-bold text-[14px] leading-tight text-black">
-                            {album.title}
-                          </p>
-                          <p className="mt-1 truncate font-brown-regular text-[11px] leading-tight text-[#0050FF]">
-                            {album.artistCredit}
-                          </p>
+                  return (
+                    <div
+                      key={normalize(album.title)}
+                      className="border-b border-black/10"
+                    >
+                      {/* MOBILE ALBUM ROW */}
+                      <div className="grid grid-cols-[minmax(0,1fr)_42px_42px_26px] items-center gap-2 px-3 py-3 sm:hidden">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          {album.artwork ? (
+                            <img
+                              src={album.artwork}
+                              alt=""
+                              className="h-10 w-10 shrink-0 object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 shrink-0 bg-black/[0.04]" />
+                          )}
 
-                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                router.push(
-                                  getAlbumChartUrl(album.debutDate)
-                                )
-                              }
-                              className="font-brown-regular text-[9px] text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2"
-                            >
-                              DEBUT {formatDate(album.debutDate)}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                router.push(
-                                  getAlbumChartUrl(album.peakDate)
-                                )
-                              }
-                              className="font-brown-regular text-[9px] text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2"
-                            >
-                              PEAK {formatDate(album.peakDate)}
-                            </button>
+                          <div className="min-w-0">
+                            <p className="truncate font-brown-bold text-[12px] leading-tight text-black">
+                              {album.title}
+                            </p>
+                            <p className="mt-0.5 truncate font-brown-regular text-[9px] leading-tight text-[#0050FF]">
+                              {album.artistCredit}
+                            </p>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex flex-col items-center justify-center">
-                        <p className="font-brown-bold text-lg leading-none text-black">
-                          {album.peak}
-                        </p>
-                        {album.peak === 1 && (
-                          <span className="mt-1 bg-[#0050FF] px-1.5 py-1 text-center font-brown-bold text-[8px] uppercase leading-none text-white">
-                            {album.weeksAtPeak}W
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-center font-brown-bold text-lg leading-none text-black">
-                        {album.weeksOnChart}
-                      </p>
-                    </div>
-
-                    {/* DESKTOP ALBUM ROW */}
-                    <div className="hidden grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2 px-3 py-3 sm:grid">
-                      <div className="flex min-w-0 items-center gap-3">
-                        {album.artwork ? (
-                          <img
-                            src={album.artwork}
-                            alt=""
-                            className="h-12 w-12 shrink-0 object-cover"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
-                        )}
-
-                        <div className="min-w-0">
-                          <p className="truncate font-brown-bold text-base leading-tight text-black">
-                            {album.title}
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="font-brown-bold text-[15px] leading-none text-black">
+                            {album.peak}
                           </p>
-                          <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
-                            {album.artistCredit}
-                          </p>
+
+                          {album.peak === 1 && (
+                            <span className="mt-1 whitespace-nowrap bg-[#0050FF] px-0.5 py-1 text-center font-brown-bold text-[7px] uppercase leading-none text-white">
+                              {album.weeksAtPeak}{' '}
+                              {album.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
+                            </span>
+                          )}
                         </div>
-                      </div>
 
-                      <div className="flex flex-col items-center justify-center">
-                        <p className="font-brown-bold text-lg leading-none text-black">
-                          {album.peak}
+                        <p className="text-center font-brown-bold text-[15px] leading-none text-black">
+                          {album.weeksOnChart}
                         </p>
 
-                        {album.peak === 1 && (
-                          <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
-                            {album.weeksAtPeak}{' '}
-                            {album.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedEntry((current) =>
+                              current === entryKey ? null : entryKey
+                            )
+                          }
+                          aria-expanded={isExpanded}
+                          aria-label="Show album debut and peak dates"
+                          className="flex h-7 w-6 items-center justify-center font-brown-regular text-lg leading-none text-black/60"
+                        >
+                          {isExpanded ? '−' : '+'}
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          router.push(getAlbumChartUrl(album.debutDate))
-                        }
-                        className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                      >
-                        {formatDate(album.debutDate)}
-                      </button>
+                      {/* MOBILE ALBUM DETAILS */}
+                      {isExpanded && (
+                        <div className="grid grid-cols-2 gap-3 border-t border-black/10 bg-black/[0.025] px-3 py-3 sm:hidden">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(getAlbumChartUrl(album.debutDate))
+                            }
+                            className="text-left"
+                          >
+                            <span className="block font-brown-regular text-[9px] uppercase tracking-[0.08em] text-black/40">
+                              DEBUT DATE
+                            </span>
+                            <span className="mt-1 block font-brown-regular text-[11px] text-[#0050FF] underline underline-offset-2">
+                              {formatDate(album.debutDate)}
+                            </span>
+                          </button>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          router.push(getAlbumChartUrl(album.peakDate))
-                        }
-                        className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                      >
-                        {formatDate(album.peakDate)}
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(getAlbumChartUrl(album.peakDate))
+                            }
+                            className="text-left"
+                          >
+                            <span className="block font-brown-regular text-[9px] uppercase tracking-[0.08em] text-black/40">
+                              PEAK DATE
+                            </span>
+                            <span className="mt-1 block font-brown-regular text-[11px] text-[#0050FF] underline underline-offset-2">
+                              {formatDate(album.peakDate)}
+                            </span>
+                          </button>
+                        </div>
+                      )}
 
-                      <p className="text-center font-brown-regular text-base leading-none text-black">
-                        {album.weeksOnChart}
-                      </p>
+                      {/* DESKTOP ALBUM ROW */}
+                      <div className="hidden grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2 px-3 py-3 sm:grid">
+                        <div className="flex min-w-0 items-center gap-3">
+                          {album.artwork ? (
+                            <img
+                              src={album.artwork}
+                              alt=""
+                              className="h-12 w-12 shrink-0 object-cover"
+                            />
+                          ) : (
+                            <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
+                          )}
+
+                          <div className="min-w-0">
+                            <p className="truncate font-brown-bold text-base leading-tight text-black">
+                              {album.title}
+                            </p>
+                            <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
+                              {album.artistCredit}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="font-brown-bold text-lg leading-none text-black">
+                            {album.peak}
+                          </p>
+
+                          {album.peak === 1 && (
+                            <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                              {album.weeksAtPeak}{' '}
+                              {album.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(getAlbumChartUrl(album.debutDate))
+                          }
+                          className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                        >
+                          {formatDate(album.debutDate)}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(getAlbumChartUrl(album.peakDate))
+                          }
+                          className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                        >
+                          {formatDate(album.peakDate)}
+                        </button>
+
+                        <p className="text-center font-brown-regular text-base leading-none text-black">
+                          {album.weeksOnChart}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </>
           )}

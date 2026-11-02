@@ -475,116 +475,121 @@ export default function AlbumChartDetail(
                   key={`${key}::${entry.rank}`}
                   className="group border-y border-black/10 transition-colors duration-150 first:border-t-0 hover:border-[#0050FF]"
                 >
-                  {/* MOBILE ROW */}
 
-                  <div className="sm:hidden">
-                    <div className="relative flex w-full items-center">
-                      <div className="flex h-[4.1rem] w-7 flex-shrink-0 flex-col overflow-hidden">
-                        <div className="flex min-h-0 flex-1 items-center justify-center bg-black/10">
-                          <img
-                            src={`/icons/${getIconFilename(entry.movementIcon)}`}
-                            alt={entry.movementIcon ?? 'movement'}
-                            className="h-6 w-6 object-contain"
-                          />
-                        </div>
+{/* MOBILE ROW */}
 
-                        <div className="flex min-h-0 flex-1 items-center justify-center bg-[#0050FF]">
-                          {showBullet && (
-                            <img
-                              src="/icons/bullet.PNG"
-                              alt="Chart highlight"
-                              className="h-6 w-6 object-contain"
-                            />
-                          )}
-                        </div>
-                      </div>
+<div className="sm:hidden">
+  <div className="relative flex w-full min-w-0 items-center">
 
-                      <div className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center">
-                        <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
-                          {entry.rank}
-                        </p>
-                      </div>
+    {/* MOVEMENT ICONS */}
+    <div className="flex h-[4.1rem] w-7 flex-shrink-0 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-black/10">
+        <img
+          src={`/icons/${getIconFilename(entry.movementIcon)}`}
+          alt={entry.movementIcon ?? 'movement'}
+          className="h-6 w-6 object-contain"
+        />
+      </div>
 
-                      <div className="h-[4.1rem] w-[4.1rem] flex-shrink-0 overflow-hidden bg-black/5">
-                        {entry.artwork ? (
-                          <img
-                            src={entry.artwork}
-                            alt={`${entry.title} artwork`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center bg-black/5 text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
-                            ARTWORK
-                          </div>
-                        )}
-                      </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-[#0050FF]">
+        {showBullet && (
+          <img
+            src="/icons/bullet.PNG"
+            alt="Chart highlight"
+            className="h-6 w-6 object-contain"
+          />
+        )}
+      </div>
+    </div>
 
-                      <div className="min-w-0 flex-1 px-2 py-2 pr-1">
-                        <div className="flex h-full flex-col justify-center">
-                          {entry.rank === 1 && (
-                            <span className="mb-1 inline-flex w-fit items-center bg-[#0050FF] px-2 py-1.5 text-[0.58rem] font-brown-bold uppercase leading-none tracking-[0.05em] text-white">
-                              {currentWeeksAtNumberOne}{' '}
-                              {currentWeeksAtNumberOne === 1
-                                ? 'WEEK'
-                                : 'WEEKS'}{' '}
-                              AT NO. 1
-                            </span>
-                          )}
+    {/* RANK */}
+    <div className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center">
+      <p className="m-0 text-[1.35rem] font-brown-bold leading-none text-black">
+        {entry.rank}
+      </p>
+    </div>
 
-                          <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
-                            {entry.title}
-                          </p>
+    {/* ARTWORK */}
+    <div className="h-[4.1rem] w-[4.1rem] flex-shrink-0 overflow-hidden bg-black/5">
+      {entry.artwork ? (
+        <img
+          src={entry.artwork}
+          alt={`${entry.title} artwork`}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center bg-black/5 text-[0.45rem] uppercase tracking-[0.2em] text-black/40">
+          ARTWORK
+        </div>
+      )}
+    </div>
 
-                          <p className="mt-0.5 break-words text-[0.72rem] font-brown-regular leading-tight text-blue-600">
-                            {entry.artist}
-                          </p>
-                        </div>
-                      </div>
+    {/* ALBUM INFORMATION */}
+    <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-2">
+      {entry.rank === 1 && (
+        <span className="mb-1 inline-flex w-fit items-center bg-[#0050FF] px-2 py-1.5 text-[0.58rem] font-brown-bold uppercase leading-none tracking-[0.05em] text-white">
+          {currentWeeksAtNumberOne}{' '}
+          {currentWeeksAtNumberOne === 1 ? 'WEEK' : 'WEEKS'} AT NO. 1
+        </span>
+      )}
 
-                        <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
-                          <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
-                            LW:
-                          </span>
-                          <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
-                            {entry.lastWeekRank ?? '—'}
-                          </span>
-                        </div>
+      <p className="break-words text-[0.9rem] font-brown-bold leading-[1.08] text-black">
+        {entry.title}
+      </p>
 
-                      <div className="flex w-[4.2rem] flex-shrink-0 flex-col items-end justify-center py-1 pr-1">
-                        <div className="flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
-                          <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
-                            PEAK:
-                          </span>
-                          <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
-                            {entry.peakPosition}
-                          </span>
-                        </div>
+      <p className="mt-0.5 break-words text-[0.72rem] font-brown-regular leading-tight text-blue-600">
+        {entry.artist}
+      </p>
+    </div>
 
-                        <div className="mt-1 flex w-full items-baseline justify-end gap-1 whitespace-nowrap text-right">
-                          <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
-                            WEEKS:
-                          </span>
-                          <span className="text-[0.68rem] font-brown-bold leading-none text-black/50">
-                            {entry.weeksOnChart}
-                          </span>
-                        </div>
-                      </div>
+    {/* CHART STATS */}
+    <div className="flex w-[4.2rem] flex-shrink-0 flex-col items-end justify-center gap-1 pr-1">
+      <div className="flex w-full items-baseline justify-end gap-1 whitespace-nowrap">
+        <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+          LW:
+        </span>
+        <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
+          {entry.lastWeekRank ?? '—'}
+        </span>
+      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => toggleHistory(entry)}
-                        className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center text-xl font-brown-regular leading-none text-black/40 transition hover:text-black/60"
-                        aria-label={
-                          isHistoryExpanded
-                            ? 'Collapse chart history'
-                            : 'Show chart history'
-                        }
-                        aria-expanded={isHistoryExpanded}
-                      >
-                        {isHistoryExpanded ? '−' : '+'}
-                      </button>
-                    </div>
-                  </div>
+      <div className="flex w-full items-baseline justify-end gap-1 whitespace-nowrap">
+        <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+          PEAK:
+        </span>
+        <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
+          {entry.peakPosition}
+        </span>
+      </div>
+
+      <div className="flex w-full items-baseline justify-end gap-1 whitespace-nowrap">
+        <span className="text-[0.48rem] font-brown-regular uppercase leading-none tracking-[0.04em] text-black/40">
+          WEEKS:
+        </span>
+        <span className="text-[0.68rem] font-brown-regular leading-none text-black/50">
+          {entry.weeksOnChart}
+        </span>
+      </div>
+    </div>
+
+    {/* HISTORY BUTTON */}
+    <button
+      type="button"
+      onClick={() => toggleHistory(entry)}
+      className="flex h-[4.1rem] w-7 flex-shrink-0 items-center justify-center text-xl font-brown-regular leading-none text-black/40 transition hover:text-black/60"
+      aria-label={
+        isHistoryExpanded
+          ? 'Collapse chart history'
+          : 'Show chart history'
+      }
+      aria-expanded={isHistoryExpanded}
+    >
+      {isHistoryExpanded ? '−' : '+'}
+    </button>
+
+  </div>
+</div>
+
 
                   {/* DESKTOP ROW */}
 
