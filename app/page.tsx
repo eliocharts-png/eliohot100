@@ -36,7 +36,11 @@ type NumberOneArchiveSong = {
 };
 
 const GOAT_CHART_TITLES = [
+  'Greatest of All-Time Artists',
   'Greatest of All-Time',
+  'Greatest of All-Time Hot 100 Artists',
+  'Greatest of All-Time Top Records',
+  'Greatest of All-Time Top Records Artists',
   'Greatest of All-Time Filipino Songs',
   'Greatest of All-Time No. 2 Songs',
   'Greatest of All-Time Female Songs',
@@ -512,12 +516,14 @@ export default function HomePage() {
   ========================================================= */
 
   const goatCharts = useMemo(
-    () =>
-      charts.filter((chart) =>
-        GOAT_CHART_TITLES.includes(chart.title),
-      ),
-    [charts],
-  );
+  () =>
+    GOAT_CHART_TITLES
+      .map((title) =>
+        charts.find((chart) => chart.title === title),
+      )
+      .filter((chart): chart is ChartData => Boolean(chart)),
+  [charts],
+);
 
   /* =========================================================
      ROTATE GOAT CHARTS EVERY 5 SECONDS
@@ -551,15 +557,28 @@ export default function HomePage() {
   ========================================================= */
 
   const activeGoatHeaderTitle =
-    activeGoatChart?.title === 'Greatest of All-Time'
+  activeGoatChart?.title ===
+  'Greatest of All-Time Artists'
+    ? 'ARTISTS'
+    : activeGoatChart?.title ===
+        'Greatest of All-Time'
       ? 'HOT 100 SONGS'
       : activeGoatChart?.title ===
-          'Greatest of All-Time Filipino Songs'
-        ? 'FILIPINO SONGS'
+          'Greatest of All-Time Hot 100 Artists'
+        ? 'HOT 100 ARTISTS'
         : activeGoatChart?.title ===
-            'Greatest of All-Time No. 2 Songs'
-          ? 'NO. 2 SONGS'
-          : 'FEMALE SONGS';
+            'Greatest of All-Time Top Records'
+          ? 'TOP RECORDS'
+          : activeGoatChart?.title ===
+              'Greatest of All-Time Top Records Artists'
+            ? 'TOP RECORDS ARTISTS'
+            : activeGoatChart?.title ===
+                'Greatest of All-Time Filipino Songs'
+              ? 'FILIPINO SONGS'
+              : activeGoatChart?.title ===
+                  'Greatest of All-Time No. 2 Songs'
+                ? 'NO. 2 SONGS'
+                : 'FEMALE SONGS';
 
   /* =========================================================
      LOAD ARTISTS FOR SEARCH

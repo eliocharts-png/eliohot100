@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -368,6 +367,13 @@ export default function SiteHeader() {
                 </div>
 
                 <a
+                  href="/goat/all-time-artists"
+                  className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  Artists
+                </a>
+
+                <a
                   href="/goat/artists"
                   className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
                 >
@@ -379,6 +385,20 @@ export default function SiteHeader() {
                   className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
                 >
                   Hot 100 Songs
+                </a>
+
+                <a
+                  href="/goat/top-records-artists"
+                  className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  Top Records Artists
+                </a>
+
+                <a
+                  href="/goat/top-records"
+                  className="block border-b border-white/10 px-4 py-2.5 font-brown-regular text-xs text-white transition-colors duration-150 hover:bg-[#0050FF] hover:text-white"
+                >
+                  Top Records
                 </a>
 
                 <a
@@ -626,6 +646,14 @@ export default function SiteHeader() {
                   </div>
 
                   <a
+                    href="/goat/all-time-artists"
+                    onClick={closeMobileMenu}
+                    className="block py-2 font-brown-bold text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    Greatest of All-Time Artists
+                  </a>
+
+                  <a
                     href="/goat/artists"
                     onClick={closeMobileMenu}
                     className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
@@ -639,6 +667,22 @@ export default function SiteHeader() {
                     className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
                   >
                     Hot 100 Songs
+                  </a>
+
+                  <a
+                    href="/goat/top-records-artists"
+                    onClick={closeMobileMenu}
+                    className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    Top Records Artists
+                  </a>
+
+                  <a
+                    href="/goat/top-records"
+                    onClick={closeMobileMenu}
+                    className="block py-2 font-brown-regular text-xs text-white transition-colors duration-150 hover:text-[#0050FF] active:text-[#0050FF]"
+                  >
+                    Top Records
                   </a>
 
                   <a

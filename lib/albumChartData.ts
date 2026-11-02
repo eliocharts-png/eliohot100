@@ -278,13 +278,13 @@ export async function getAlbumChartData(
 
   const availableWeeks = [...weeksAscending].reverse();
   const normalizedRequestedWeek = requestedWeek
-    ? normalizeWeek(requestedWeek)
-    : '';
+  ? normalizeWeek(requestedWeek)
+  : '';
 
-  const week =
-    normalizedRequestedWeek && weeksAscending.includes(normalizedRequestedWeek)
-      ? normalizedRequestedWeek
-      : availableWeeks[0];
+const week =
+  normalizedRequestedWeek && weeksAscending.includes(normalizedRequestedWeek)
+    ? normalizedRequestedWeek
+    : availableWeeks[0];
 
   const selectedIndex = weeksAscending.indexOf(week);
   const previousChartWeek =

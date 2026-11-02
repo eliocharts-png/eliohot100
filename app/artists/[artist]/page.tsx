@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-
 import { useParams, useRouter } from 'next/navigation';
 
-const YEAR_END_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCwhJoNSmVVS7klopONiGjob6kaRw_1CyjviTVffP_WdbMKZEo4xs_ou7nv-mkd14u25T0KcDshHdJ/pub?gid=1658746037&single=true&output=csv';
+const ALBUM_DATABASE_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/1hwXa1A9lpc8dti9kcnUK3p_pYmL4JmyHtAaPPL6S3s4/export?format=csv&gid=709193280';
 
-const ARTISTS_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
+const ALBUM_ARTWORK_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/1hwXa1A9lpc8dti9kcnUK3p_pYmL4JmyHtAaPPL6S3s4/export?format=csv&gid=1763528492';
 
 type ArtistSong = {
   title: string;
@@ -33,12 +32,33 @@ type ArtistResponse = {
   totalPoints: number;
 };
 
-type YearEndEntry = {
-  year: string;
+type AlbumChartRow = {
+  weekEnding: string;
   rank: number;
   title: string;
+  units: number;
   artist: string;
 };
+
+type AlbumArtwork = {
+  title: string;
+  artist: string;
+  artwork: string;
+};
+
+type ArtistAlbum = {
+  title: string;
+  artistCredit: string;
+  artwork?: string;
+  peak: number;
+  debutDate: string;
+  peakDate: string;
+  weeksOnChart: number;
+  weeksAtPeak: number;
+  totalUnits: number;
+};
+
+type ChartType = 'HOT 100' | 'TOP RECORDS';
 
 function normalize(value: string): string {
   return value
@@ -63,7 +83,6 @@ function parseCSV(csv: string): string[][] {
       } else {
         quoted = !quoted;
       }
-
       continue;
     }
 
@@ -73,30 +92,19 @@ function parseCSV(csv: string): string[][] {
       continue;
     }
 
-    if (
-      (char === '\n' || char === '\r') &&
-      !quoted
-    ) {
-      if (
-        char === '\r' &&
-        csv[i + 1] === '\n'
-      ) {
+    if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && csv[i + 1] === '\n') {
         i += 1;
       }
 
       row.push(value.trim());
 
-      if (
-        row.some(
-          (cell) => cell.trim() !== ''
-        )
-      ) {
+      if (row.some((cell) => cell.trim() !== '')) {
         rows.push(row);
       }
 
       row = [];
       value = '';
-
       continue;
     }
 
@@ -106,11 +114,7 @@ function parseCSV(csv: string): string[][] {
   if (value !== '' || row.length > 0) {
     row.push(value.trim());
 
-    if (
-      row.some(
-        (cell) => cell.trim() !== ''
-      )
-    ) {
+    if (row.some((cell) => cell.trim() !== '')) {
       rows.push(row);
     }
   }
@@ -118,46 +122,13 @@ function parseCSV(csv: string): string[][] {
   return rows;
 }
 
-function parseArtists(csv: string): string[] {
-  const rows = parseCSV(csv);
-
-  const artistNames = rows
-    .slice(2)
-    .map(
-      (row) => row[0]?.trim() ?? ''
-    )
-    .filter(
-      (artist) => artist.length > 0
-    );
-
-  const uniqueArtists = Array.from(
-    new Set(artistNames)
-  );
-
-  uniqueArtists.sort((a, b) =>
-    a.localeCompare(
-      b,
-      undefined,
-      {
-        sensitivity: 'base',
-      }
-    )
-  );
-
-  return uniqueArtists;
-}
-
-function parseSongCell(
-  value: string
-): {
+function parseSongCell(value: string): {
   title: string;
   artist: string;
 } {
   const parts = value
     .split(/\r?\n/)
-    .map(
-      (part) => part.trim()
-    )
+    .map((part) => part.trim())
     .filter(Boolean);
 
   return {
@@ -166,225 +137,73 @@ function parseSongCell(
   };
 }
 
-function findColumn(
-  headers: string[],
-  patterns: string[]
-): number {
-  return headers.findIndex(
-    (header) => {
-      const normalized =
-        normalize(header);
-
-      return patterns.some(
-        (pattern) =>
-          normalized.includes(pattern)
-      );
-    }
-  );
-}
-
-function parseYearEndCSV(
-  csv: string
-): YearEndEntry[] {
+function parseAlbumDatabaseCSV(csv: string): AlbumChartRow[] {
   const rows = parseCSV(csv);
 
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const headers = rows[0].map(
-    (header) => normalize(header)
-  );
-
-  const yearColumn = findColumn(
-    headers,
-    [
-      'year',
-      'chart year',
-      'year end',
-    ]
-  );
-
-  const rankColumn = findColumn(
-    headers,
-    [
-      'rank',
-      'ranking',
-      'position',
-      'peak',
-    ]
-  );
-
-  const titleColumn = findColumn(
-    headers,
-    [
-      'song title',
-      'title',
-      'song',
-    ]
-  );
-
-  const artistColumn = findColumn(
-    headers,
-    [
-      'artist',
-      'artists',
-      'artist name',
-    ]
-  );
-
-  const entries: YearEndEntry[] = [];
-
-  const startIndex =
-    yearColumn >= 0 ||
-    rankColumn >= 0 ||
-    titleColumn >= 0 ||
-    artistColumn >= 0
-      ? 1
-      : 0;
-
-  for (
-    let i = startIndex;
-    i < rows.length;
-    i += 1
-  ) {
-    const row = rows[i];
-
-    let year =
-      yearColumn >= 0
-        ? row[yearColumn] ?? ''
-        : '';
-
-    let rankValue =
-      rankColumn >= 0
-        ? row[rankColumn] ?? ''
-        : '';
-
-    let title =
-      titleColumn >= 0
-        ? row[titleColumn] ?? ''
-        : '';
-
-    let artist =
-      artistColumn >= 0
-        ? row[artistColumn] ?? ''
-        : '';
-
-    if (
-      !year ||
-      !rankValue ||
-      !title ||
-      !artist
-    ) {
-      const possibleYear =
-        row.find((cell) =>
-          /^20\d{2}$/.test(
-            cell.trim()
-          )
-        );
-
-      const possibleRank =
-        row.find((cell) =>
-          /^\d{1,3}$/.test(
-            cell.trim()
-          )
-        );
-
-      if (!year) {
-        year =
-          possibleYear ?? '';
-      }
-
-      if (!rankValue) {
-        rankValue =
-          possibleRank ?? '';
-      }
-    }
-
-    const rank = Number(
-      rankValue
-        .replace(/^#/, '')
-        .trim()
+  return rows.slice(1).flatMap((row) => {
+    const weekEnding = row[0]?.trim() ?? '';
+    const rank = Number(row[1]);
+    const title = row[2]?.trim() ?? '';
+    const units = Number(
+      (row[3] ?? '').replace(/,/g, '').replace(/[$]/g, '')
     );
+    const artist = row[4]?.trim() ?? '';
 
     if (
-      (!title || !artist) &&
-      row.length > 0
-    ) {
-      for (const cell of row) {
-        if (cell.includes('\n')) {
-          const parsed =
-            parseSongCell(cell);
-
-          if (
-            parsed.title &&
-            parsed.artist
-          ) {
-            title =
-              parsed.title;
-            artist =
-              parsed.artist;
-            break;
-          }
-        }
-      }
-    }
-
-    if (!title || !artist) {
-      const nonEmpty =
-        row.filter(
-          (cell) =>
-            cell.trim() !== ''
-        );
-
-      for (const cell of nonEmpty) {
-        const parsed =
-          parseSongCell(cell);
-
-        if (
-          parsed.title &&
-          parsed.artist
-        ) {
-          title =
-            parsed.title;
-          artist =
-            parsed.artist;
-          break;
-        }
-      }
-    }
-
-    if (
-      !year ||
-      !rank ||
+      !weekEnding ||
+      !Number.isFinite(rank) ||
+      rank <= 0 ||
       !title ||
       !artist
     ) {
-      continue;
+      return [];
     }
 
-    entries.push({
-      year: year.trim(),
-      rank,
-      title: title.trim(),
-      artist: artist.trim(),
-    });
-  }
+    return [
+      {
+        weekEnding,
+        rank,
+        title,
+        units: Number.isFinite(units) ? units : 0,
+        artist,
+      },
+    ];
+  });
+}
 
-  return entries;
+function parseAlbumArtworkCSV(csv: string): AlbumArtwork[] {
+  const rows = parseCSV(csv);
+
+  return rows.slice(1).flatMap((row) => {
+    const combinedCell = row[1] ?? '';
+    const artwork = row[2]?.trim() ?? '';
+
+    if (!combinedCell || !artwork) {
+      return [];
+    }
+
+    const parsed = parseSongCell(combinedCell);
+
+    if (!parsed.title || !parsed.artist) {
+      return [];
+    }
+
+    return [
+      {
+        title: parsed.title,
+        artist: parsed.artist,
+        artwork,
+      },
+    ];
+  });
 }
 
 function artistMatches(
   chartArtist: string,
   requestedArtist: string
 ): boolean {
-  const requested =
-    normalize(
-      requestedArtist
-    );
-
-  const chart =
-    normalize(chartArtist);
+  const requested = normalize(requestedArtist);
+  const chart = normalize(chartArtist);
 
   if (chart === requested) {
     return true;
@@ -394,119 +213,161 @@ function artistMatches(
     .split(
       /\s+(?:featuring|feat\.?|ft\.?|with)\s+|,\s*|\s+&\s+/i
     )
-    .some(
-      (artist) =>
-        normalize(artist) ===
-        requested
-    );
+    .some((artist) => normalize(artist) === requested);
 }
 
-function formatDate(
-  value: string
-): string {
+function getDateSortValue(value: string): number {
+  const timestamp = new Date(value).getTime();
+
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function buildArtistAlbums(
+  rows: AlbumChartRow[],
+  artworkRows: AlbumArtwork[],
+  requestedArtist: string
+): ArtistAlbum[] {
+  const matchingRows = rows.filter((row) =>
+    artistMatches(row.artist, requestedArtist)
+  );
+
+  const artworkMap = new Map<string, string>();
+
+  for (const item of artworkRows) {
+    const key = `${normalize(item.title)}|||${normalize(item.artist)}`;
+    artworkMap.set(key, item.artwork);
+  }
+
+  const grouped = new Map<string, AlbumChartRow[]>();
+
+  for (const row of matchingRows) {
+    const key = normalize(row.title);
+    const existing = grouped.get(key) ?? [];
+
+    existing.push(row);
+    grouped.set(key, existing);
+  }
+
+  return Array.from(grouped.values())
+    .map((albumRows) => {
+      const chronologicalRows = [...albumRows].sort(
+        (a, b) =>
+          getDateSortValue(a.weekEnding) -
+          getDateSortValue(b.weekEnding)
+      );
+
+      const peak = Math.min(...albumRows.map((row) => row.rank));
+
+      const peakRows = chronologicalRows.filter(
+        (row) => row.rank === peak
+      );
+
+      const firstRow = chronologicalRows[0];
+      const peakRow = peakRows[0];
+
+      const artworkKey = `${normalize(firstRow.title)}|||${normalize(
+        firstRow.artist
+      )}`;
+
+      let artwork = artworkMap.get(artworkKey);
+
+      if (!artwork) {
+        const titleMatches = artworkRows.filter(
+          (item) => normalize(item.title) === normalize(firstRow.title)
+        );
+
+        if (titleMatches.length === 1) {
+          artwork = titleMatches[0].artwork;
+        }
+      }
+
+      return {
+        title: firstRow.title,
+        artistCredit: firstRow.artist,
+        artwork,
+        peak,
+        debutDate: firstRow.weekEnding,
+        peakDate: peakRow?.weekEnding ?? firstRow.weekEnding,
+        weeksOnChart: albumRows.length,
+        weeksAtPeak: peakRows.length,
+        totalUnits: albumRows.reduce(
+          (total, row) => total + row.units,
+          0
+        ),
+      };
+    })
+    .sort((a, b) => {
+      if (a.peak !== b.peak) {
+        return a.peak - b.peak;
+      }
+
+      if (a.weeksOnChart !== b.weeksOnChart) {
+        return b.weeksOnChart - a.weeksOnChart;
+      }
+
+      return (
+        getDateSortValue(a.peakDate) -
+        getDateSortValue(b.peakDate)
+      );
+    });
+}
+
+function formatDate(value: string): string {
   return value;
 }
 
-function getWeeklyChartUrl(
-  date: string
-): string {
-  return `/weekly?week=${encodeURIComponent(
-    date
-  )}`;
+function getWeeklyChartUrl(date: string): string {
+  return `/weekly?week=${encodeURIComponent(date)}`;
 }
 
-function getYearEndUrl(
-  year: string,
-  song: string
-): string {
-  return `/year-end?year=${encodeURIComponent(
-    year
-  )}&song=${encodeURIComponent(
-    song
-  )}`;
+function getAlbumChartUrl(date: string): string {
+  return `/albums?week=${encodeURIComponent(date)}`;
 }
 
 export default function ArtistPage() {
   const params = useParams();
   const router = useRouter();
 
-  const artistParam =
-    Array.isArray(params.artist)
-      ? params.artist[0]
-      : params.artist;
+  const artistParam = Array.isArray(params.artist)
+    ? params.artist[0]
+    : params.artist;
 
-  const artistName =
-    decodeURIComponent(
-      artistParam ?? ''
-    );
+  const artistName = decodeURIComponent(artistParam ?? '');
 
+  const [data, setData] = useState<ArtistResponse | null>(null);
+  const [albumRows, setAlbumRows] = useState<AlbumChartRow[]>([]);
+  const [albumArtwork, setAlbumArtwork] = useState<AlbumArtwork[]>([]);
 
+  const [loading, setLoading] = useState(true);
+  const [albumLoading, setAlbumLoading] = useState(false);
 
-  const [data, setData] =
-    useState<ArtistResponse | null>(
-      null
-    );
+  const [error, setError] = useState(false);
+  const [albumError, setAlbumError] = useState(false);
 
-  const [yearEnd, setYearEnd] =
-    useState<YearEndEntry[]>([]);
-
-  const [artists, setArtists] =
-    useState<string[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [yearEndLoading, setYearEndLoading] =
-    useState(true);
-
-  const [artistsLoading, setArtistsLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState(false);
-
-  const [search, setSearch] =
-    useState('');
-
-  const [expandedSong, setExpandedSong] =
-    useState<string | null>(null);
+  const [selectedChart, setSelectedChart] =
+    useState<ChartType>('HOT 100');
 
   useEffect(() => {
-    if (!artistName) {
-      return;
-    }
+    if (!artistName) return;
 
     async function loadArtist() {
       try {
         setLoading(true);
         setError(false);
 
-        const response =
-          await fetch(
-            `/api/artist?name=${encodeURIComponent(
-              artistName
-            )}`,
-            {
-              cache: 'no-store',
-            }
-          );
-
-        if (!response.ok) {
-          throw new Error(
-            `Artist request failed: ${response.status}`
-          );
-        }
-
-        const result =
-          (await response.json()) as ArtistResponse;
-
-        setData(result);
-      } catch (loadError) {
-        console.error(
-          'Failed to load artist:',
-          loadError
+        const response = await fetch(
+          `/api/artist?name=${encodeURIComponent(artistName)}`,
+          { cache: 'no-store' }
         );
 
+        if (!response.ok) {
+          throw new Error(`Artist request failed: ${response.status}`);
+        }
+
+        const result = (await response.json()) as ArtistResponse;
+        setData(result);
+      } catch (loadError) {
+        console.error('Failed to load artist:', loadError);
         setError(true);
       } finally {
         setLoading(false);
@@ -517,277 +378,153 @@ export default function ArtistPage() {
   }, [artistName]);
 
   useEffect(() => {
-    async function loadArtists() {
+    if (selectedChart !== 'TOP RECORDS' || albumRows.length > 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAlbumData() {
       try {
-        setArtistsLoading(true);
+        setAlbumLoading(true);
+        setAlbumError(false);
 
-        const response =
-          await fetch(
-            `${ARTISTS_CSV_URL}&_=${Date.now()}`,
-            {
-              cache: 'no-store',
-            }
-          );
+        const [databaseResponse, artworkResponse] = await Promise.all([
+          fetch(`${ALBUM_DATABASE_CSV_URL}&_=${Date.now()}`, {
+            cache: 'no-store',
+          }),
+          fetch(`${ALBUM_ARTWORK_CSV_URL}&_=${Date.now()}`, {
+            cache: 'no-store',
+          }),
+        ]);
 
-        if (!response.ok) {
-          throw new Error(
-            `Artists request failed: ${response.status}`
-          );
+        if (!databaseResponse.ok || !artworkResponse.ok) {
+          throw new Error('Unable to load album data');
         }
 
-        const csv =
-          await response.text();
+        const [databaseCSV, artworkCSV] = await Promise.all([
+          databaseResponse.text(),
+          artworkResponse.text(),
+        ]);
 
-        if (!csv.trim()) {
-          throw new Error(
-            'Artists CSV is empty'
-          );
+        if (!databaseCSV.trim()) {
+          throw new Error('Album Database CSV is empty');
         }
 
-        const artistList =
-          parseArtists(csv);
+        const parsedRows = parseAlbumDatabaseCSV(databaseCSV);
+        const parsedArtwork = parseAlbumArtworkCSV(artworkCSV);
 
-        setArtists(
-          artistList
-        );
+        if (!cancelled) {
+          setAlbumRows(parsedRows);
+          setAlbumArtwork(parsedArtwork);
+        }
       } catch (loadError) {
-        console.error(
-          'Failed to load artists:',
-          loadError
-        );
+        console.error('Failed to load album data:', loadError);
 
-        setArtists([]);
-      } finally {
-        setArtistsLoading(false);
-      }
-    }
-
-    void loadArtists();
-  }, []);
-
-  useEffect(() => {
-    async function loadYearEnd() {
-      try {
-        setYearEndLoading(true);
-
-        const response =
-          await fetch(
-            YEAR_END_CSV_URL,
-            {
-              cache: 'no-store',
-            }
-          );
-
-        if (!response.ok) {
-          throw new Error(
-            `Year-End request failed: ${response.status}`
-          );
+        if (!cancelled) {
+          setAlbumError(true);
         }
-
-        const csv =
-          await response.text();
-
-        const parsed =
-          parseYearEndCSV(csv);
-
-        setYearEnd(parsed);
-      } catch (loadError) {
-        console.error(
-          'Year-End error:',
-          loadError
-        );
-
-        setYearEnd([]);
       } finally {
-        setYearEndLoading(false);
-      }
-    }
-
-    void loadYearEnd();
-  }, []);
-
-  const filteredArtists =
-    useMemo(() => {
-      const query =
-        normalize(search);
-
-      if (!query) {
-        return [];
-      }
-
-      return artists
-        .filter((artist) =>
-          normalize(
-            artist
-          ).includes(query)
-        )
-        .slice(0, 20);
-    }, [
-      artists,
-      search,
-    ]);
-
-  const getYearEndForSong = (
-    song: ArtistSong
-  ): YearEndEntry[] => {
-    if (!data) {
-      return [];
-    }
-
-    return yearEnd
-      .filter(
-        (entry) =>
-          normalize(entry.title) ===
-            normalize(song.title) &&
-          artistMatches(
-            entry.artist,
-            data.artist
-          )
-      )
-      .sort((a, b) => {
-        const yearDifference =
-          Number(a.year) -
-          Number(b.year);
-
-        if (
-          yearDifference !== 0
-        ) {
-          return yearDifference;
+        if (!cancelled) {
+          setAlbumLoading(false);
         }
+      }
+    }
 
-        return a.rank - b.rank;
-      });
+    void loadAlbumData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChart, albumRows.length]);
+
+  const sortedSongs = useMemo(() => {
+    if (!data) return [];
+
+    return [...data.songs].sort((a, b) => {
+      if (a.peak !== b.peak) {
+        return a.peak - b.peak;
+      }
+
+      if (a.peak === 1 && a.weeksAtPeak !== b.weeksAtPeak) {
+        return b.weeksAtPeak - a.weeksAtPeak;
+      }
+
+      if (a.weeksOnChart !== b.weeksOnChart) {
+        return b.weeksOnChart - a.weeksOnChart;
+      }
+
+      return a.peakDate.localeCompare(b.peakDate);
+    });
+  }, [data]);
+
+  const artistAlbums = useMemo(() => {
+    if (!data || albumRows.length === 0) return [];
+
+    return buildArtistAlbums(
+      albumRows,
+      albumArtwork,
+      data.artist
+    );
+  }, [albumRows, albumArtwork, data]);
+
+  const albumStats = useMemo(
+    () => ({
+      numberOneAlbums: artistAlbums.filter(
+        (album) => album.peak === 1
+      ).length,
+      top10Albums: artistAlbums.filter(
+        (album) => album.peak <= 10
+      ).length,
+      top20Albums: artistAlbums.filter(
+        (album) => album.peak <= 20
+      ).length,
+      top40Albums: artistAlbums.filter(
+        (album) => album.peak <= 40
+      ).length,
+      totalAlbums: artistAlbums.length,
+    }),
+    [artistAlbums]
+  );
+
+  const handleChartChange = (chart: ChartType) => {
+    setSelectedChart(chart);
   };
 
-  const sortedSongs =
-    useMemo(() => {
-      if (!data) {
-        return [];
-      }
-
-      return [...data.songs].sort(
-        (a, b) => {
-          if (a.peak !== b.peak) {
-            return (
-              a.peak - b.peak
-            );
-          }
-
-          if (a.peak === 1) {
-            if (
-              a.weeksAtPeak !==
-              b.weeksAtPeak
-            ) {
-              return (
-                b.weeksAtPeak -
-                a.weeksAtPeak
-              );
-            }
-          }
-
-          if (
-            a.weeksOnChart !==
-            b.weeksOnChart
-          ) {
-            return (
-              b.weeksOnChart -
-              a.weeksOnChart
-            );
-          }
-
-          return a.peakDate.localeCompare(
-            b.peakDate
-          );
-        }
-      );
-    }, [data]);
+  const crystalFont = {
+    fontFamily: '"Crystal Ultra Condensed Bold", sans-serif',
+  };
 
   if (loading) {
     return (
       <main className="min-h-screen bg-white text-black">
         <div className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-20">
-          <section className="mx-auto">
-            <div className="sm:hidden">
-              <div className="mx-auto max-w-[360px]">
-                <div className="mx-auto w-[230px]">
-                  <div className="aspect-square w-full animate-pulse bg-black/[0.07]" />
-                </div>
+          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+            <div className="h-[180px] w-[180px] animate-pulse bg-black/[0.07] sm:h-[220px] sm:w-[220px]" />
 
-                <div className="mt-5 text-center">
-                  <div className="mx-auto h-7 w-40 animate-pulse bg-black/[0.08]" />
-                </div>
+            <div className="w-full flex-1">
+              <div className="h-5 w-32 animate-pulse bg-black/[0.08]" />
+              <div className="mt-3 h-12 w-64 animate-pulse bg-black/[0.08]" />
 
-                <div className="mt-3 grid grid-cols-5 gap-1.5">
-                  {Array.from({
-                    length: 5,
-                  }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="flex h-[58px] flex-col items-center justify-center bg-[#0050FF]"
-                    >
-                      <div className="h-2 w-7 animate-pulse bg-white/30" />
-                      <div className="mt-2 h-5 w-8 animate-pulse bg-white/40" />
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-4 grid grid-cols-5 gap-1.5">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-[65px] animate-pulse bg-[#0050FF]/30"
+                  />
+                ))}
               </div>
             </div>
+          </div>
 
-            <div className="hidden items-center justify-center gap-5 sm:flex">
-              <div className="w-[220px] shrink-0">
-                <div className="aspect-square w-full animate-pulse bg-black/[0.07]" />
-              </div>
-
-              <div>
-                <div className="mx-auto mb-3 h-8 w-52 animate-pulse bg-black/[0.08]" />
-
-                <div className="flex items-center justify-center gap-2">
-                  {Array.from({
-                    length: 4,
-                  }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="flex h-[74px] w-[70px] flex-col items-center justify-center bg-[#0050FF]"
-                    >
-                      <div className="h-2 w-8 animate-pulse bg-white/30" />
-                      <div className="mt-2 h-7 w-9 animate-pulse bg-white/40" />
-                    </div>
-                  ))}
-
-                  <div className="flex h-[74px] w-[95px] flex-col items-center justify-center bg-[#0050FF]">
-                    <div className="h-2 w-10 animate-pulse bg-white/30" />
-                    <div className="mt-2 h-5 w-14 animate-pulse bg-white/40" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="mt-10">
-            <div className="bg-[#0050FF] px-3 py-2">
-              <div className="h-3 w-12 animate-pulse bg-white/30" />
-            </div>
-
-            <div className="divide-y divide-black/10">
-              {Array.from({
-                length: 8,
-              }).map((_, index) => (
-                <div
-                  key={index}
-                  className="px-3 py-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 shrink-0 animate-pulse bg-black/[0.07]" />
-
-                    <div className="min-w-0 flex-1">
-                      <div className="h-4 w-[55%] animate-pulse bg-black/[0.09]" />
-                      <div className="mt-2 h-3 w-[35%] animate-pulse bg-[#0050FF]/20" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+          <div className="mt-10 space-y-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-[70px] animate-pulse bg-black/[0.04]"
+              />
+            ))}
+          </div>
         </div>
       </main>
     );
@@ -805,89 +542,33 @@ export default function ArtistPage() {
     );
   }
 
+  const stats =
+    selectedChart === 'HOT 100'
+      ? [
+          { label: '#1', value: data.numberOneHits },
+          { label: 'TOP 10', value: data.top10Hits },
+          {
+            label: 'TOP 20',
+            value: data.songs.filter((song) => song.peak <= 20).length,
+          },
+          { label: 'TOP 40', value: data.top40Hits },
+          { label: 'ENTRIES', value: data.entries },
+        ]
+      : [
+          { label: '#1', value: albumStats.numberOneAlbums },
+          { label: 'TOP 10', value: albumStats.top10Albums },
+          { label: 'TOP 20', value: albumStats.top20Albums },
+          { label: 'TOP 40', value: albumStats.top40Albums },
+          { label: 'ALBUMS', value: albumStats.totalAlbums },
+        ];
+
   return (
     <main className="min-h-screen bg-white text-black">
-
+      {/* ARTIST HEADER */}
       <section className="mx-auto max-w-6xl px-4 pt-24 sm:px-6 sm:pt-20">
-
-        <div className="sm:hidden">
-          <div className="mx-auto max-w-[360px]">
-
-            <div className="mx-auto w-[230px]">
-              <div className="aspect-square w-full overflow-hidden bg-black/[0.04]">
-                {data.artistImage ? (
-                  <img
-                    src={data.artistImage}
-                    alt={data.artist}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-black/[0.04]">
-                    <span className="font-brown-bold text-7xl uppercase text-black/15">
-                      {data.artist.charAt(0)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-5 text-center">
-              <p className="font-brown-bold text-2xl uppercase leading-[0.95] tracking-[-0.04em] text-[#0050FF]">
-                {data.artist}
-              </p>
-            </div>
-
-            <div className="mt-4 grid grid-cols-5 gap-1.5">
-              <div className="flex h-[62px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[9px] uppercase leading-none tracking-[0.04em] text-white">
-                  #1
-                </p>
-                <p className="mt-1.5 font-brown-bold text-xl leading-none text-white">
-                  {data.numberOneHits}
-                </p>
-              </div>
-
-              <div className="flex h-[62px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[9px] uppercase leading-none tracking-[0.04em] text-white">
-                  TOP 10
-                </p>
-                <p className="mt-1.5 font-brown-bold text-xl leading-none text-white">
-                  {data.top10Hits}
-                </p>
-              </div>
-
-              <div className="flex h-[62px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[9px] uppercase leading-none tracking-[0.04em] text-white">
-                  TOP 40
-                </p>
-                <p className="mt-1.5 font-brown-bold text-xl leading-none text-white">
-                  {data.top40Hits}
-                </p>
-              </div>
-
-              <div className="flex h-[62px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[9px] uppercase leading-none tracking-[0.04em] text-white">
-                  ENTRIES
-                </p>
-                <p className="mt-1.5 font-brown-bold text-xl leading-none text-white">
-                  {data.entries}
-                </p>
-              </div>
-
-              <div className="flex h-[62px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[9px] uppercase leading-none tracking-[0.04em] text-white">
-                  POINTS
-                </p>
-                <p className="mt-1.5 font-brown-bold text-[12px] leading-none text-white">
-                  {data.totalPoints.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden items-center justify-center gap-6 sm:flex">
-          <div className="w-[220px] shrink-0">
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-6">
+          {/* ARTIST IMAGE */}
+          <div className="mx-auto w-[190px] shrink-0 sm:mx-0 sm:w-[220px]">
             <div className="aspect-square w-full overflow-hidden bg-black/[0.04]">
               {data.artistImage ? (
                 <img
@@ -905,448 +586,419 @@ export default function ArtistPage() {
             </div>
           </div>
 
-          <div>
-            <p className="mb-4 font-brown-bold text-4xl uppercase leading-[0.95] tracking-[-0.04em] text-[#0050FF]">
+          {/* ARTIST INFORMATION */}
+          <div className="w-full min-w-0">
+            {/* CHART SELECTOR */}
+            <div className="mb-2 inline-flex border border-[#0050FF]">
+              {(['HOT 100', 'TOP RECORDS'] as ChartType[]).map((chart) => (
+                <button
+                  key={chart}
+                  type="button"
+                  onClick={() => handleChartChange(chart)}
+                  aria-pressed={selectedChart === chart}
+                  className={`px-3 py-1.5 text-[17px] leading-none transition-colors sm:px-4 sm:py-2 sm:text-[19px] ${
+                    selectedChart === chart
+                      ? 'bg-[#0050FF] text-white'
+                      : 'bg-black/[0.06] text-black/40 hover:bg-[#0050FF]/10 hover:text-[#0050FF]'
+                  }`}
+                  style={crystalFont}
+                >
+                  {chart}
+                </button>
+              ))}
+            </div>
+
+            {/* ARTIST NAME */}
+            <h1
+              className="break-words text-left text-[48px] uppercase leading-[0.9] text-[#0050FF] sm:text-[64px]"
+              style={{
+                ...crystalFont,
+                letterSpacing: '0.055em',
+              }}
+            >
               {data.artist}
-            </p>
+            </h1>
 
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex h-[78px] w-[72px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[10px] uppercase leading-none tracking-[0.04em] text-white">
-                  #1
-                </p>
-                <p className="mt-1.5 font-brown-bold text-2xl leading-none text-white">
-                  {data.numberOneHits}
-                </p>
-              </div>
+            {/* CAREER STATS */}
+            <div className="mt-4 grid grid-cols-5 gap-1.5">
+              {stats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex min-h-[62px] flex-col items-center justify-center bg-[#0050FF] px-1 py-2 sm:min-h-[76px]"
+                >
+                  <p className="font-brown-regular text-[8px] uppercase leading-none tracking-[0.04em] text-white sm:text-[10px]">
+                    {stat.label}
+                  </p>
 
-              <div className="flex h-[78px] w-[72px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[10px] uppercase leading-none tracking-[0.04em] text-white">
-                  TOP 10
-                </p>
-                <p className="mt-1.5 font-brown-bold text-2xl leading-none text-white">
-                  {data.top10Hits}
-                </p>
-              </div>
-
-              <div className="flex h-[78px] w-[72px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[10px] uppercase leading-none tracking-[0.04em] text-white">
-                  TOP 40
-                </p>
-                <p className="mt-1.5 font-brown-bold text-2xl leading-none text-white">
-                  {data.top40Hits}
-                </p>
-              </div>
-
-              <div className="flex h-[78px] w-[72px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[10px] uppercase leading-none tracking-[0.04em] text-white">
-                  ENTRIES
-                </p>
-                <p className="mt-1.5 font-brown-bold text-2xl leading-none text-white">
-                  {data.entries}
-                </p>
-              </div>
-
-              <div className="flex h-[78px] w-[100px] flex-col items-center justify-center bg-[#0050FF]">
-                <p className="font-brown-regular text-[10px] uppercase leading-none tracking-[0.04em] text-white">
-                  POINTS
-                </p>
-                <p className="mt-1.5 font-brown-bold text-xl leading-none text-white">
-                  {data.totalPoints.toLocaleString()}
-                </p>
-              </div>
+                  <p className="mt-1.5 font-brown-bold text-xl leading-none text-white sm:text-2xl">
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto mt-10 max-w-6xl px-4 sm:px-6">
-
-        <div className="bg-[#0050FF] px-3 py-2.5 sm:hidden">
-          <div className="grid grid-cols-[minmax(0,1fr)_42px_52px_30px] items-center gap-2">
-            <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-white">
-              SONG
-            </p>
-
-            <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
-              PEAK
-            </p>
-
-            <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
-              WEEKS
-            </p>
-
-            <p className="text-center font-brown-bold text-[11px] text-white">
-              +
-            </p>
+      {/* HOT 100 SONG HISTORY */}
+      {selectedChart === 'HOT 100' && (
+        <section className="mx-auto mt-10 max-w-6xl px-4 sm:px-6">
+          {/* MOBILE HEADER */}
+          <div className="bg-[#0050FF] px-3 py-2.5 sm:hidden">
+            <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2">
+              <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-white">
+                SONG
+              </p>
+              <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                PEAK
+              </p>
+              <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                WEEKS
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="hidden bg-[#0050FF] px-3 py-2.5 sm:block">
-          <div className="grid grid-cols-[minmax(0,1fr)_65px_110px_110px_95px_30px] items-center gap-2">
-            <p className="font-brown-bold text-[11px] uppercase tracking-[0.08em] text-white">
-              SONG
-            </p>
-
-            <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
-              PEAK
-            </p>
-
-            <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
-              DEBUT DATE
-            </p>
-
-            <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
-              PEAK DATE
-            </p>
-
-            <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
-              WEEKS ON CHART
-            </p>
-
-            <p className="text-center font-brown-bold text-[11px] text-white">
-              +
-            </p>
+          {/* DESKTOP HEADER */}
+          <div className="hidden bg-[#0050FF] px-3 py-2.5 sm:block">
+            <div className="grid grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2">
+              <p className="font-brown-bold text-[11px] uppercase tracking-[0.08em] text-white">
+                SONG
+              </p>
+              <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                PEAK
+              </p>
+              <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                DEBUT DATE
+              </p>
+              <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                PEAK DATE
+              </p>
+              <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                WEEKS ON CHART
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div>
-          {sortedSongs.map((song) => {
-            const songId =
-              `${song.title}|||${song.artistCredit}`;
+          {sortedSongs.map((song) => (
+            <div
+              key={`${song.title}|||${song.artistCredit}`}
+              className="border-b border-black/10"
+            >
+              {/* MOBILE SONG ROW */}
+              <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2 px-3 py-3 sm:hidden">
+                <div className="flex min-w-0 items-center gap-3">
+                  {song.artwork ? (
+                    <img
+                      src={song.artwork}
+                      alt=""
+                      className="h-12 w-12 shrink-0 object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
+                  )}
 
-            const isExpanded =
-              expandedSong === songId;
-
-            const songYearEnd =
-              isExpanded
-                ? getYearEndForSong(song)
-                : [];
-
-            const isNumberOne =
-              song.peak === 1;
-
-            return (
-              <div
-                key={songId}
-                className="border-b border-black/10"
-              >
-
-                <div className="sm:hidden">
-
-                  <div className="grid grid-cols-[minmax(0,1fr)_42px_52px_30px] items-center gap-2 px-3 py-3">
-
-                    <div className="flex min-w-0 items-center gap-3">
-                      {song.artwork ? (
-                        <img
-                          src={song.artwork}
-                          alt=""
-                          className="h-12 w-12 shrink-0 object-cover"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
-                      )}
-
-                      <div className="min-w-0">
-                        <p className="truncate font-brown-bold text-[14px] leading-tight text-black">
-                          {song.title}
-                        </p>
-
-                        <p className="mt-1 truncate font-brown-regular text-[11px] leading-tight text-[#0050FF]">
-                          {song.artistCredit}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-center justify-center">
-                      <p className="font-brown-bold text-lg leading-none text-black">
-                        {song.peak}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-center">
-                      <p className="font-brown-bold text-lg leading-none text-black">
-                        {song.weeksOnChart}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedSong(
-                          isExpanded
-                            ? null
-                            : songId
-                        )
-                      }
-                      aria-label={
-                        isExpanded
-                          ? 'Hide details'
-                          : 'Show details'
-                      }
-                      className="mx-auto flex h-7 w-7 items-center justify-center font-brown-regular text-2xl leading-none text-black"
-                    >
-                      {isExpanded
-                        ? '−'
-                        : '+'}
-                    </button>
+                  <div className="min-w-0">
+                    <p className="truncate font-brown-bold text-[14px] leading-tight text-black">
+                      {song.title}
+                    </p>
+                    <p className="mt-1 truncate font-brown-regular text-[11px] leading-tight text-[#0050FF]">
+                      {song.artistCredit}
+                    </p>
                   </div>
+                </div>
 
-                  {isExpanded && (
-                    <div className="border-t border-black/[0.06] px-3 py-3">
-
-                      <div className="grid grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            router.push(
-                              getWeeklyChartUrl(
-                                song.debutDate
-                              )
-                            )
-                          }
-                          className="border-r border-black/[0.06] pr-3 text-left"
-                        >
-                          <p className="font-brown-bold text-[8px] uppercase tracking-[0.08em] text-black/40">
-                            DEBUT DATE
-                          </p>
-
-                          <p className="mt-1 font-brown-regular text-[11px] leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2">
-                            {formatDate(
-                              song.debutDate
-                            )}
-                          </p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            router.push(
-                              getWeeklyChartUrl(
-                                song.peakDate
-                              )
-                            )
-                          }
-                          className="pl-3 text-left"
-                        >
-                          <p className="font-brown-bold text-[8px] uppercase tracking-[0.08em] text-black/40">
-                            PEAK DATE
-                          </p>
-
-                          <p className="mt-1 font-brown-regular text-[11px] leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2">
-                            {formatDate(
-                              song.peakDate
-                            )}
-                          </p>
-                        </button>
-                      </div>
-
-                      <div className="mt-3 border-l-2 border-[#0050FF] pl-3">
-                        <p className="mb-2.5 font-brown-bold text-[10px] uppercase tracking-[0.12em] text-[#0050FF]">
-                          YEAR-END
-                        </p>
-
-                        {yearEndLoading ? (
-                          <p className="font-brown-regular text-[11px] uppercase tracking-[0.08em] text-black/40">
-                            LOADING
-                          </p>
-                        ) : songYearEnd.length > 0 ? (
-                          <div className="space-y-2">
-                            {songYearEnd.map(
-                              (
-                                entry,
-                                index
-                              ) => (
-                                <div
-                                  key={`${entry.year}-${entry.rank}-${index}`}
-                                  className="flex items-center gap-3"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      router.push(
-                                        getYearEndUrl(
-                                          entry.year,
-                                          entry.title
-                                        )
-                                      )
-                                    }
-                                    className="w-10 text-left font-brown-regular text-sm text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                                  >
-                                    {entry.year}
-                                  </button>
-
-                                  <span className="bg-[#0050FF] px-2.5 py-1 font-brown-bold text-[11px] text-white">
-                                    #{entry.rank}
-                                  </span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        ) : (
-                          <p className="font-brown-regular text-sm text-black/60">
-                            N/A
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                <div className="flex flex-col items-center justify-center">
+                  <p className="font-brown-bold text-lg leading-none text-black">
+                    {song.peak}
+                  </p>
+                  {song.peak === 1 && (
+                    <span className="mt-1 bg-[#0050FF] px-1.5 py-1 text-center font-brown-bold text-[8px] uppercase leading-none text-white">
+                      {song.weeksAtPeak}W
+                    </span>
                   )}
                 </div>
 
-                <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_65px_110px_110px_95px_30px] sm:items-center sm:gap-2 sm:px-3 sm:py-3">
+                <p className="text-center font-brown-bold text-lg leading-none text-black">
+                  {song.weeksOnChart}
+                </p>
+              </div>
 
-                  <div className="flex min-w-0 items-center gap-3">
-                    {song.artwork ? (
-                      <img
-                        src={song.artwork}
-                        alt=""
-                        className="h-12 w-12 shrink-0 object-cover"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
-                    )}
+              {/* DESKTOP SONG ROW */}
+              <div className="hidden grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2 px-3 py-3 sm:grid">
+                <div className="flex min-w-0 items-center gap-3">
+                  {song.artwork ? (
+                    <img
+                      src={song.artwork}
+                      alt=""
+                      className="h-12 w-12 shrink-0 object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
+                  )}
 
-                    <div className="min-w-0">
-                      <p className="truncate font-brown-bold text-base leading-tight text-black">
-                        {song.title}
-                      </p>
-
-                      <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
-                        {song.artistCredit}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="font-brown-bold text-lg leading-none text-black">
-                      {song.peak}
+                  <div className="min-w-0">
+                    <p className="truncate font-brown-bold text-base leading-tight text-black">
+                      {song.title}
                     </p>
-
-                    {isNumberOne && (
-                      <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
-                        {song.weeksAtPeak}{' '}
-                        {song.weeksAtPeak === 1
-                          ? 'WEEK'
-                          : 'WEEKS'}
-                      </span>
-                    )}
+                    <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
+                      {song.artistCredit}
+                    </p>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.push(
-                        getWeeklyChartUrl(
-                          song.debutDate
-                        )
-                      )
-                    }
-                    className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                  >
-                    {formatDate(
-                      song.debutDate
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.push(
-                        getWeeklyChartUrl(
-                          song.peakDate
-                        )
-                      )
-                    }
-                    className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                  >
-                    {formatDate(
-                      song.peakDate
-                    )}
-                  </button>
-
-                  <p className="text-center font-brown-regular text-base leading-none text-black">
-                    {song.weeksOnChart}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedSong(
-                        isExpanded
-                          ? null
-                          : songId
-                      )
-                    }
-                    aria-label={
-                      isExpanded
-                        ? 'Hide Year-End'
-                        : 'Show Year-End'
-                    }
-                    className="mx-auto flex h-7 w-7 items-center justify-center font-brown-regular text-xl leading-none text-black hover:bg-[#0050FF] hover:text-white"
-                  >
-                    {isExpanded
-                      ? '−'
-                      : '+'}
-                  </button>
                 </div>
 
-                {isExpanded && (
-                  <div className="hidden pb-5 pl-16 pr-10 sm:block">
-                    <div className="border-l-2 border-[#0050FF] pl-4">
-                      <p className="mb-2.5 font-brown-bold text-[10px] uppercase tracking-[0.12em] text-[#0050FF]">
-                        YEAR-END
-                      </p>
+                <div className="flex flex-col items-center justify-center">
+                  <p className="font-brown-bold text-lg leading-none text-black">
+                    {song.peak}
+                  </p>
 
-                      {yearEndLoading ? (
-                        <p className="font-brown-regular text-[11px] uppercase tracking-[0.08em] text-black/40">
-                          LOADING
-                        </p>
-                      ) : songYearEnd.length > 0 ? (
-                        <div className="space-y-2">
-                          {songYearEnd.map(
-                            (
-                              entry,
-                              index
-                            ) => (
-                              <div
-                                key={`${entry.year}-${entry.rank}-${index}`}
-                                className="flex items-center gap-3"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    router.push(
-                                      getYearEndUrl(
-                                        entry.year,
-                                        entry.title
-                                      )
-                                    )
-                                  }
-                                  className="w-10 text-left font-brown-regular text-sm text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
-                                >
-                                  {entry.year}
-                                </button>
+                  {song.peak === 1 && (
+                    <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                      {song.weeksAtPeak}{' '}
+                      {song.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
+                    </span>
+                  )}
+                </div>
 
-                                <span className="bg-[#0050FF] px-2.5 py-1 font-brown-bold text-[11px] text-white">
-                                  #{entry.rank}
-                                </span>
-                              </div>
-                            )
-                          )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(getWeeklyChartUrl(song.debutDate))
+                  }
+                  className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                >
+                  {formatDate(song.debutDate)}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(getWeeklyChartUrl(song.peakDate))
+                  }
+                  className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                >
+                  {formatDate(song.peakDate)}
+                </button>
+
+                <p className="text-center font-brown-regular text-base leading-none text-black">
+                  {song.weeksOnChart}
+                </p>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* TOP RECORDS ALBUM HISTORY */}
+      {selectedChart === 'TOP RECORDS' && (
+        <section className="mx-auto mt-10 max-w-6xl px-4 sm:px-6">
+          {albumLoading ? (
+            <div className="bg-[#0050FF] px-3 py-4">
+              <p className="font-brown-regular text-[11px] uppercase tracking-[0.12em] text-white">
+                LOADING ALBUM HISTORY
+              </p>
+            </div>
+          ) : albumError ? (
+            <div className="border border-black/10 px-4 py-6">
+              <p className="font-brown-bold text-sm uppercase text-black">
+                UNABLE TO LOAD TOP RECORDS
+              </p>
+              <p className="mt-1 font-brown-regular text-xs text-black/50">
+                Please try switching charts again.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setAlbumRows([]);
+                  setAlbumArtwork([]);
+                  setAlbumError(false);
+                }}
+                className="mt-3 font-brown-bold text-xs uppercase text-[#0050FF] underline underline-offset-2"
+              >
+                RETRY
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* MOBILE ALBUM HEADER */}
+              <div className="bg-[#0050FF] px-3 py-2.5 sm:hidden">
+                <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2">
+                  <p className="font-brown-bold text-[10px] uppercase tracking-[0.08em] text-white">
+                    ALBUM
+                  </p>
+                  <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                    PEAK
+                  </p>
+                  <p className="text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                    WEEKS
+                  </p>
+                </div>
+              </div>
+
+              {/* DESKTOP ALBUM HEADER */}
+              <div className="hidden bg-[#0050FF] px-3 py-2.5 sm:block">
+                <div className="grid grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2">
+                  <p className="font-brown-bold text-[11px] uppercase tracking-[0.08em] text-white">
+                    ALBUM
+                  </p>
+                  <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                    PEAK
+                  </p>
+                  <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                    DEBUT DATE
+                  </p>
+                  <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                    PEAK DATE
+                  </p>
+                  <p className="text-center font-brown-bold text-[10px] uppercase leading-none text-white">
+                    WEEKS ON CHART
+                  </p>
+                </div>
+              </div>
+
+              {artistAlbums.length === 0 ? (
+                <div className="border-b border-black/10 px-3 py-8 text-center">
+                  <p className="font-brown-regular text-sm uppercase tracking-[0.1em] text-black/40">
+                    NO ALBUM ENTRIES FOUND
+                  </p>
+                </div>
+              ) : (
+                artistAlbums.map((album) => (
+                  <div
+                    key={normalize(album.title)}
+                    className="border-b border-black/10"
+                  >
+                    {/* MOBILE ALBUM ROW */}
+                    <div className="grid grid-cols-[minmax(0,1fr)_42px_52px] items-center gap-2 px-3 py-3 sm:hidden">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {album.artwork ? (
+                          <img
+                            src={album.artwork}
+                            alt=""
+                            className="h-12 w-12 shrink-0 object-cover"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="truncate font-brown-bold text-[14px] leading-tight text-black">
+                            {album.title}
+                          </p>
+                          <p className="mt-1 truncate font-brown-regular text-[11px] leading-tight text-[#0050FF]">
+                            {album.artistCredit}
+                          </p>
+
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                router.push(
+                                  getAlbumChartUrl(album.debutDate)
+                                )
+                              }
+                              className="font-brown-regular text-[9px] text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2"
+                            >
+                              DEBUT {formatDate(album.debutDate)}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                router.push(
+                                  getAlbumChartUrl(album.peakDate)
+                                )
+                              }
+                              className="font-brown-regular text-[9px] text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2"
+                            >
+                              PEAK {formatDate(album.peakDate)}
+                            </button>
+                          </div>
                         </div>
-                      ) : (
-                        <p className="font-brown-regular text-sm text-black/60">
-                          N/A
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center">
+                        <p className="font-brown-bold text-lg leading-none text-black">
+                          {album.peak}
                         </p>
-                      )}
+                        {album.peak === 1 && (
+                          <span className="mt-1 bg-[#0050FF] px-1.5 py-1 text-center font-brown-bold text-[8px] uppercase leading-none text-white">
+                            {album.weeksAtPeak}W
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-center font-brown-bold text-lg leading-none text-black">
+                        {album.weeksOnChart}
+                      </p>
+                    </div>
+
+                    {/* DESKTOP ALBUM ROW */}
+                    <div className="hidden grid-cols-[minmax(0,1fr)_65px_110px_110px_95px] items-center gap-2 px-3 py-3 sm:grid">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {album.artwork ? (
+                          <img
+                            src={album.artwork}
+                            alt=""
+                            className="h-12 w-12 shrink-0 object-cover"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 shrink-0 bg-black/[0.04]" />
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="truncate font-brown-bold text-base leading-tight text-black">
+                            {album.title}
+                          </p>
+                          <p className="mt-1 truncate font-brown-regular text-sm leading-tight text-[#0050FF]">
+                            {album.artistCredit}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center">
+                        <p className="font-brown-bold text-lg leading-none text-black">
+                          {album.peak}
+                        </p>
+
+                        {album.peak === 1 && (
+                          <span className="mt-1.5 bg-[#0050FF] px-2 py-1 text-center font-brown-bold text-[9px] uppercase leading-none text-white">
+                            {album.weeksAtPeak}{' '}
+                            {album.weeksAtPeak === 1 ? 'WEEK' : 'WEEKS'}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(getAlbumChartUrl(album.debutDate))
+                        }
+                        className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                      >
+                        {formatDate(album.debutDate)}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(getAlbumChartUrl(album.peakDate))
+                        }
+                        className="text-center font-brown-regular text-sm leading-tight text-[#0050FF] underline decoration-[#0050FF]/40 underline-offset-2 hover:text-black"
+                      >
+                        {formatDate(album.peakDate)}
+                      </button>
+
+                      <p className="text-center font-brown-regular text-base leading-none text-black">
+                        {album.weeksOnChart}
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+                ))
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       <div className="h-12" />
     </main>

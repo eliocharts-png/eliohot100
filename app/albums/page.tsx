@@ -9,9 +9,19 @@ export const metadata = {
 
 export const revalidate = 300;
 
-export default async function AlbumsPage() {
+interface AlbumsPageProps {
+  searchParams: Promise<{
+    week?: string;
+  }>;
+}
+
+export default async function AlbumsPage({
+  searchParams,
+}: AlbumsPageProps) {
   try {
-    const chartData = await getAlbumChartData();
+    const { week } = await searchParams;
+
+    const chartData = await getAlbumChartData(week);
 
     return <AlbumChartDetail {...chartData} />;
   } catch (error) {

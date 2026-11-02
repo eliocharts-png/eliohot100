@@ -46,6 +46,30 @@ export const sheetSources: ChartSource[] = [
     csvUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=52589889&single=true&output=csv',
   },
+    {
+    title: 'Greatest of All-Time Artists',
+    href: '/goat/all-time-artists',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1706050979&single=true&output=csv',
+  },
+  {
+    title: 'Greatest of All-Time Hot 100 Artists',
+    href: '/goat/artists',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=1512706476&single=true&output=csv',
+  },
+  {
+    title: 'Greatest of All-Time Top Records',
+    href: '/goat/top-records',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=2032802693&single=true&output=csv',
+  },
+  {
+    title: 'Greatest of All-Time Top Records Artists',
+    href: '/goat/top-records-artists',
+    csvUrl:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=691107934&single=true&output=csv',
+  },
   {
     title: 'Decade-End 2010s',
     href: '/decade-end/2010s',
@@ -347,6 +371,61 @@ function parseGoatCsv(
         a.rank - b.rank
     );
 }
+function parseFlatGoatCsv(
+  csvText: string
+): ChartEntry[] {
+  const parsed = Papa.parse(
+    csvText,
+    {
+      header: false,
+      skipEmptyLines: true,
+    }
+  );
+
+  const rows =
+    parsed.data as string[][];
+
+  return rows
+    .map(
+      (
+        row
+      ): ChartEntry | null => {
+        const rank =
+          Number(row[0]?.trim() ?? 0);
+
+        const content =
+          row[1]?.trim() ?? '';
+
+        const image =
+          row[2]?.trim() ?? '';
+
+        if (
+          !Number.isFinite(rank) ||
+          rank <= 0 ||
+          !content
+        ) {
+          return null;
+        }
+
+        return {
+          rank,
+          title: content,
+          artist: '',
+          artwork: image || undefined,
+        };
+      }
+    )
+    .filter(
+      (
+        entry
+      ): entry is ChartEntry =>
+        entry !== null
+    )
+    .sort(
+      (a, b) =>
+        a.rank - b.rank
+    );
+}
 
 /*
  * ============================================================
@@ -576,7 +655,7 @@ export async function fetchChartData(
       return [];
     }
 
-    if (
+        if (
       title ===
         'Greatest of All-Time' ||
       title ===
@@ -586,9 +665,20 @@ export async function fetchChartData(
       title ===
         'Greatest of All-Time Female Songs'
     ) {
-      return parseGoatCsv(
-        csvText
-      );
+      return parseGoatCsv(csvText);
+    }
+
+    if (
+      title ===
+        'Greatest of All-Time Artists' ||
+      title ===
+        'Greatest of All-Time Hot 100 Artists' ||
+      title ===
+        'Greatest of All-Time Top Records' ||
+      title ===
+        'Greatest of All-Time Top Records Artists'
+    ) {
+      return parseFlatGoatCsv(csvText);
     }
 
     if (

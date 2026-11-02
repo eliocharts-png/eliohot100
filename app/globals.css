@@ -20,7 +20,7 @@
 
 :root {
   color-scheme: light;
-  font-family: var(--font-brown-regular), system-ui, sans-serif;
+  font-family: var(--font-crystal-book), system-ui, sans-serif;
   background-color: #ffffff;
   color: #000000;
 }
@@ -38,7 +38,7 @@ body {
   margin: 0;
   padding: 0;
   background: #ffffff;
-  font-family: var(--font-brown-regular), system-ui, sans-serif;
+  font-family: var(--font-crystal-book), system-ui, sans-serif;
 }
 
 * {
@@ -51,23 +51,17 @@ body {
 }
 
 /* =========================================================
-   BROWN FONT CLASSES
+   CRYSTAL FONT CLASSES
    ========================================================= */
 
-.section-title {
-  font-family: var(--font-brown-bold), system-ui, sans-serif;
-}
-
+.section-title,
 .font-brown-bold {
-  font-family: var(--font-brown-bold), system-ui, sans-serif;
+  font-family: var(--font-crystal-extrabold), system-ui, sans-serif;
 }
 
-.font-brown-regular {
-  font-family: var(--font-brown-regular), system-ui, sans-serif;
-}
-
+.font-brown-regular,
 .font-brown-light {
-  font-family: var(--font-brown-regular), system-ui, sans-serif;
+  font-family: var(--font-crystal-book), system-ui, sans-serif;
 }
 
 /* =========================================================
@@ -367,7 +361,8 @@ html.dark .chart-loading-shimmer {
  *
  * remains exactly the same in dark mode.
  */
- /* =========================================================
+
+/* =========================================================
    GOAT BLUR TRANSITION
    ========================================================= */
 
@@ -842,8 +837,8 @@ html.dark .chart-loading-shimmer {
   }
 }
 
-
 /* Compact ECA banner shown while scrolling down */
+
 .eca-compact-promo {
   position: fixed;
   top: 3.8rem;
@@ -960,6 +955,7 @@ html.dark .chart-loading-shimmer {
 }
 
 /* Awards predictions page: dark mode */
+
 html.dark .predictions-page {
   background: #101010;
   color: #f5f5f5;
@@ -987,6 +983,7 @@ html.dark .predictions-page .prediction-category-card {
 }
 
 /* Gold category headers with black text */
+
 html.dark .predictions-page .prediction-category-header {
   background: #e6c878;
   color: #111;
@@ -1004,6 +1001,7 @@ html.dark .predictions-page .prediction-category-header button:hover {
 }
 
 /* Black contender area with gold text */
+
 html.dark .predictions-page .prediction-table-head {
   color: #c5a34f;
   border-color: #383838;
@@ -1028,6 +1026,7 @@ html.dark .predictions-page .prediction-winner-star {
 }
 
 /* Keep progress bars gold */
+
 html.dark .predictions-page .prediction-odds-bar {
   background: #383838;
 }
@@ -1037,6 +1036,7 @@ html.dark .predictions-page .prediction-odds-bar-fill {
 }
 
 /* Preserve percentage change colors */
+
 html.dark .predictions-page .prediction-odds-change.is-up {
   color: #35c979;
 }
@@ -1093,6 +1093,7 @@ html.dark .predictions-page .prediction-note {
 }
 
 /* No. 1 History page background */
+
 html:not(.dark) .no1-history-page {
   background-color: #ffffff !important;
   color: #000000;
@@ -1104,11 +1105,13 @@ html.dark .no1-history-page {
 }
 
 /* No. 1 History description: readable in light mode */
+
 html:not(.dark) .no1-history-page > p {
   color: #000000 !important;
 }
 
 /* No. 1 History: enforce readable text colors */
+
 html:not(.dark) .no1-history-page,
 html:not(.dark) .no1-history-page p,
 html:not(.dark) .no1-history-page h1,
@@ -1126,6 +1129,7 @@ html.dark .no1-history-page {
 }
 
 /* No. 1 History search bar: light mode */
+
 html:not(.dark) .no1-history-page input {
   background-color: #ffffff !important;
   color: #000000 !important;
@@ -1144,11 +1148,14 @@ html:not(.dark) .no1-history-page input:focus {
 }
 
 /* No. 1 History: keep artwork overlay text white in light mode */
+
 html:not(.dark) .no1-history-page .group .absolute,
 html:not(.dark) .no1-history-page .group .absolute * {
   color: #ffffff !important;
 }
+
 /* ECA artist detail page: dark mode */
+
 html.dark .awards-artist-page {
   color: #f5f5f5;
 }
@@ -1164,6 +1171,7 @@ html.dark .awards-artist-page .text-black\/65 {
 }
 
 /* Winner nomination highlights */
+
 html.dark .awards-artist-page .bg-\[\#EAF4FF\] {
   background-color: #172b45;
 }
@@ -1173,16 +1181,20 @@ html.dark .awards-artist-page .bg-\[\#EAF4FF\] .text-\[\#0050FF\] {
 }
 
 /* Keep nominee rows readable */
+
 html.dark .awards-artist-page .bg-white {
   background-color: #171717;
 }
 
 /* Subtle hover state */
+
 html.dark .awards-artist-page button:hover,
 html.dark .awards-artist-page [role="button"]:hover {
   color: inherit;
 }
+
 /* ECA awards home page dark mode */
+
 html.dark .awards-home-nominee .awards-nominee-title {
   color: #f5f5f5;
 }
@@ -1192,12 +1204,13 @@ html.dark .awards-home-nominee .awards-nominee-artist {
 }
 
 /* Year selector */
+
 html.dark .awards-home-page .awards-year-label {
   color: #c4c4cc;
 }
 
-
 /* ECA awards year selector dark mode */
+
 html.dark button.awards-year-label {
   color: #c4c4cc;
 }
@@ -1214,8 +1227,8 @@ html.dark button.awards-year-arrow:disabled {
   color: #52525b;
 }
 
-
 /* Weekly chart tooltip theme */
+
 :root {
   --chart-tooltip-bg: #ffffff;
   --chart-tooltip-border: #e5e7eb;
@@ -1226,4 +1239,81 @@ html.dark {
   --chart-tooltip-bg: #171717;
   --chart-tooltip-border: #404040;
   --chart-tooltip-text: #f5f5f5;
+}
+/* GLOBAL CHART TYPOGRAPHY OVERRIDES */
+
+/* Song and record titles */
+p[class~="text-4xl"],
+p[class~="sm:text-4xl"],
+p[class~="text-[0.9rem]"] {
+  font-size: 20px !important;
+  line-height: 1.1 !important;
+}
+
+/* Artist names */
+p[class~="text-xl"][class~="font-brown-regular"],
+p[class~="text-[0.72rem]"][class~="font-brown-regular"] {
+  font-size: 16px !important;
+  line-height: 1.1 !important;
+  margin-top: 4px !important;
+}
+
+/* RANKINGS */
+p[class~="text-[3rem]"],
+p[class~="text-[1.35rem]"],
+p[class~="sm:text-[3.5rem]"] {
+  font-size: 30px !important;
+}
+
+/* RECORDS PAGE TITLES AND ARTISTS */
+h3[class~="text-[1rem]"][class~="sm:text-[1.65rem]"] {
+  font-size: 16px !important;
+  line-height: 1.1 !important;
+}
+/* GLOBAL PAGE TITLE FONT */
+
+.page-title,
+h1.font-brown-bold {
+  font-family: 'Crystal Ultra Condensed Bold', sans-serif !important;
+  font-size: 8.5rem !important;
+  letter-spacing: 0.01em !important;
+  line-height: 0.65 !important;
+}
+/* =========================================================
+   MOBILE CHART TYPOGRAPHY
+   Match desktop sizing
+   ========================================================= */
+
+@media (max-width: 639px) {
+
+  /* Page titles */
+  .page-title,
+  h1.font-brown-bold {
+    font-size: 8.5rem !important;
+  }
+
+  /* Song and record titles */
+  p[class~="text-4xl"],
+  p[class~="sm:text-4xl"],
+  p[class~="text-[0.9rem]"] {
+    font-size: 20px !important;
+  }
+
+  /* Artist names */
+  p[class~="text-xl"][class~="font-brown-regular"],
+  p[class~="text-[0.72rem]"][class~="font-brown-regular"] {
+    font-size: 16px !important;
+  }
+
+  /* Rankings */
+  p[class~="text-[3rem]"],
+  p[class~="text-[1.35rem]"],
+  p[class~="sm:text-[3.5rem]"] {
+    font-size: 30px !important;
+  }
+
+  /* Records page titles */
+  h3[class~="text-[1rem]"][class~="sm:text-[1.65rem]"] {
+    font-size: 16px !important;
+  }
 }

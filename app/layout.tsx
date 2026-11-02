@@ -6,15 +6,15 @@ import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 
-const brownBold = localFont({
-  src: '../fonts/Brown-Bold.ttf',
-  variable: '--font-brown-bold',
+const crystalBook = localFont({
+  src: '../public/fonts/Crystal-Book.woff2',
+  variable: '--font-crystal-book',
   display: 'swap',
 });
 
-const brownRegular = localFont({
-  src: '../fonts/Brown-Regular.ttf',
-  variable: '--font-brown-regular',
+const crystalExtraBold = localFont({
+  src: '../public/fonts/Crystal-ExtraBold.woff2',
+  variable: '--font-crystal-extrabold',
   display: 'swap',
 });
 
@@ -49,11 +49,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${brownBold.variable} ${brownRegular.variable} ${gothamBlack.variable} ${gothamRegular.variable}`}
+        className={`${crystalBook.variable} ${crystalExtraBold.variable} ${gothamBlack.variable} ${gothamRegular.variable}`}
       >
         <SiteHeader />
 
+        <div className="site-content">
         {children}
+        </div>
 
         <SiteFooter />
 
