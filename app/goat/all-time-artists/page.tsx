@@ -438,7 +438,7 @@ export default function AllTimeArtistsPage() {
         {/* HEADER */}
         <div className="bg-white px-4 py-5 text-center sm:px-6 sm:py-6">
           <h1 className="text-[2.8rem] font-brown-bold uppercase leading-[0.9] tracking-[-0.08em] text-black sm:text-[5.5rem] lg:text-[7rem]">
-            GREATEST OF ALL-TIME ARTISTS
+            ALL-TIME ARTISTS
           </h1>
         </div>
 
@@ -476,7 +476,7 @@ export default function AllTimeArtistsPage() {
                   <div className="absolute right-0 top-full z-[200] w-[18rem] pt-3 sm:right-1/2 sm:w-[32rem] sm:translate-x-1/2">
                     <div className="border border-black/10 bg-white px-5 py-5 text-center shadow-[0_18px_50px_rgba(0,0,0,0.2)] sm:px-7 sm:py-6">
                       <p className="text-[0.62rem] font-brown-bold uppercase tracking-[0.2em] text-black sm:text-xs">
-                        GREATEST OF ALL-TIME ARTISTS
+                        ALL-TIME ARTISTS
                       </p>
 
                       <p className="mt-3 text-xs font-brown-regular leading-relaxed text-black/70 sm:text-sm">
