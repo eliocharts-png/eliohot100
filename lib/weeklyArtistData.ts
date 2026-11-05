@@ -1,3 +1,4 @@
+
 import Papa from 'papaparse';
 
 import {
@@ -6,6 +7,13 @@ import {
 } from './artistData';
 
 export type WeeklyArtistEntry = {
+  week: string;
+
+  chartHistory: Array<{
+    week: string;
+    rank: number;
+  }>;
+
   rank: number;
   artist: string;
   artwork?: string;
@@ -27,15 +35,6 @@ export type WeeklyArtistEntry = {
     | '▼'
     | '→';
 
-  /*
-   * TRUE when:
-   *
-   * - artist moved up
-   * - artist re-entered
-   * - artist debuted
-   * - OR artist's total points increased
-   *   compared with the previous week
-   */
   showBullet: boolean;
 
   peakPosition: number;
@@ -73,25 +72,6 @@ export type WeeklyArtistPayload = {
 const ARTISTS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
 
-/*
- * Google Sheets column O = index 14
- *
- * A = 0
- * B = 1
- * C = 2
- * D = 3
- * E = 4
- * F = 5
- * G = 6
- * H = 7
- * I = 8
- * J = 9
- * K = 10
- * L = 11
- * M = 12
- * N = 13
- * O = 14
- */
 const ARTIST_IMAGE_COLUMN_INDEX = 14;
 
 /* =========================================================
@@ -549,9 +529,6 @@ async function fetchArtistRecords(): Promise<
   for (
     const row of parsed.data
   ) {
-    /*
-     * Column A
-     */
     const artist =
       row[0]?.trim() ?? '';
 
@@ -559,9 +536,6 @@ async function fetchArtistRecords(): Promise<
       continue;
     }
 
-    /*
-     * Ignore header.
-     */
     const normalized =
       normalize(artist);
 
@@ -573,9 +547,6 @@ async function fetchArtistRecords(): Promise<
       continue;
     }
 
-    /*
-     * Column O ONLY.
-     */
     const artwork =
       row[
         ARTIST_IMAGE_COLUMN_INDEX
@@ -686,9 +657,6 @@ function getShowBullet(
     | WeeklyArtistEntry
     | undefined
 ): boolean {
-  /*
-   * Re-entry and debut always get a bullet.
-   */
   if (
     movementIcon === 'reentry' ||
     movementIcon === 'debut'
@@ -696,20 +664,12 @@ function getShowBullet(
     return true;
   }
 
-  /*
-   * Moving up always gets a bullet.
-   */
   if (
     movementIcon === 'up'
   ) {
     return true;
   }
 
-  /*
-   * If the artist was on the chart
-   * the previous week, compare total
-   * artist points.
-   */
   if (
     previousEntry &&
     currentPoints >
@@ -1052,6 +1012,10 @@ export async function fetchWeeklyArtistData(
           peak: number;
           weeks: number;
           weeksAtNumberOne: number;
+          chartHistory: Array<{
+            week: string;
+            rank: number;
+          }>;
         }
       > = {};
 
@@ -1266,6 +1230,18 @@ export async function fetchWeeklyArtistData(
                   : 0;
 
             /*
+             * Build the complete chart
+             * history, including this week.
+             */
+            const chartHistory = [
+              ...(history?.chartHistory ?? []),
+              {
+                week: currentWeek,
+                rank,
+              },
+            ];
+
+            /*
              * Save updated history.
              */
             artistChartHistory[
@@ -1274,6 +1250,7 @@ export async function fetchWeeklyArtistData(
               peak,
               weeks,
               weeksAtNumberOne,
+              chartHistory,
             };
 
             /*
@@ -1298,7 +1275,7 @@ export async function fetchWeeklyArtistData(
             /*
              * Bullet.
              *
-             * This now checks both
+             * This checks both
              * movement AND total points.
              */
             const showBullet =
@@ -1309,6 +1286,13 @@ export async function fetchWeeklyArtistData(
               );
 
             return {
+              week: currentWeek,
+
+              chartHistory,
+
+              /*
+               * Rank.
+               */
               rank,
 
               /*
@@ -1420,16 +1404,6 @@ export async function fetchWeeklyArtistData(
       entriesByWeek,
     };
   } catch (error) {
-    /*
-     * IMPORTANT:
-     *
-     * We still return the expected payload shape so
-     * the page does not crash.
-     *
-     * BUT we log the complete error above so the
-     * terminal shows the actual reason instead of
-     * leaving us guessing.
-     */
     console.error(
       '[weeklyArtistData] FAILED:',
       error
