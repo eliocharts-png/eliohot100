@@ -615,7 +615,7 @@ h1.font-brown-bold:not(.article-headline) {
 /* Page titles */
 .page-title,
 h1.font-brown-bold:not(.article-headline) {
-  font-size: clamp(2.5rem, 10vw, 3.5rem) !important;
+  font-size: clamp(3.5rem, 12vw, 4.5rem) !important;
   line-height: 0.8 !important;
 }
 
