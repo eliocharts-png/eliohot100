@@ -269,10 +269,9 @@ function tokenizeArtistCredit(
    * when they are part of a stored collaboration
    * credit.
    *
-   * IMPORTANT:
-   * Silk Sonic is now handled separately as an
-   * artist alias in creditBelongsToArtist().
+   * Silk Sonic is handled separately as an alias.
    */
+
   cleaned = cleaned
     .replace(/[()[\]]/g, ' ')
     .replace(/\s+/g, ' ')
@@ -280,22 +279,8 @@ function tokenizeArtistCredit(
 
   /*
    * Normalize collaboration separators.
-   *
-   * These separators mean multiple credited artists:
-   *
-   * &
-   * and
-   * featuring
-   * feat.
-   * ft.
-   * with
-   * /
-   * +
-   * ×
-   * x
-   * ,
-   * ;
    */
+
   cleaned = cleaned
     .replace(
       /\s+(?:&|and|featuring|feat\.?|ft\.?|with|\/|\+|×|x)\s+/gi,
@@ -343,25 +328,15 @@ function creditBelongsToArtist(
   }
 
   /*
-   * =======================================================
    * SILK SONIC
    *
-   * The spreadsheet now credits Silk Sonic simply as:
-   *
-   * Silk Sonic
-   *
-   * However, Silk Sonic nominations should appear on:
+   * Silk Sonic nominations should appear on:
    *
    * 1. Silk Sonic
    * 2. Bruno Mars
    * 3. Anderson .Paak
    *
-   * This is ONLY a matching rule for the artist pages.
-   *
-   * The displayed credit remains exactly:
-   *
-   * Silk Sonic
-   * =======================================================
+   * The displayed credit remains Silk Sonic.
    */
 
   if (isSilkSonic(credit)) {
@@ -373,9 +348,7 @@ function creditBelongsToArtist(
   }
 
   /*
-   * =======================================================
    * NORMAL COLLABORATIONS
-   * =======================================================
    */
 
   const artists =
@@ -405,6 +378,7 @@ function nomineeBelongsToArtist(
   /*
    * ARTIST-BASED CATEGORIES
    */
+
   if (
     isArtistBasedCategory(
       category
@@ -419,6 +393,7 @@ function nomineeBelongsToArtist(
   /*
    * SONG / ALBUM / OTHER CATEGORIES
    */
+
   const artistCredit =
     getNomineeArtists(
       nominee
@@ -558,9 +533,9 @@ function buildArtistHistory(
 
   /*
    * Column A = category
-   *
    * Columns B onward = years
    */
+
   for (
     let yearIndex = 1;
     yearIndex < headers.length;
@@ -603,10 +578,6 @@ function buildArtistHistory(
         continue;
       }
 
-      /*
-       * Each line here is one
-       * physical nominee entry.
-       */
       const nomineeLines =
         splitNominationLines(
           nomineeCell
@@ -647,10 +618,6 @@ function buildArtistHistory(
           continue;
         }
 
-        /*
-         * ONE AND ONLY ONE
-         * HISTORY ENTRY.
-         */
         history.push({
           id:
             `${year}|${category}|${nomineeIndex}|${parsed.name}`,
@@ -667,12 +634,10 @@ function buildArtistHistory(
 
   /*
    * Sort newest year first.
-   *
-   * Within the same year:
-   * winners first.
-   *
+   * Within the same year, winners first.
    * Then category.
    */
+
   history.sort(
     (a, b) => {
       const yearDifference =
@@ -1017,13 +982,6 @@ function formatNomineeTitle(
 
 /* =========================================================
  * NOMINATION URL
- *
- * ALL NOMINEES now goes back to:
- *
- * /awards?year=2025&category=Song%20of%20the%20Year
- *
- * This allows awards/page.tsx to display
- * the correct year + category.
  * ======================================================= */
 
 function getNominationUrl(
@@ -1237,7 +1195,7 @@ export default function AwardsArtistPage() {
     };
   }, [artistName]);
 
-  /* =======================================================
+  /* =====================================================
    * ARTIST IMAGE
    * ===================================================== */
 
@@ -1254,7 +1212,7 @@ export default function AwardsArtistPage() {
       ]
     );
 
-  /* =======================================================
+  /* =====================================================
    * DOMINANT COLOR
    * ===================================================== */
 
@@ -1284,7 +1242,7 @@ export default function AwardsArtistPage() {
     };
   }, [artistImage]);
 
-  /* =======================================================
+  /* =====================================================
    * HERO TEXT COLOR
    * ===================================================== */
 
@@ -1297,7 +1255,7 @@ export default function AwardsArtistPage() {
       [dominantColor]
     );
 
-  /* =======================================================
+  /* =====================================================
    * SEARCH
    * ===================================================== */
 
@@ -1334,7 +1292,7 @@ export default function AwardsArtistPage() {
       artistName,
     ]);
 
-  /* =======================================================
+  /* =====================================================
    * STATS
    * ===================================================== */
 
@@ -1347,7 +1305,7 @@ export default function AwardsArtistPage() {
         entry.winner
     ).length;
 
-  /* =======================================================
+  /* =====================================================
    * CURRENT RECOGNITION
    * ===================================================== */
 
@@ -1356,7 +1314,7 @@ export default function AwardsArtistPage() {
       recognitionIndex
     ];
 
-  /* =======================================================
+  /* =====================================================
    * NAVIGATION
    * ===================================================== */
 
@@ -1421,14 +1379,13 @@ export default function AwardsArtistPage() {
     );
   }
 
-  /* =======================================================
+  /* =====================================================
    * RENDER
    * ===================================================== */
 
   return (
     <main className="awards-artist-page min-h-screen bg-white text-black">
       <div>
-
         {/* =================================================
          * HERO
          * ================================================= */}
@@ -1467,7 +1424,6 @@ export default function AwardsArtistPage() {
                 }}
               >
                 <div className="flex items-start justify-between">
-
                   <button
                     type="button"
                     onClick={
@@ -1490,7 +1446,6 @@ export default function AwardsArtistPage() {
                   </button>
 
                   <div className="relative flex flex-col items-end">
-
                     <button
                       type="button"
                       aria-label="Search Awards artists"
@@ -1841,262 +1796,258 @@ export default function AwardsArtistPage() {
                       Artist
                     </p>
 
+                    {/* ARTIST NAME */}
                     <h1
                       className="
-                        mt-1
+                        mt-3
                         max-w-3xl
-                        break-words
                         font-brown-bold
-                        text-[2.8rem]
+                        text-[2rem]
                         uppercase
-                        leading-[0.86]
-                        tracking-[-0.07em]
-                        sm:text-[4.4rem]
-                        lg:text-[5.2rem]
-                        xl:text-[5.8rem]
+                        tracking-[-0.05em]
+                        sm:text-[3.2rem]
+                        lg:text-[3.8rem]
+                        xl:text-[4.2rem]
                       "
                     >
-                      {artistName}
+                      {artistName.split(/\s+/).map((word, index) => (
+                        <span
+                          key={`${word}-${index}`}
+                          className="block"
+                          style={{
+                            lineHeight: 0.85,
+                          }}
+                        >
+                          {word}
+                        </span>
+                      ))}
                     </h1>
-                  </div>
 
-                  <div className="mt-10">
-
-                    <div
-                      className="
-                        grid
-                        grid-cols-2
-                      "
-                    >
+                    <div className="mt-10">
                       <div
                         className="
-                          py-5
-                          pr-5
-                          sm:py-7
-                          sm:pr-8
-                        "
-                      >
-                        <p
-                          className="
-                            font-brown-bold
-                            text-4xl
-                            leading-none
-                            sm:text-6xl
-                          "
-                        >
-                          {totalWins}
-                        </p>
-
-                        <p
-                          className="
-                            mt-2
-                            font-brown-regular
-                            text-[10px]
-                            uppercase
-                            tracking-[0.1em]
-                            opacity-55
-                            sm:text-xs
-                          "
-                        >
-                          Wins
-                        </p>
-                      </div>
-
-                      <div
-                        className="
-                          py-5
-                          pl-5
-                          sm:py-7
-                          sm:pl-8
-                        "
-                      >
-                        <p
-                          className="
-                            font-brown-bold
-                            text-4xl
-                            leading-none
-                            sm:text-6xl
-                          "
-                        >
-                          {
-                            totalNominations
-                          }
-                        </p>
-
-                        <p
-                          className="
-                            mt-2
-                            font-brown-regular
-                            text-[10px]
-                            uppercase
-                            tracking-[0.1em]
-                            opacity-55
-                            sm:text-xs
-                          "
-                        >
-                          Nominations
-                        </p>
-                      </div>
-                    </div>
-
-                    {currentRecognition && (
-                      <div
-                        className="
-                          mt-8
-                          pt-6
-                          sm:mt-10
-                          sm:pt-8
+                          grid
+                          grid-cols-2
                         "
                       >
                         <div
                           className="
-                            flex
-                            items-start
-                            justify-between
-                            gap-5
+                            py-5
+                            pr-5
+                            sm:py-7
+                            sm:pr-8
                           "
                         >
-                          <div className="min-w-0">
+                          <p
+                            className="
+                              font-brown-bold
+                              text-4xl
+                              leading-none
+                              sm:text-6xl
+                            "
+                          >
+                            {totalWins}
+                          </p>
 
-                            <div className="flex items-center gap-3">
-                              <span
-                                className="
-                                  font-brown-bold
-                                  text-xs
-                                  uppercase
-                                  tracking-[0.1em]
-                                  opacity-55
-                                  sm:text-sm
-                                "
-                              >
-                                {
-                                  currentRecognition.year
-                                }
-                              </span>
+                          <p
+                            className="
+                              mt-2
+                              font-brown-regular
+                              text-[10px]
+                              uppercase
+                              tracking-[0.1em]
+                              opacity-55
+                              sm:text-xs
+                            "
+                          >
+                            Wins
+                          </p>
+                        </div>
 
-                              <span
-                                className="
-                                  font-brown-bold
-                                  text-[9px]
-                                  uppercase
-                                  tracking-[0.08em]
-                                "
-                              >
-                                {
-                                  currentRecognition.winner
-                                    ? 'Winner'
-                                    : 'Nominee'
-                                }
-                              </span>
-                            </div>
+                        <div
+                          className="
+                            py-5
+                            pl-5
+                            sm:py-7
+                            sm:pl-8
+                          "
+                        >
+                          <p
+                            className="
+                              font-brown-bold
+                              text-4xl
+                              leading-none
+                              sm:text-6xl
+                            "
+                          >
+                            {totalNominations}
+                          </p>
 
-                            <h2
-                              className="
-                                mt-3
-                                font-brown-bold
-                                text-xl
-                                uppercase
-                                leading-tight
-                                sm:text-2xl
-                              "
-                            >
-                              {
-                                currentRecognition.category
-                              }
-                            </h2>
+                          <p
+                            className="
+                              mt-2
+                              font-brown-regular
+                              text-[10px]
+                              uppercase
+                              tracking-[0.1em]
+                              opacity-55
+                              sm:text-xs
+                            "
+                          >
+                            Nominations
+                          </p>
+                        </div>
+                      </div>
 
-                            <p
-                              className="
-                                mt-2
-                                font-brown-regular
-                                text-sm
-                                leading-tight
-                                opacity-60
-                                sm:text-base
-                              "
-                            >
-                              {
-                                formatNomineeTitle(
-                                  currentRecognition.nominee,
-                                  currentRecognition.category
-                                )
-                              }
-                            </p>
-                          </div>
-
+                      {currentRecognition && (
+                        <div
+                          className="
+                            mt-8
+                            pt-6
+                            sm:mt-10
+                            sm:pt-8
+                          "
+                        >
                           <div
                             className="
                               flex
-                              shrink-0
-                              gap-1
+                              items-start
+                              justify-between
+                              gap-5
                             "
                           >
-                            <button
-                              type="button"
-                              aria-label="Previous recognition"
-                              onClick={
-                                previousRecognition
-                              }
-                              className="
-                                flex
-                                h-10
-                                w-10
-                                items-center
-                                justify-center
-                                font-brown-bold
-                                text-lg
-                                transition-opacity
-                                hover:opacity-50
-                                sm:h-11
-                                sm:w-11
-                              "
-                            >
-                              ‹
-                            </button>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className="
+                                    font-brown-bold
+                                    text-xs
+                                    uppercase
+                                    tracking-[0.1em]
+                                    opacity-55
+                                    sm:text-sm
+                                  "
+                                >
+                                  {currentRecognition.year}
+                                </span>
 
-                            <button
-                              type="button"
-                              aria-label="Next recognition"
-                              onClick={
-                                nextRecognition
-                              }
+                                <span
+                                  className="
+                                    font-brown-bold
+                                    text-[9px]
+                                    uppercase
+                                    tracking-[0.08em]
+                                  "
+                                >
+                                  {currentRecognition.winner
+                                    ? 'Winner'
+                                    : 'Nominee'}
+                                </span>
+                              </div>
+
+                              <h2
+                                className="
+                                  mt-3
+                                  font-brown-bold
+                                  text-xl
+                                  uppercase
+                                  leading-tight
+                                  sm:text-2xl
+                                "
+                              >
+                                {currentRecognition.category}
+                              </h2>
+
+                              <p
+                                className="
+                                  mt-2
+                                  font-brown-regular
+                                  text-sm
+                                  leading-tight
+                                  opacity-60
+                                  sm:text-base
+                                "
+                              >
+                                {formatNomineeTitle(
+                                  currentRecognition.nominee,
+                                  currentRecognition.category
+                                )}
+                              </p>
+                            </div>
+
+                            <div
                               className="
                                 flex
-                                h-10
-                                w-10
-                                items-center
-                                justify-center
-                                font-brown-bold
-                                text-lg
-                                transition-opacity
-                                hover:opacity-50
-                                sm:h-11
-                                sm:w-11
+                                shrink-0
+                                gap-1
                               "
                             >
-                              ›
-                            </button>
+                              <button
+                                type="button"
+                                aria-label="Previous recognition"
+                                onClick={
+                                  previousRecognition
+                                }
+                                className="
+                                  flex
+                                  h-10
+                                  w-10
+                                  items-center
+                                  justify-center
+                                  font-brown-bold
+                                  text-lg
+                                  transition-opacity
+                                  hover:opacity-50
+                                  sm:h-11
+                                  sm:w-11
+                                "
+                              >
+                                ‹
+                              </button>
+
+                              <button
+                                type="button"
+                                aria-label="Next recognition"
+                                onClick={
+                                  nextRecognition
+                                }
+                                className="
+                                  flex
+                                  h-10
+                                  w-10
+                                  items-center
+                                  justify-center
+                                  font-brown-bold
+                                  text-lg
+                                  transition-opacity
+                                  hover:opacity-50
+                                  sm:h-11
+                                  sm:w-11
+                                "
+                              >
+                                ›
+                              </button>
+                            </div>
                           </div>
-                        </div>
 
-                        <p
-                          className="
-                            mt-5
-                            font-brown-regular
-                            text-[9px]
-                            uppercase
-                            tracking-[0.12em]
-                            opacity-35
-                          "
-                        >
-                          Recognition{' '}
-                          {recognitionIndex +
-                            1}{' '}
-                          of{' '}
-                          {history.length}
-                        </p>
-                      </div>
-                    )}
+                          <p
+                            className="
+                              mt-5
+                              font-brown-regular
+                              text-[9px]
+                              uppercase
+                              tracking-[0.12em]
+                              opacity-35
+                            "
+                          >
+                            Recognition{' '}
+                            {recognitionIndex + 1}{' '}
+                            of{' '}
+                            {history.length}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2227,9 +2178,7 @@ export default function AwardsArtistPage() {
                 </h2>
               </div>
 
-              {/* =================================================
-               * DESKTOP HEADER
-               * ================================================= */}
+              {/* DESKTOP HEADER */}
 
               <div
                 className="
@@ -2330,10 +2279,7 @@ export default function AwardsArtistPage() {
                           focus:outline-none
                         `}
                       >
-
-                        {/* =================================================
-                         * DESKTOP ROW
-                         * ================================================= */}
+                        {/* DESKTOP ROW */}
 
                         <div
                           className="
@@ -2351,9 +2297,7 @@ export default function AwardsArtistPage() {
                               leading-tight
                             "
                           >
-                            {
-                              entry.year
-                            }
+                            {entry.year}
                           </p>
 
                           <div>
@@ -2367,9 +2311,7 @@ export default function AwardsArtistPage() {
                                 group-hover:text-[#0050FF]
                               "
                             >
-                              {
-                                entry.category
-                              }
+                              {entry.category}
                             </p>
 
                             <p
@@ -2400,9 +2342,7 @@ export default function AwardsArtistPage() {
                               text-black/65
                             "
                           >
-                            {
-                              artists
-                            }
+                            {artists}
                           </p>
 
                           <p
@@ -2415,9 +2355,7 @@ export default function AwardsArtistPage() {
                             {title}
                           </p>
 
-                          {/* =================================================
-                           * ALL NOMINEES
-                           * ================================================= */}
+                          {/* ALL NOMINEES */}
 
                           <div className="flex items-center justify-end">
                             <Link
@@ -2453,12 +2391,9 @@ export default function AwardsArtistPage() {
                           </div>
                         </div>
 
-                        {/* =================================================
-                         * MOBILE ROW
-                         * ================================================= */}
+                        {/* MOBILE ROW */}
 
                         <div className="md:hidden">
-
                           <div className="flex items-start justify-between gap-4">
                             <div>
                               <p
@@ -2468,9 +2403,7 @@ export default function AwardsArtistPage() {
                                   leading-none
                                 "
                               >
-                                {
-                                  entry.year
-                                }
+                                {entry.year}
                               </p>
 
                               <p
@@ -2483,9 +2416,7 @@ export default function AwardsArtistPage() {
                                   group-hover:text-[#0050FF]
                                 "
                               >
-                                {
-                                  entry.category
-                                }
+                                {entry.category}
                               </p>
                             </div>
 
@@ -2538,9 +2469,7 @@ export default function AwardsArtistPage() {
                                   leading-tight
                                 "
                               >
-                                {
-                                  artists
-                                }
+                                {artists}
                               </p>
                             </div>
 
@@ -2570,9 +2499,7 @@ export default function AwardsArtistPage() {
                             </div>
                           </div>
 
-                          {/* =================================================
-                           * MOBILE ALL NOMINEES
-                           * ================================================= */}
+                          {/* MOBILE ALL NOMINEES */}
 
                           <div className="mt-5 flex items-center justify-between gap-4">
                             <Link

@@ -2,8 +2,13 @@ import Papa from 'papaparse';
 
 import type {
   ChartEntry,
+  ChartHistoryEntry,
   WeeklyChartEntry,
   WeeklyChartPayload,
+  WeeklyAlbumEntry,
+  WeeklyAlbumChartPayload,
+  WeeklyArtistEntry,
+  WeeklyArtistChartPayload,
   MovementIcon,
   RecurrentChartEntry,
   RecurrentChartPayload,
@@ -663,7 +668,9 @@ export async function fetchChartData(
       title ===
         'Greatest of All-Time No. 2 Songs' ||
       title ===
-        'Greatest of All-Time Female Songs'
+        'Greatest of All-Time Female Songs' ||
+      title ===
+        'Greatest of All-Time Top Records'
     ) {
       return parseGoatCsv(csvText);
     }
@@ -673,8 +680,6 @@ export async function fetchChartData(
         'Greatest of All-Time Artists' ||
       title ===
         'Greatest of All-Time Hot 100 Artists' ||
-      title ===
-        'Greatest of All-Time Top Records' ||
       title ===
         'Greatest of All-Time Top Records Artists'
     ) {
@@ -2216,5 +2221,340 @@ export async function fetchWeeklyChartData(
       weeksAtNumberOne: 0,
       weeksAtNumberOneByWeek: {},
     };
+  }
+}  
+
+const ALBUMS_WEEKLY_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/1hwXa1A9lpc8dti9kcnUK3p_pYmL4JmyHtAaPPL6S3s4/export?format=csv&gid=709193280';
+
+const UNIQUE_ALBUMS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/1hwXa1A9lpc8dti9kcnUK3p_pYmL4JmyHtAaPPL6S3s4/export?format=csv&gid=1763528492';
+
+const HOT100_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=2098313277&single=true&output=csv';
+
+function normalizeChartName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function parseChartNumber(value: string | undefined): number {
+  if (!value) return 0;
+  return Number(value.replace(/,/g, '').trim()) || 0;
+}
+
+async function fetchCsvRows(url: string): Promise<string[][]> {
+  const response = await fetch(url, { cache: 'no-store' });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch CSV: ${response.status}`);
+  }
+
+  const csvText = await response.text();
+
+  return Papa.parse<string[]>(csvText, {
+    header: false,
+    skipEmptyLines: true,
+  }).data;
+}
+
+export async function fetchWeeklyAlbumChartData(
+  selectedWeek?: string,
+): Promise<WeeklyAlbumChartPayload> {
+  const emptyPayload: WeeklyAlbumChartPayload = {
+    week: '',
+    displayWeek: 'UNKNOWN',
+    availableWeeks: [],
+    entries: [],
+    entriesByWeek: {},
+  };
+
+  try {
+    const [weeklyRows, uniqueAlbumRows] = await Promise.all([
+      fetchCsvRows(ALBUMS_WEEKLY_CSV_URL),
+      fetchCsvRows(UNIQUE_ALBUMS_CSV_URL),
+    ]);
+
+    const albumDetails = new Map<
+      string,
+      { artist: string; artwork: string; creditedArtists: string[] }
+    >();
+
+    // Unique Albums CSV:
+    // B = album title + display artist (line break)
+    // C = artwork
+    // D = credited artists (comma-separated)
+    for (const row of uniqueAlbumRows) {
+      const displayCell = row[1] ?? '';
+      const lines = displayCell
+        .split(/\r?\n/)
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      const title = lines[0] ?? '';
+      const artist = lines.slice(1).join(' ');
+      const artwork = row[2]?.trim() ?? '';
+      const creditedArtists = (row[3] ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      if (!title) continue;
+
+      albumDetails.set(normalizeChartName(title), {
+        artist,
+        artwork,
+        creditedArtists,
+      });
+    }
+
+    const groupedRows: Record<
+      string,
+      Array<{
+        title: string;
+        artist: string;
+        artwork: string;
+        points: number;
+        rank: number;
+      }>
+    > = {};
+
+    // Weekly Albums CSV:
+    // A = week
+    // B = rank
+    // C = album title
+    // D = points
+    // E = artist
+    for (const row of weeklyRows) {
+      const week = row[0]?.trim() ?? '';
+      const rank = parseChartNumber(row[1]);
+      const title = row[2]?.trim() ?? '';
+      const points = parseChartNumber(row[3]);
+      const weeklyArtist = row[4]?.trim() ?? '';
+
+      if (!week || !title || !rank || !parseChartDate(week)) continue;
+
+      const details = albumDetails.get(normalizeChartName(title));
+
+      if (!groupedRows[week]) {
+        groupedRows[week] = [];
+      }
+
+      groupedRows[week].push({
+        title,
+        artist: details?.artist || weeklyArtist,
+        artwork: details?.artwork || '',
+        points,
+        rank,
+      });
+    }
+
+    const availableWeeks = Object.keys(groupedRows).sort(
+  (a, b) => parseChartDate(b) - parseChartDate(a),
+);
+
+    if (!availableWeeks.length) return emptyPayload;
+
+    const chronologicalWeeks = [...availableWeeks].reverse();
+
+    const previousRanks = new Map<string, number>();
+    const peakPositions = new Map<string, number>();
+    const weeksOnChart = new Map<string, number>();
+    const histories = new Map<string, ChartHistoryEntry[]>();
+    const previouslyAppeared = new Set<string>();
+
+    const entriesByWeek: Record<string, WeeklyAlbumEntry[]> = {};
+
+    for (const week of chronologicalWeeks) {
+      const rows = [...groupedRows[week]].sort(
+        (a, b) => a.rank - b.rank,
+      );
+
+      const currentRanks = new Map<string, number>();
+
+      entriesByWeek[week] = rows.map((row) => {
+        const key = normalizeChartName(row.title);
+        const lastWeekRank = previousRanks.get(key) ?? null;
+        const peakPosition = Math.min(
+          peakPositions.get(key) ?? row.rank,
+          row.rank,
+        );
+        const totalWeeks = (weeksOnChart.get(key) ?? 0) + 1;
+        const chartHistory = [
+          ...(histories.get(key) ?? []),
+          { week, rank: row.rank },
+        ];
+
+        const movementIcon: MovementIcon = getMovementIcon(
+          row.rank,
+          lastWeekRank,
+          previouslyAppeared.has(key),
+        );
+
+        currentRanks.set(key, row.rank);
+        peakPositions.set(key, peakPosition);
+        weeksOnChart.set(key, totalWeeks);
+        histories.set(key, chartHistory);
+        previouslyAppeared.add(key);
+
+        return {
+          week,
+          rank: row.rank,
+          title: row.title,
+          artist: row.artist,
+          points: row.points,
+          artwork: row.artwork,
+          lastWeekRank,
+          peakPosition,
+          weeksOnChart: totalWeeks,
+          movementIcon,
+          chartHistory,
+        };
+      });
+
+      previousRanks.clear();
+      currentRanks.forEach((rank, key) => previousRanks.set(key, rank));
+    }
+
+    const week =
+      selectedWeek && entriesByWeek[selectedWeek]
+        ? selectedWeek
+        : availableWeeks[0];
+
+    return {
+      week,
+      displayWeek: formatDateLabel(week),
+      availableWeeks,
+      entries: entriesByWeek[week] ?? [],
+      entriesByWeek,
+    };
+  } catch (error) {
+    console.error('Error fetching Weekly Albums chart:', error);
+    return emptyPayload;
+  }
+}
+
+export async function fetchWeeklyArtistChartData(
+  selectedWeek?: string,
+): Promise<WeeklyArtistChartPayload> {
+  const emptyPayload: WeeklyArtistChartPayload = {
+    week: '',
+    displayWeek: 'UNKNOWN',
+    availableWeeks: [],
+    entries: [],
+    entriesByWeek: {},
+  };
+
+  try {
+    // Reuse the existing Hot 100 parser and its weekly data.
+    const hot100Payload = await fetchWeeklyChartData(HOT100_CSV_URL);
+
+    const availableWeeks = hot100Payload.availableWeeks;
+
+    if (!availableWeeks.length) return emptyPayload;
+
+    const chronologicalWeeks = [...availableWeeks].reverse();
+
+    const previousRanks = new Map<string, number>();
+    const peakPositions = new Map<string, number>();
+    const weeksOnChart = new Map<string, number>();
+    const histories = new Map<string, ChartHistoryEntry[]>();
+    const previouslyAppeared = new Set<string>();
+
+    const entriesByWeek: Record<string, WeeklyArtistEntry[]> = {};
+
+    for (const week of chronologicalWeeks) {
+      const artistPoints = new Map<string, number>();
+
+      const songs = hot100Payload.entriesByWeek[week] ?? [];
+
+      for (const song of songs) {
+        const creditedArtists = [
+          ...new Set(
+            song.artist
+              .split(',')
+              .map((artist) => artist.trim())
+              .filter(Boolean),
+          ),
+        ];
+
+        for (const artist of creditedArtists) {
+          const key = normalizeChartName(artist);
+
+          // Every credited artist receives the song's full points.
+          artistPoints.set(
+            key,
+            (artistPoints.get(key) ?? 0) + (song.points ?? 0),
+          );
+        }
+      }
+
+      const rankedArtists = [...artistPoints.entries()]
+        .sort((a, b) => b[1] - a[1]);
+
+      const currentRanks = new Map<string, number>();
+
+      entriesByWeek[week] = rankedArtists.map(
+        ([key, points], index) => {
+          const rank = index + 1;
+          const artist = key;
+          const lastWeekRank = previousRanks.get(key) ?? null;
+
+          const peakPosition = Math.min(
+            peakPositions.get(key) ?? rank,
+            rank,
+          );
+
+          const totalWeeks = (weeksOnChart.get(key) ?? 0) + 1;
+
+          const chartHistory = [
+            ...(histories.get(key) ?? []),
+            { week, rank },
+          ];
+
+          const movementIcon: MovementIcon = getMovementIcon(
+            rank,
+            lastWeekRank,
+            previouslyAppeared.has(key),
+          );
+
+          currentRanks.set(key, rank);
+          peakPositions.set(key, peakPosition);
+          weeksOnChart.set(key, totalWeeks);
+          histories.set(key, chartHistory);
+          previouslyAppeared.add(key);
+
+          return {
+            week,
+            rank,
+            artist,
+            points,
+            lastWeekRank,
+            peakPosition,
+            weeksOnChart: totalWeeks,
+            movementIcon,
+            chartHistory,
+          };
+        },
+      );
+
+      previousRanks.clear();
+      currentRanks.forEach((rank, key) => previousRanks.set(key, rank));
+    }
+
+    const week =
+      selectedWeek && entriesByWeek[selectedWeek]
+        ? selectedWeek
+        : availableWeeks[0];
+
+    return {
+      week,
+      displayWeek: formatDateLabel(week),
+      availableWeeks,
+      entries: entriesByWeek[week] ?? [],
+      entriesByWeek,
+    };
+  } catch (error) {
+    console.error('Error fetching Weekly Artists chart:', error);
+    return emptyPayload;
   }
 }

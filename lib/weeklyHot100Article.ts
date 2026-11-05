@@ -1,8 +1,75 @@
+
 import type {
   NewPeak,
   WeeklyChartEntry,
   WeeklyHot100Analysis,
 } from '@/types';
+
+/*
+ * =========================================================
+ * HEADLINE VERB ROTATION
+ * =========================================================
+ */
+
+const headlineVerbs = {
+  debut: [
+    'Debuts',
+    'Arrives',
+    'Enters',
+    'Opens',
+    'Lands',
+  ],
+  holds: [
+    'Holds',
+    'Remains',
+    'Stays',
+    'Retains',
+    'Defends',
+  ],
+  rises: [
+    'Rises',
+    'Climbs',
+    'Ascends',
+    'Surges',
+    'Soars',
+    'Claims',
+  ],
+  returns: [
+    'Returns',
+    'Reclaims',
+    'Regains',
+    'Retakes',
+    'Recaptures',
+  ],
+  reenters: [
+    'Re-enters',
+    'Returns',
+    'Lands',
+    'Arrives',
+  ],
+} as const;
+
+function getHeadlineVerb(
+  category: keyof typeof headlineVerbs,
+  analysis: WeeklyHot100Analysis
+): string {
+  const options = headlineVerbs[category];
+
+  const seed = [
+    analysis.week,
+    analysis.numberOne?.title ?? '',
+    analysis.numberOne?.artist ?? '',
+    category,
+  ].join('|');
+
+  let hash = 0;
+
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+
+  return options[hash % options.length];
+}
 
 /*
  * =========================================================
@@ -17,13 +84,7 @@ function songName(
   return `"${title}" by ${artist}`;
 }
 
-/*
- * =========================================================
- * TOP 10 MOVEMENT
- * =========================================================
- */
-
-function buildTop10Sentence(
+function formatMovement(
   entry: WeeklyChartEntry
 ): string {
   const song = songName(
@@ -31,146 +92,183 @@ function buildTop10Sentence(
     entry.artist
   );
 
-  const rank = entry.rank;
   const lastWeek = entry.lastWeekRank;
+  const rank = entry.rank;
 
-  /*
-   * No previous rank = debut.
-   */
   if (lastWeek === null) {
-    return `${song} debuts at No. ${rank}`;
+    return `${song} makes its chart debut at No. ${rank}`;
   }
 
-  /*
-   * Rose.
-   */
   if (lastWeek > rank) {
-    return `${song} rises from No. ${lastWeek} to No. ${rank}`;
+    const movement = lastWeek - rank;
+
+    return `${song} climbs ${movement} ${
+      movement === 1 ? 'place' : 'places'
+    } to No. ${rank}`;
   }
 
-  /*
-   * Fell.
-   */
   if (lastWeek < rank) {
-    return `${song} falls from No. ${lastWeek} to No. ${rank}`;
+    const movement = rank - lastWeek;
+
+    return `${song} slips ${movement} ${
+      movement === 1 ? 'place' : 'places'
+    } to No. ${rank}`;
   }
 
-  /*
-   * Stayed.
-   */
   return `${song} holds at No. ${rank}`;
 }
 
 /*
  * =========================================================
- * TOP 10 PARAGRAPH
+ * TOP 10
  * =========================================================
  */
 
-function getTop10Paragraph(
+function getTop10Paragraphs(
   analysis: WeeklyHot100Analysis
-): string {
-  const top10 =
-    [...analysis.top10]
-      .sort(
-        (a, b) =>
-          a.rank - b.rank
-      )
-      .slice(0, 10);
+): string[] {
+  const top10 = [...analysis.top10]
+    .sort(
+      (a, b) => a.rank - b.rank
+    )
+    .slice(0, 10);
 
-  if (
-    top10.length === 0
-  ) {
-    return '';
+  if (top10.length === 0) {
+    return [];
   }
 
-  const phrases =
-    top10.map(
-      (entry) =>
-        buildTop10Sentence(entry)
+  const paragraphs: string[] = [];
+
+  const numberOne = top10[0];
+
+  if (numberOne) {
+    const song = songName(
+      numberOne.title,
+      numberOne.artist
     );
 
-  /*
-   * One song.
-   */
-  if (
-    phrases.length === 1
-  ) {
-    return `${phrases[0]}.`;
-  }
+    const lastWeek = numberOne.lastWeekRank;
 
-  /*
-   * Two songs.
-   */
-  if (
-    phrases.length === 2
-  ) {
-    return `${phrases[0]}, while ${phrases[1]}.`;
-  }
-
-  /*
-   * Start with No. 1.
-   */
-  let paragraph =
-    phrases[0]!;
-
-  /*
-   * Connect No. 2.
-   */
-  paragraph +=
-    `, while ${phrases[1]}`;
-
-  /*
-   * Add the remaining songs.
-   */
-  for (
-    let i = 2;
-    i < phrases.length;
-    i++
-  ) {
-    const phrase =
-      phrases[i]!;
-
-    if (
-      i === 2 ||
-      i === 5 ||
-      i === 8
-    ) {
-      paragraph +=
-        `, while ${phrase}`;
+    if (lastWeek === null) {
+      paragraphs.push(
+        `${song} makes an immediate impact, debuting at No. 1.`
+      );
+    } else if (lastWeek === 1) {
+      paragraphs.push(
+        `${song} holds on to the No. 1 position for another week.`
+      );
     } else {
-      paragraph +=
-        `, ${phrase}`;
+      const movement = lastWeek - 1;
+
+      paragraphs.push(
+        `${song} climbs ${movement} ${
+          movement === 1 ? 'place' : 'places'
+        } from No. ${lastWeek} to claim the top spot.`
+      );
     }
   }
 
-  return `${paragraph}.`;
+  /*
+   * Nos. 2 and 3.
+   */
+
+  const second = top10[1];
+  const third = top10[2];
+
+  if (second && third) {
+    paragraphs.push(
+      `${formatMovement(second)}, while ${formatMovement(third)}.`
+    );
+  } else if (second) {
+    paragraphs.push(
+      `${formatMovement(second)}.`
+    );
+  }
+
+  /*
+   * Nos. 4–10.
+   *
+   * Group movements into shorter sentences.
+   */
+
+  const remaining = top10.slice(3);
+
+  for (
+    let i = 0;
+    i < remaining.length;
+    i += 2
+  ) {
+    const first = remaining[i];
+    const secondEntry = remaining[i + 1];
+
+    if (!first) continue;
+
+    if (secondEntry) {
+      paragraphs.push(
+        `Meanwhile, ${formatMovement(first)}, while ${formatMovement(secondEntry)}.`
+      );
+    } else {
+      paragraphs.push(
+        `${formatMovement(first)}.`
+      );
+    }
+  }
+
+  return paragraphs;
 }
 
 /*
  * =========================================================
  * DEBUTS
  * =========================================================
+ *
+ * Include:
+ * - The highest debut of the week.
+ * - Other debuts entering the Top 20.
+ *
+ * Lower chart debuts are omitted.
+ * =========================================================
  */
 
 function getDebutsParagraph(
   analysis: WeeklyHot100Analysis
 ): string {
-  const debuts =
-    [...analysis.debuts]
-      .sort(
-        (a, b) =>
-          a.rank - b.rank
-      );
+  const debuts = [...analysis.debuts]
+    .sort(
+      (a, b) => a.rank - b.rank
+    );
 
-  if (
-    debuts.length === 0
-  ) {
+  if (debuts.length === 0) {
     return '';
   }
 
-  const names =
-    debuts.map(
+  const highestDebut = debuts[0];
+
+  if (!highestDebut) {
+    return '';
+  }
+
+  const notableDebuts = debuts.filter(
+    (entry) => entry.rank <= 20
+  );
+
+  const otherDebuts = notableDebuts.filter(
+    (entry) =>
+      entry.title !== highestDebut.title ||
+      entry.artist !== highestDebut.artist
+  );
+
+  const paragraphs: string[] = [];
+
+  paragraphs.push(
+    `The week's highest debut belongs to ${songName(
+      highestDebut.title,
+      highestDebut.artist
+    )}, which enters at No. ${highestDebut.rank}.`
+  );
+
+  if (otherDebuts.length > 0) {
+    const names = otherDebuts.map(
       (entry) =>
         `${songName(
           entry.title,
@@ -178,124 +276,57 @@ function getDebutsParagraph(
         )} at No. ${entry.rank}`
     );
 
-  if (
-    names.length === 1
-  ) {
-    return `Debuting this week is ${names[0]}.`;
+    paragraphs.push(
+      `Other notable new entries include ${names.join('; ')}.`
+    );
   }
 
-  if (
-    names.length === 2
-  ) {
-    return `Debuting this week are ${names[0]} and ${names[1]}.`;
-  }
-
-  return `Debuting this week are ${names
-    .slice(0, -1)
-    .join(', ')}, and ${
-    names[names.length - 1]
-  }.`;
+  return paragraphs.join('\n\n');
 }
 
 /*
  * =========================================================
  * NEW PEAKS
  * =========================================================
+ *
+ * Only include new peaks at Nos. 11–20.
+ *
+ * Top 10 new peaks are already covered in the
+ * opening section.
+ * =========================================================
  */
 
 function getNewPeaksParagraph(
   analysis: WeeklyHot100Analysis
 ): string {
-  const peaks =
-    [...analysis.newPeaks]
-      .sort(
-        (a, b) =>
-          a.entry.rank -
-          b.entry.rank
-      );
-
-  if (
-    peaks.length === 0
-  ) {
-    return '';
-  }
-
-  const names =
-    peaks.map(
+  const peaks = [...analysis.newPeaks]
+    .filter(
       (peak: NewPeak) =>
-        `${songName(
-          peak.entry.title,
-          peak.entry.artist
-        )} at No. ${peak.entry.rank}`
+        peak.entry.rank > 10 &&
+        peak.entry.rank <= 20
+    )
+    .sort(
+      (a, b) =>
+        a.entry.rank - b.entry.rank
     );
 
-  if (
-    names.length === 1
-  ) {
-    return `Reaching a new peak this week is ${names[0]}.`;
-  }
-
-  if (
-    names.length === 2
-  ) {
-    return `Songs reaching new peaks this week are ${names[0]} and ${names[1]}.`;
-  }
-
-  return `Songs reaching new peaks this week are ${names
-    .slice(0, -1)
-    .join(', ')}, and ${
-    names[names.length - 1]
-  }.`;
-}
-
-/*
- * =========================================================
- * RE-ENTRIES
- * =========================================================
- */
-
-function getReentriesParagraph(
-  analysis: WeeklyHot100Analysis
-): string {
-  const reentries =
-    [...analysis.reentries]
-      .sort(
-        (a, b) =>
-          a.rank - b.rank
-      );
-
-  if (
-    reentries.length === 0
-  ) {
+  if (peaks.length === 0) {
     return '';
   }
 
-  const names =
-    reentries.map(
-      (entry) =>
-        `${songName(
-          entry.title,
-          entry.artist
-        )} at No. ${entry.rank}`
-    );
+  const names = peaks.map(
+    (peak) =>
+      `${songName(
+        peak.entry.title,
+        peak.entry.artist
+      )} at No. ${peak.entry.rank}`
+  );
 
-  if (
-    names.length === 1
-  ) {
-    return `Returning to the chart this week is ${names[0]}.`;
+  if (names.length === 1) {
+    return `Among this week's notable milestones, ${names[0]} reaches a new career peak.`;
   }
 
-  if (
-    names.length === 2
-  ) {
-    return `Returning to the chart this week are ${names[0]} and ${names[1]}.`;
-  }
-
-  return `Returning to the chart this week are ${names
-    .slice(0, -1)
-    .join(', ')}, and ${
-    names[names.length - 1]
-  }.`;
+  return `Several songs reach new career highs this week, including ${names.join('; ')}.`;
 }
 
 /*
@@ -307,116 +338,113 @@ function getReentriesParagraph(
 export function generateWeeklyHot100Article(
   analysis: WeeklyHot100Analysis
 ): string {
-  if (
-    analysis.top10.length === 0
-  ) {
+  if (analysis.top10.length === 0) {
     return '';
   }
 
   const paragraphs: string[] = [];
 
   /*
-   * 1. Entire Top 10.
+   * 1. Top 10 coverage.
    */
-  const top10 =
-    getTop10Paragraph(
-      analysis
-    );
 
-  if (top10) {
-    paragraphs.push(
-      top10
-    );
-  }
+  paragraphs.push(
+    ...getTop10Paragraphs(analysis)
+  );
 
   /*
-   * 2. Debuts.
+   * 2. Notable debuts.
    */
-  const debuts =
-    getDebutsParagraph(
-      analysis
-    );
+
+  const debuts = getDebutsParagraph(
+    analysis
+  );
 
   if (debuts) {
-    paragraphs.push(
-      debuts
-    );
+    paragraphs.push(debuts);
   }
 
   /*
-   * 3. New peaks.
+   * 3. New peaks within the Top 20.
    */
-  const newPeaks =
-    getNewPeaksParagraph(
-      analysis
-    );
+
+  const newPeaks = getNewPeaksParagraph(
+    analysis
+  );
 
   if (newPeaks) {
-    paragraphs.push(
-      newPeaks
-    );
-  }
-
-  /*
-   * 4. Re-entries.
-   */
-  const reentries =
-    getReentriesParagraph(
-      analysis
-    );
-
-  if (reentries) {
-    paragraphs.push(
-      reentries
-    );
+    paragraphs.push(newPeaks);
   }
 
   return paragraphs
     .map(
-      (paragraph) =>
-        paragraph.trim()
+      (paragraph) => paragraph.trim()
     )
     .filter(
-      (paragraph) =>
-        paragraph.length > 0
+      (paragraph) => paragraph.length > 0
     )
     .join('\n\n');
 }
 
 /*
  * =========================================================
- * SIMPLE HEADLINE
+ * HEADLINE
  * =========================================================
  */
 
 export function getWeeklyHot100ArticleTitle(
   analysis: WeeklyHot100Analysis
 ): string {
-  const numberOne =
-    analysis.numberOne;
+  const numberOne = analysis.numberOne;
 
   if (numberOne) {
-    if (
-      numberOne.lastWeekRank === 1
+    const previouslyReachedNumberOne =
+      numberOne.chartHistory.some(
+        (history) =>
+          history.rank === 1 &&
+          history.week !== numberOne.week
+      );
+
+    let category: keyof typeof headlineVerbs;
+
+    if (numberOne.lastWeekRank === 1) {
+      category = 'holds';
+    } else if (previouslyReachedNumberOne) {
+      category = 'returns';
+    } else if (
+      numberOne.lastWeekRank === null &&
+      !numberOne.hasAnyPriorAppearance
     ) {
-      return `"${numberOne.title}" Remains No. 1 on the Elio Hot 100`;
+      category = 'debut';
+    } else if (numberOne.lastWeekRank === null) {
+      category = 'reenters';
+    } else {
+      category = 'rises';
     }
 
-    if (
-      numberOne.lastWeekRank === null
-    ) {
-      return `"${numberOne.title}" Debuts at No. 1 on the Elio Hot 100`;
-    }
+    const verb = getHeadlineVerb(
+      category,
+      analysis
+    );
 
-    return `"${numberOne.title}" Rises to No. 1 on the Elio Hot 100`;
+    const destination =
+      category === 'holds'
+        ? 'at No. 1'
+        : category === 'returns'
+          ? 'to No. 1'
+          : category === 'reenters'
+            ? 'at No. 1'
+            : category === 'debut'
+              ? 'at No. 1'
+              : 'to No. 1';
+
+    return `"${numberOne.title}" ${verb} ${destination} on the Elio Hot 100`;
   }
 
-  const topSong =
-    [...analysis.top10]
-      .sort(
-        (a, b) =>
-          a.rank - b.rank
-      )[0];
+  const topSong = [...analysis.top10]
+    .sort(
+      (a, b) => a.rank - b.rank
+    )[0];
 
   if (topSong) {
     return `"${topSong.title}" Leads This Week's Elio Hot 100 Top 10`;

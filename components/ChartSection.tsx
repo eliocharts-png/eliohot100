@@ -188,27 +188,27 @@ export default function ChartSection({
 
               {/* RANK BADGE */}
 
-              <div className="pointer-events-none absolute bottom-0 left-0 flex h-7 min-w-[1.9rem] items-center justify-center bg-[#0050FF] px-1.5 font-brown-bold text-[0.85rem] leading-none text-white sm:h-10 sm:min-w-[2.75rem] sm:px-2 sm:text-lg">
+              <div
+                className="pointer-events-none absolute bottom-0 left-0 flex h-7 min-w-[1.9rem] items-center justify-center bg-[#0050FF] px-1.5 text-[0.85rem] leading-none text-white sm:h-10 sm:min-w-[2.75rem] sm:px-2 sm:text-lg"
+                style={{
+                  fontFamily: "'Crystal Expanded Extra Black', sans-serif",
+                  fontWeight: 900,
+                }}
+              >
                 {entry.rank}
               </div>
             </div>
 
-            {/* SONG / ARTIST */}
+            {/* ALBUM TITLE / ARTIST */}
 
-            <div className="mt-2 min-w-0 sm:mt-3">
-              <p
-                key={`${entry.title}-${entry.artist}-title`}
-                className="goat-text-blur break-words font-brown-bold text-[0.7rem] leading-[1.08] text-black sm:text-base sm:leading-5"
-              >
+            <div className="mt-2 flex min-w-0 flex-col sm:mt-3">
+              <div className="goat-text-blur !block w-full whitespace-normal break-words font-brown-bold text-[0.7rem] leading-[1.08] text-black sm:text-base sm:leading-5">
                 {entry.title}
-              </p>
+              </div>
 
-              <p
-                key={`${entry.title}-${entry.artist}-artist`}
-                className="goat-text-blur mt-0.5 break-words font-brown-regular text-[0.58rem] leading-[1.1] tracking-[0.01em] text-[#666666] sm:text-sm sm:leading-5 sm:tracking-[0.02em]"
-              >
+              <div className="goat-text-blur !mt-0.5 !block w-full whitespace-normal break-words font-brown-regular text-[0.58rem] leading-[1.1] tracking-[0.01em] text-[#666666] sm:text-sm sm:leading-5 sm:tracking-[0.02em]">
                 {entry.artist}
-              </p>
+              </div>
             </div>
           </article>
         ))}

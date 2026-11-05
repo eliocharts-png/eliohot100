@@ -722,26 +722,36 @@ export default function HomePage() {
                               className="flex flex-col items-center text-center"
                             >
                               <div className="relative w-full max-w-[150px]">
-                                <div className="aspect-square w-full overflow-hidden bg-white/10">
-                                  <img
-                                    src={artistImage}
-                                    alt={`${entry.artist} artist`}
-                                    className="h-full w-full object-cover"
-                                    onError={(event) => {
-                                      const image = event.currentTarget;
+                                <a
+  href="/artists"
+  aria-label={`View ${entry.artist}'s artist chart`}
+  className="group block aspect-square w-full overflow-hidden bg-white/10"
+>
+  <img
+    src={artistImage}
+    alt={`${entry.artist} artist`}
+    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+    onError={(event) => {
+      const image = event.currentTarget;
 
-                                      if (image.src !== fallbackImage) {
-                                        image.src = fallbackImage;
-                                      }
-                                    }}
-                                  />
-                                </div>
+      if (image.src !== fallbackImage) {
+        image.src = fallbackImage;
+      }
+    }}
+  />
+</a>
 
-                                <div className="absolute left-1/2 top-full z-10 flex h-9 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-[#0050FF]">
-                                  <p className="font-brown-bold text-xl leading-none text-white">
-                                    {entry.rank}
-                                  </p>
-                                </div>
+                         <div className="absolute left-1/2 top-full z-10 flex h-9 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-[#0050FF]">
+  <p
+    className="text-xl leading-none text-white"
+    style={{
+      fontFamily: "'Crystal Expanded Extra Black', sans-serif",
+      fontWeight: 900,
+    }}
+  >
+    {entry.rank}
+  </p>
+</div>
                               </div>
 
                               <a

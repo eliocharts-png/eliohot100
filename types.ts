@@ -233,3 +233,60 @@ export interface NewPeak {
   entry: WeeklyChartEntry;
   previousPeak: number | null;
 }
+/*
+ * =========================================================
+ * WEEKLY ALBUMS CHART
+ * =========================================================
+ */
+
+export interface WeeklyAlbumEntry {
+  week: string;
+  rank: number;
+  title: string;
+  artist: string;
+  points: number;
+  artwork?: string;
+
+  lastWeekRank: number | null;
+  peakPosition: number;
+  weeksOnChart: number;
+
+  movementIcon: MovementIcon;
+  chartHistory: ChartHistoryEntry[];
+}
+
+export interface WeeklyAlbumChartPayload {
+  week: string;
+  displayWeek: string;
+  availableWeeks: string[];
+  entries: WeeklyAlbumEntry[];
+  entriesByWeek: Record<string, WeeklyAlbumEntry[]>;
+}
+
+/*
+ * =========================================================
+ * WEEKLY ARTISTS CHART
+ * =========================================================
+ */
+
+export interface WeeklyArtistEntry {
+  week: string;
+  rank: number;
+  artist: string;
+  points: number;
+
+  lastWeekRank: number | null;
+  peakPosition: number;
+  weeksOnChart: number;
+
+  movementIcon: MovementIcon;
+  chartHistory: ChartHistoryEntry[];
+}
+
+export interface WeeklyArtistChartPayload {
+  week: string;
+  displayWeek: string;
+  availableWeeks: string[];
+  entries: WeeklyArtistEntry[];
+  entriesByWeek: Record<string, WeeklyArtistEntry[]>;
+}

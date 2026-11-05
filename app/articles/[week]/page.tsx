@@ -419,9 +419,9 @@ export default async function ArticlePage({
 
             {/* HEADLINE */}
 
-            <h1 className="mt-3 font-brown-bold text-3xl leading-[0.98] tracking-[-0.045em] sm:text-5xl lg:text-6xl xl:text-7xl">
-              {title}
-            </h1>
+<h1 className="article-headline mt-3 font-brown-bold tracking-[-0.045em]">
+  {title.toUpperCase()}
+</h1>
 
             {/* AUTHOR + DATE */}
 
