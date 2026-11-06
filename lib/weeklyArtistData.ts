@@ -61,18 +61,60 @@ export type WeeklyArtistPayload = {
  *
  * Column A = Artist
  * Column O = Artist Image
- *
- * IMPORTANT:
- * The weekly Artist Chart is NOT stored in this sheet.
- * The chart is calculated from the SONGS + HOT 100 sheets.
- *
- * Column O is ONLY used for artist artwork.
  * ======================================================= */
 
 const ARTISTS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo4WYmWMqXuJnp9n_CguacvkVIVBXvjs69acvAHAEWtqSfOqyf2N5w5vRiohp6y9I5WJpM5XzWrUlF/pub?gid=397544544&single=true&output=csv';
 
 const ARTIST_IMAGE_COLUMN_INDEX = 14;
+
+/* =========================================================
+ * TOP RECORDS SHEET
+ *
+ * A = Week
+ * B = Rank
+ * C = Album Title
+ * D = Units
+ * E = Artists
+ * ======================================================= */
+
+const TOP_RECORDS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/1hwXa1A9lpc8dti9kcnUK3p_pYmL4JmyHtAaPPL6S3s4/export?format=csv&gid=709193280';
+
+const TOP_RECORDS_START_DATE = '11/5/26';
+
+/* =========================================================
+ * NEW ARTIST CHART METHODOLOGY
+ *
+ * Effective November 5, 2026 onward.
+ *
+ * Hot 100 performance = 50 points
+ * Albums performance = 50 points
+ *
+ * Within each category:
+ * Best entry = 70%
+ * Remaining entries = 30%
+ *
+ * Additional entries use diminishing weights:
+ * 50%, 25%, 12.5%, 6.25%, etc.
+ *
+ * #1 Hot 100 song = +5
+ * #1 album = +5
+ * Both simultaneously = additional +5
+ *
+ * Maximum possible score = 115
+ * ======================================================= */
+
+const CATEGORY_MAX_SCORE = 50;
+
+const BEST_ENTRY_WEIGHT = 0.70;
+const REMAINING_ENTRIES_WEIGHT = 0.30;
+
+const ADDITIONAL_ENTRY_DECAY = 0.50;
+
+const NUMBER_ONE_SONG_BONUS = 5;
+const NUMBER_ONE_ALBUM_BONUS = 5;
+const DOUBLE_NUMBER_ONE_BONUS = 5;
 
 /* =========================================================
  * TYPES
@@ -96,6 +138,20 @@ type SongRecord = {
 type ArtistRecord = {
   artist: string;
   artwork?: string;
+};
+
+type TopRecordsRow = {
+  week: string;
+  rank: number;
+  title: string;
+  units: number;
+  artists: string[];
+};
+
+type AlbumEntry = {
+  rank: number;
+  title: string;
+  units: number;
 };
 
 /* =========================================================
@@ -166,6 +222,19 @@ function parseDate(value: string): number {
     month - 1,
     day
   ).getTime();
+}
+
+/* =========================================================
+ * METHODOLOGY DATE CHECK
+ * ======================================================= */
+
+function usesNewMethodology(
+  week: string
+): boolean {
+  return (
+    parseDate(week) >=
+    parseDate(TOP_RECORDS_START_DATE)
+  );
 }
 
 /* =========================================================
@@ -275,6 +344,14 @@ async function fetchCsv(
     );
 
   if (!response.ok) {
+    const errorText =
+      await response.text();
+
+    console.error(
+      `[weeklyArtistData] ${label} HTTP ${response.status}:`,
+      errorText
+    );
+
     throw new Error(
       `${label}: CSV request failed: HTTP ${response.status}`
     );
@@ -323,9 +400,7 @@ async function fetchSongRecords(): Promise<
 
   const songs: SongRecord[] = [];
 
-  for (
-    const row of parsed.data
-  ) {
+  for (const row of parsed.data) {
     const content =
       row[1]?.trim() ?? '';
 
@@ -420,9 +495,7 @@ async function fetchHot100(): Promise<
 
   const result: Hot100Row[] = [];
 
-  for (
-    const row of parsed.data
-  ) {
+  for (const row of parsed.data) {
     const week =
       row[0]?.trim() ?? '';
 
@@ -500,9 +573,6 @@ async function fetchHot100(): Promise<
  *
  * Column A = Artist
  * Column O = Artist Image
- *
- * THIS DOES NOT PROVIDE THE WEEKLY CHART DATA.
- * It only provides the official artist name and image.
  * ======================================================= */
 
 async function fetchArtistRecords(): Promise<
@@ -523,12 +593,9 @@ async function fetchArtistRecords(): Promise<
       }
     );
 
-  const records: ArtistRecord[] =
-    [];
+  const records: ArtistRecord[] = [];
 
-  for (
-    const row of parsed.data
-  ) {
+  for (const row of parsed.data) {
     const artist =
       row[0]?.trim() ?? '';
 
@@ -573,6 +640,271 @@ async function fetchArtistRecords(): Promise<
   );
 
   return records;
+}
+
+/* =========================================================
+ * TOP RECORDS SHEET
+ *
+ * A = Week
+ * B = Rank
+ * C = Album Title
+ * D = Units
+ * E = Artists
+ *
+ * Only weeks beginning November 5, 2026 are included.
+ * ======================================================= */
+
+async function fetchTopRecords(): Promise<
+  TopRecordsRow[]
+> {
+  const csv =
+    await fetchCsv(
+      TOP_RECORDS_CSV_URL,
+      'TOP RECORDS'
+    );
+
+  const parsed =
+    Papa.parse<string[]>(
+      csv,
+      {
+        header: false,
+        skipEmptyLines: true,
+      }
+    );
+
+  const result: TopRecordsRow[] = [];
+
+  const startDate =
+    parseDate(
+      TOP_RECORDS_START_DATE
+    );
+
+  for (const row of parsed.data) {
+    const week =
+      row[0]?.trim() ?? '';
+
+    const rank =
+      Number(
+        row[1]?.trim() ?? 0
+      );
+
+    const title =
+      row[2]?.trim() ?? '';
+
+    const units =
+      Number(
+        (row[3] ?? '')
+          .replace(/,/g, '')
+          .trim()
+      );
+
+    const artistField =
+      row[4]?.trim() ?? '';
+
+    if (
+      !week ||
+      parseDate(week) < startDate ||
+      rank <= 0 ||
+      !title ||
+      !Number.isFinite(units) ||
+      units <= 0 ||
+      !artistField
+    ) {
+      continue;
+    }
+
+    const artists =
+      artistField
+        .split(',')
+        .map(
+          (artist) =>
+            artist.trim()
+        )
+        .filter(Boolean);
+
+    if (
+      artists.length === 0
+    ) {
+      continue;
+    }
+
+    result.push({
+      week,
+      rank,
+      title,
+      units,
+      artists,
+    });
+  }
+
+  console.log(
+    `[weeklyArtistData] Top Records rows parsed from ${TOP_RECORDS_START_DATE}: ${result.length}`
+  );
+
+  console.log(
+    `[weeklyArtistData] #1 albums found: ${
+      result.filter(
+        (row) => row.rank === 1
+      ).length
+    }`
+  );
+
+  return result;
+}
+
+/* =========================================================
+ * DIMINISHING ENTRY SCORE
+ *
+ * Best entry receives 70%.
+ *
+ * Remaining entries share 30%.
+ * Their relative weights are:
+ *
+ * 50%, 25%, 12.5%, 6.25%, etc.
+ *
+ * If an artist has only one entry, that entry
+ * receives its full value.
+ * ======================================================= */
+
+function calculateWeightedEntryScore(
+  values: number[]
+): number {
+  const sorted =
+    values
+      .filter(
+        (value) =>
+          Number.isFinite(value) &&
+          value > 0
+      )
+      .sort(
+        (a, b) => b - a
+      );
+
+  if (sorted.length === 0) {
+    return 0;
+  }
+
+  const bestEntry =
+    sorted[0];
+
+  if (sorted.length === 1) {
+    return bestEntry;
+  }
+
+  const additionalEntries =
+    sorted.slice(1);
+
+  const weights =
+    additionalEntries.map(
+      (_, index) =>
+        Math.pow(
+          ADDITIONAL_ENTRY_DECAY,
+          index
+        )
+    );
+
+  const totalWeight =
+    weights.reduce(
+      (sum, weight) =>
+        sum + weight,
+      0
+    );
+
+  const weightedAdditionalScore =
+    additionalEntries.reduce(
+      (sum, value, index) =>
+        sum +
+        value *
+          (
+            weights[index] /
+            totalWeight
+          ),
+      0
+    );
+
+  return (
+    bestEntry *
+      BEST_ENTRY_WEIGHT +
+    weightedAdditionalScore *
+      REMAINING_ENTRIES_WEIGHT
+  );
+}
+
+/* =========================================================
+ * CATEGORY NORMALIZATION
+ *
+ * The strongest artist in each category receives
+ * the full 50 points available for that category.
+ *
+ * Every other artist receives a proportional score.
+ * ======================================================= */
+
+function normalizeCategoryScores(
+  rawScores: number[]
+): number[] {
+  const maximum =
+    Math.max(
+      0,
+      ...rawScores
+    );
+
+  if (maximum <= 0) {
+    return rawScores.map(
+      () => 0
+    );
+  }
+
+  return rawScores.map(
+    (score) =>
+      (
+        score /
+        maximum
+      ) *
+      CATEGORY_MAX_SCORE
+  );
+}
+
+/* =========================================================
+ * NUMBER ONE BONUS
+ * ======================================================= */
+
+function calculateNumberOneBonus(
+  songs: Hot100Row[],
+  albums: AlbumEntry[]
+): number {
+  const hasNumberOneSong =
+    songs.some(
+      (song) =>
+        song.rank === 1
+    );
+
+  const hasNumberOneAlbum =
+    albums.some(
+      (album) =>
+        album.rank === 1
+    );
+
+  let bonus = 0;
+
+  if (hasNumberOneSong) {
+    bonus +=
+      NUMBER_ONE_SONG_BONUS;
+  }
+
+  if (hasNumberOneAlbum) {
+    bonus +=
+      NUMBER_ONE_ALBUM_BONUS;
+  }
+
+  if (
+    hasNumberOneSong &&
+    hasNumberOneAlbum
+  ) {
+    bonus +=
+      DOUBLE_NUMBER_ONE_BONUS;
+  }
+
+  return bonus;
 }
 
 /* =========================================================
@@ -638,16 +970,6 @@ function getArrow(
 
 /* =========================================================
  * BULLET
- *
- * The blue bullet appears when ANY of these are true:
- *
- * 1. Artist moved UP
- * 2. Artist RE-ENTERED
- * 3. Artist DEBUTED
- * 4. Artist's total points increased
- *
- * The points comparison is against the artist's
- * total points from the previous week.
  * ======================================================= */
 
 function getShowBullet(
@@ -688,30 +1010,30 @@ function getShowBullet(
 export async function fetchWeeklyArtistData(
   selectedWeek?: string
 ): Promise<WeeklyArtistPayload> {
-  const empty: WeeklyArtistPayload =
-    {
-      week: '',
-      displayWeek: 'UNKNOWN',
-      availableWeeks: [],
-      entries: [],
-      entriesByWeek: {},
-    };
+  const empty: WeeklyArtistPayload = {
+    week: '',
+    displayWeek: 'UNKNOWN',
+    availableWeeks: [],
+    entries: [],
+    entriesByWeek: {},
+  };
 
   try {
     /* =====================================================
-     * LOAD ALL THREE DATA SOURCES
+     * LOAD ALL FOUR DATA SOURCES
      * =================================================== */
 
     const [
       songs,
       hot100,
       artistRecords,
-    ] =
-      await Promise.all([
-        fetchSongRecords(),
-        fetchHot100(),
-        fetchArtistRecords(),
-      ]);
+      topRecords,
+    ] = await Promise.all([
+      fetchSongRecords(),
+      fetchHot100(),
+      fetchArtistRecords(),
+      fetchTopRecords(),
+    ]);
 
     console.log(
       '[weeklyArtistData] ==============================='
@@ -727,6 +1049,10 @@ export async function fetchWeeklyArtistData(
 
     console.log(
       `[weeklyArtistData] Official artists: ${artistRecords.length}`
+    );
+
+    console.log(
+      `[weeklyArtistData] Top Records rows: ${topRecords.length}`
     );
 
     console.log(
@@ -770,18 +1096,12 @@ export async function fetchWeeklyArtistData(
         }
       >();
 
-    for (
-      const record of artistRecords
-    ) {
+    for (const record of artistRecords) {
       officialArtistMap.set(
-        normalize(
-          record.artist
-        ),
+        normalize(record.artist),
         {
-          name:
-            record.artist,
-          artwork:
-            record.artwork,
+          name: record.artist,
+          artwork: record.artwork,
         }
       );
     }
@@ -791,14 +1111,9 @@ export async function fetchWeeklyArtistData(
      * =================================================== */
 
     const songMap =
-      new Map<
-        string,
-        SongRecord
-      >();
+      new Map<string, SongRecord>();
 
-    for (
-      const song of songs
-    ) {
+    for (const song of songs) {
       songMap.set(
         songKey(
           song.title,
@@ -817,30 +1132,26 @@ export async function fetchWeeklyArtistData(
      * =================================================== */
 
     const groupedRows:
-      Record<
-        string,
-        Hot100Row[]
-      > = {};
+      Record<string, Hot100Row[]> = {};
 
-    for (
-      const row of hot100
-    ) {
+    for (const row of hot100) {
       if (
         !groupedRows[row.week]
       ) {
-        groupedRows[
-          row.week
-        ] = [];
+        groupedRows[row.week] = [];
       }
 
-      groupedRows[
-        row.week
-      ].push(row);
+      groupedRows[row.week].push(row);
     }
 
     const availableWeeks =
-      Object.keys(
-        groupedRows
+      Array.from(
+        new Set([
+          ...Object.keys(groupedRows),
+          ...topRecords.map(
+            (row) => row.week
+          ),
+        ])
       ).sort(
         (a, b) =>
           parseDate(b) -
@@ -855,7 +1166,7 @@ export async function fetchWeeklyArtistData(
       availableWeeks.length === 0
     ) {
       throw new Error(
-        'No valid chart weeks were found in the HOT 100 sheet.'
+        'No valid chart weeks were found in the HOT 100 or TOP RECORDS sheets.'
       );
     }
 
@@ -865,9 +1176,9 @@ export async function fetchWeeklyArtistData(
 
     const week =
       selectedWeek &&
-      groupedRows[
+      availableWeeks.includes(
         selectedWeek
-      ]
+      )
         ? selectedWeek
         : availableWeeks[0];
 
@@ -886,8 +1197,8 @@ export async function fetchWeeklyArtistData(
           string,
           {
             artist: string;
-            points: number;
             songs: Hot100Row[];
+            albums: AlbumEntry[];
           }
         >
       > = {};
@@ -895,9 +1206,11 @@ export async function fetchWeeklyArtistData(
     let matchedHot100Rows = 0;
     let unmatchedHot100Rows = 0;
 
-    for (
-      const row of hot100
-    ) {
+    /* =====================================================
+     * ADD HOT 100 ENTRIES
+     * =================================================== */
+
+    for (const row of hot100) {
       const song =
         songMap.get(
           songKey(
@@ -913,42 +1226,26 @@ export async function fetchWeeklyArtistData(
 
       matchedHot100Rows++;
 
-      for (
-        const artist of
-          song.artists
-      ) {
+      for (const artist of song.artists) {
         const key =
           normalize(artist);
 
-        if (
-          !artistHistory[key]
-        ) {
-          artistHistory[key] =
-            {};
+        if (!artistHistory[key]) {
+          artistHistory[key] = {};
         }
 
         if (
-          !artistHistory[key][
-            row.week
-          ]
+          !artistHistory[key][row.week]
         ) {
-          artistHistory[key][
-            row.week
-          ] = {
+          artistHistory[key][row.week] = {
             artist,
-            points: 0,
             songs: [],
+            albums: [],
           };
         }
 
-        artistHistory[key][
-          row.week
-        ].points +=
-          row.points;
-
-        artistHistory[key][
-          row.week
-        ].songs.push(row);
+        artistHistory[key][row.week]
+          .songs.push(row);
       }
     }
 
@@ -960,18 +1257,48 @@ export async function fetchWeeklyArtistData(
       `[weeklyArtistData] Unmatched Hot 100 rows: ${unmatchedHot100Rows}`
     );
 
+    /* =====================================================
+     * ADD TOP RECORDS ENTRIES
+     *
+     * Each credited artist receives the full album entry.
+     * =================================================== */
+
+    for (const row of topRecords) {
+      for (const artist of row.artists) {
+        const key =
+          normalize(artist);
+
+        if (!artistHistory[key]) {
+          artistHistory[key] = {};
+        }
+
+        if (
+          !artistHistory[key][row.week]
+        ) {
+          artistHistory[key][row.week] = {
+            artist,
+            songs: [],
+            albums: [],
+          };
+        }
+
+        artistHistory[key][row.week]
+          .albums.push({
+            rank: row.rank,
+            title: row.title,
+            units: row.units,
+          });
+      }
+    }
+
     console.log(
       `[weeklyArtistData] Artists with calculated history: ${
-        Object.keys(
-          artistHistory
-        ).length
+        Object.keys(artistHistory).length
       }`
     );
 
     if (
-      Object.keys(
-        artistHistory
-      ).length === 0
+      Object.keys(artistHistory).length === 0
     ) {
       throw new Error(
         'No artist history could be created. The SONGS and HOT 100 song/artist formatting is not matching.'
@@ -982,24 +1309,20 @@ export async function fetchWeeklyArtistData(
      * CHRONOLOGICAL WEEKS
      * =================================================== */
 
-    const chronologicalWeeks =
-      [
-        ...availableWeeks,
-      ].sort(
-        (a, b) =>
-          parseDate(a) -
-          parseDate(b)
-      );
+    const chronologicalWeeks = [
+      ...availableWeeks,
+    ].sort(
+      (a, b) =>
+        parseDate(a) -
+        parseDate(b)
+    );
 
     /* =====================================================
      * RESULTS
      * =================================================== */
 
     const entriesByWeek:
-      Record<
-        string,
-        WeeklyArtistEntry[]
-      > = {};
+      Record<string, WeeklyArtistEntry[]> = {};
 
     /* =====================================================
      * ARTIST CHART CAREER HISTORY
@@ -1023,60 +1346,207 @@ export async function fetchWeeklyArtistData(
      * BUILD EVERY WEEK
      * =================================================== */
 
-    for (
-      const currentWeek of
-        chronologicalWeeks
-    ) {
-      const artistRows:
+    for (const currentWeek of chronologicalWeeks) {
+      const useNewScoring =
+        usesNewMethodology(currentWeek);
+
+      const weeklyArtistData:
         Array<{
           artist: string;
-          points: number;
           songs: Hot100Row[];
+          albums: AlbumEntry[];
+          rawHot100Score: number;
+          rawAlbumsScore: number;
+          bestHot100Rank: number;
+          bestAlbumRank: number;
         }> = [];
 
       /* ===================================================
-       * FIND ALL ARTISTS ACTIVE THIS WEEK
+       * COLLECT ACTIVE ARTISTS AND THEIR ENTRIES
        * ================================================= */
 
-      for (
-        const key of Object.keys(
-          artistHistory
-        )
-      ) {
+      for (const key of Object.keys(artistHistory)) {
         const data =
-          artistHistory[key][
-            currentWeek
-          ];
+          artistHistory[key][currentWeek];
 
         if (!data) {
           continue;
         }
 
-        artistRows.push({
-          artist:
-            data.artist,
-          points:
-            data.points,
-          songs:
-            data.songs,
+        const bestHot100Rank =
+          data.songs.length > 0
+            ? Math.min(
+                ...data.songs.map(
+                  (song) => song.rank
+                )
+              )
+            : Number.POSITIVE_INFINITY;
+
+        const bestAlbumRank =
+          data.albums.length > 0
+            ? Math.min(
+                ...data.albums.map(
+                  (album) => album.rank
+                )
+              )
+            : Number.POSITIVE_INFINITY;
+
+        weeklyArtistData.push({
+          artist: data.artist,
+          songs: data.songs,
+          albums: data.albums,
+
+          rawHot100Score:
+            calculateWeightedEntryScore(
+              data.songs.map(
+                (song) => song.points
+              )
+            ),
+
+          rawAlbumsScore:
+            calculateWeightedEntryScore(
+              data.albums.map(
+                (album) => album.units
+              )
+            ),
+
+          bestHot100Rank,
+          bestAlbumRank,
         });
+      }
+
+      /* ===================================================
+       * CALCULATE ARTIST SCORES
+       *
+       * BEFORE NOVEMBER 5, 2026:
+       * Original methodology:
+       * Hot 100 points + album units / 100 / 2
+       *
+       * NOVEMBER 5, 2026 ONWARD:
+       * New weighted 50/50 methodology.
+       * ================================================= */
+
+      let artistRows:
+        Array<{
+          artist: string;
+          points: number;
+          songs: Hot100Row[];
+          albums: AlbumEntry[];
+          bestHot100Rank: number;
+          bestAlbumRank: number;
+        }>;
+
+      if (useNewScoring) {
+        /* ===============================================
+         * NEW METHODOLOGY
+         * ============================================= */
+
+        const hot100Scores =
+          normalizeCategoryScores(
+            weeklyArtistData.map(
+              (artist) =>
+                artist.rawHot100Score
+            )
+          );
+
+        const albumScores =
+          normalizeCategoryScores(
+            weeklyArtistData.map(
+              (artist) =>
+                artist.rawAlbumsScore
+            )
+          );
+
+        artistRows =
+          weeklyArtistData.map(
+            (artist, index) => {
+              const numberOneBonus =
+                calculateNumberOneBonus(
+                  artist.songs,
+                  artist.albums
+                );
+
+              const finalScore =
+                hot100Scores[index] +
+                albumScores[index] +
+                numberOneBonus;
+
+              return {
+                artist: artist.artist,
+                points: finalScore,
+                songs: artist.songs,
+                albums: artist.albums,
+                bestHot100Rank:
+                  artist.bestHot100Rank,
+                bestAlbumRank:
+                  artist.bestAlbumRank,
+              };
+            }
+          );
+      } else {
+        /* ===============================================
+         * ORIGINAL METHODOLOGY
+         *
+         * This preserves historical scoring.
+         * ============================================= */
+
+        artistRows =
+          weeklyArtistData.map(
+            (artist) => {
+              const hot100Points =
+                artist.songs.reduce(
+                  (sum, song) =>
+                    sum + song.points,
+                  0
+                );
+
+              const albumPoints =
+                artist.albums.reduce(
+                  (sum, album) =>
+                    sum +
+                    album.units / 100 / 2,
+                  0
+                );
+
+              return {
+                artist: artist.artist,
+
+                points:
+                  hot100Points +
+                  albumPoints,
+
+                songs: artist.songs,
+                albums: artist.albums,
+
+                bestHot100Rank:
+                  artist.bestHot100Rank,
+
+                bestAlbumRank:
+                  artist.bestAlbumRank,
+              };
+            }
+          );
       }
 
       /* ===================================================
        * SORT ARTISTS
        *
        * Primary:
-       *     Artist points
+       *     Artist Chart score
        *
        * Tiebreaker:
-       *     Best individual Hot 100 rank
+       *     Best Hot 100 rank
+       *
+       * New methodology only:
+       *     Best album rank as second tiebreaker
        * ================================================= */
 
       artistRows.sort(
         (a, b) => {
           if (
-            b.points !==
-            a.points
+            Math.abs(
+              b.points - a.points
+            ) > 0.000001
           ) {
             return (
               b.points -
@@ -1084,26 +1554,24 @@ export async function fetchWeeklyArtistData(
             );
           }
 
-          const bestA =
-            Math.min(
-              ...a.songs.map(
-                (song) =>
-                  song.rank
-              )
+          if (
+            a.bestHot100Rank !==
+            b.bestHot100Rank
+          ) {
+            return (
+              a.bestHot100Rank -
+              b.bestHot100Rank
             );
+          }
 
-          const bestB =
-            Math.min(
-              ...b.songs.map(
-                (song) =>
-                  song.rank
-              )
+          if (useNewScoring) {
+            return (
+              a.bestAlbumRank -
+              b.bestAlbumRank
             );
+          }
 
-          return (
-            bestA -
-            bestB
-          );
+          return 0;
         }
       );
 
@@ -1112,10 +1580,7 @@ export async function fetchWeeklyArtistData(
        * ================================================= */
 
       const top20 =
-        artistRows.slice(
-          0,
-          20
-        );
+        artistRows.slice(0, 20);
 
       /* ===================================================
        * PREVIOUS WEEK
@@ -1128,17 +1593,27 @@ export async function fetchWeeklyArtistData(
 
       const previousWeek =
         previousIndex >= 0
-          ? chronologicalWeeks[
-              previousIndex
-            ]
+          ? chronologicalWeeks[previousIndex]
           : null;
 
       const previousEntries =
         previousWeek
-          ? entriesByWeek[
-              previousWeek
-            ] ?? []
+          ? entriesByWeek[previousWeek] ?? []
           : [];
+
+      /* ===================================================
+       * CHECK WHETHER POINTS ARE COMPARABLE
+       *
+       * Do not compare old raw points against the new
+       * normalized score during the transition week.
+       * ================================================= */
+
+      const canComparePreviousPoints =
+        previousWeek !== null &&
+        (
+          usesNewMethodology(previousWeek) ===
+          useNewScoring
+        );
 
       /* ===================================================
        * CREATE WEEKLY ENTRIES
@@ -1146,59 +1621,34 @@ export async function fetchWeeklyArtistData(
 
       const currentEntries =
         top20.map(
-          (
-            artistRow,
-            index
-          ) => {
-            const rank =
-              index + 1;
+          (artistRow, index) => {
+            const rank = index + 1;
 
             const key =
-              normalize(
-                artistRow.artist
-              );
+              normalize(artistRow.artist);
 
-            /*
-             * Find previous week's
-             * entry for this artist.
-             *
-             * This gives us BOTH:
-             *
-             * - previous rank
-             * - previous total points
-             */
             const previousEntry =
               previousEntries.find(
-                (
-                  entry
-                ) =>
-                  normalize(
-                    entry.artist
-                  ) === key
+                (entry) =>
+                  normalize(entry.artist) === key
               );
 
             const lastWeekRank =
-              previousEntry
-                ?.rank ?? null;
+              previousEntry?.rank ?? null;
 
-            /*
-             * Previous career history.
-             */
+            /* Previous career history */
+
             const history =
-              artistChartHistory[
-                key
-              ];
+              artistChartHistory[key];
 
             const hadPriorAppearance =
               Boolean(
                 history &&
-                history.weeks >
-                  0
+                history.weeks > 0
               );
 
-            /*
-             * Peak position.
-             */
+            /* Peak position */
+
             const peak =
               history
                 ? Math.min(
@@ -1207,32 +1657,25 @@ export async function fetchWeeklyArtistData(
                   )
                 : rank;
 
-            /*
-             * Weeks on Artist Chart.
-             */
+            /* Weeks on Artist Chart */
+
             const weeks =
               history
-                ? history.weeks +
-                  1
+                ? history.weeks + 1
                 : 1;
 
-            /*
-             * Weeks at #1.
-             */
+            /* Weeks at number one */
+
             const weeksAtNumberOne =
               history
                 ? history.weeksAtNumberOne +
-                  (rank === 1
-                    ? 1
-                    : 0)
+                  (rank === 1 ? 1 : 0)
                 : rank === 1
                   ? 1
                   : 0;
 
-            /*
-             * Build the complete chart
-             * history, including this week.
-             */
+            /* Complete chart history */
+
             const chartHistory = [
               ...(history?.chartHistory ?? []),
               {
@@ -1241,30 +1684,22 @@ export async function fetchWeeklyArtistData(
               },
             ];
 
-            /*
-             * Save updated history.
-             */
-            artistChartHistory[
-              key
-            ] = {
+            /* Save updated history */
+
+            artistChartHistory[key] = {
               peak,
               weeks,
               weeksAtNumberOne,
               chartHistory,
             };
 
-            /*
-             * Official artist information
-             * from Artists sheet.
-             */
-            const officialArtist =
-              officialArtistMap.get(
-                key
-              );
+            /* Official artist information */
 
-            /*
-             * Movement icon.
-             */
+            const officialArtist =
+              officialArtistMap.get(key);
+
+            /* Movement */
+
             const movementIcon =
               getMovementIcon(
                 rank,
@@ -1272,17 +1707,18 @@ export async function fetchWeeklyArtistData(
                 hadPriorAppearance
               );
 
-            /*
-             * Bullet.
-             *
-             * This checks both
-             * movement AND total points.
-             */
+            /* Blue bullet */
+
+            const comparablePreviousEntry =
+              canComparePreviousPoints
+                ? previousEntry
+                : undefined;
+
             const showBullet =
               getShowBullet(
                 movementIcon,
                 artistRow.points,
-                previousEntry
+                comparablePreviousEntry
               );
 
             return {
@@ -1290,58 +1726,30 @@ export async function fetchWeeklyArtistData(
 
               chartHistory,
 
-              /*
-               * Rank.
-               */
               rank,
 
-              /*
-               * Prefer exact official
-               * artist name from Column A.
-               */
               artist:
                 officialArtist?.name ??
                 artistRow.artist,
 
-              /*
-               * Column O artwork ONLY.
-               */
               artwork:
                 officialArtist?.artwork,
 
-              /*
-               * Calculated artist points.
-               */
               points:
                 artistRow.points,
 
-              /*
-               * Previous week's position.
-               */
               lastWeekRank,
 
-              /*
-               * Movement.
-               */
               movementIcon,
 
-              /*
-               * Arrow.
-               */
               arrow:
                 getArrow(
                   rank,
                   lastWeekRank
                 ),
 
-              /*
-               * Blue bullet.
-               */
               showBullet,
 
-              /*
-               * Career statistics.
-               */
               peakPosition:
                 peak,
 
@@ -1349,17 +1757,14 @@ export async function fetchWeeklyArtistData(
                 weeks,
 
               songsOnChart:
-                artistRow.songs
-                  .length,
+                artistRow.songs.length,
 
               weeksAtNumberOne,
             };
           }
         );
 
-      entriesByWeek[
-        currentWeek
-      ] =
+      entriesByWeek[currentWeek] =
         currentEntries;
     }
 
@@ -1368,9 +1773,7 @@ export async function fetchWeeklyArtistData(
      * =================================================== */
 
     const selectedEntries =
-      entriesByWeek[
-        week
-      ] ?? [];
+      entriesByWeek[week] ?? [];
 
     console.log(
       `[weeklyArtistData] Selected week entries: ${selectedEntries.length}`
@@ -1384,6 +1787,14 @@ export async function fetchWeeklyArtistData(
       );
     }
 
+    console.log(
+      `[weeklyArtistData] Methodology for ${week}: ${
+        usesNewMethodology(week)
+          ? 'NEW 50/50 WEIGHTED SYSTEM'
+          : 'ORIGINAL POINTS SYSTEM'
+      }`
+    );
+
     /* =====================================================
      * RETURN
      * =================================================== */
@@ -1392,9 +1803,7 @@ export async function fetchWeeklyArtistData(
       week,
 
       displayWeek:
-        formatDateLabel(
-          week
-        ),
+        formatDateLabel(week),
 
       availableWeeks,
 
