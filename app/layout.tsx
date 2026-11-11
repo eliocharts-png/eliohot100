@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import PromoBanner from '@/components/PromoBanner';
 
 const crystalBook = localFont({
   src: '../public/fonts/Crystal-Book.woff2',
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body
         className={`${crystalBook.variable} ${crystalExtraBold.variable} ${gothamBlack.variable} ${gothamRegular.variable}`}
       >
+        <PromoBanner />
         <SiteHeader />
 
         <div className="site-content">

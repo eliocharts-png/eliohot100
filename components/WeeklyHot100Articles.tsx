@@ -52,13 +52,6 @@ type WeeklyHot100ArticlesProps = {
   weeklyData: WeeklyChartPayload;
 };
 
-type MediumArticle = {
-  title: string;
-  link: string;
-  pubDate: string;
-  thumbnail: string;
-};
-
 type GeneratedArticle = {
   type: 'generated';
   id: string;
@@ -67,15 +60,6 @@ type GeneratedArticle = {
   cover: string;
   date: Date;
 };
-
-type HomepageArticle =
-  | GeneratedArticle
-  | {
-      type: 'medium';
-      id: string;
-      article: MediumArticle;
-      date: Date;
-    };
 
 /* =========================================================
    DATE HELPERS
@@ -148,12 +132,6 @@ function getRelativeTime(date: Date): string {
   return formatArticleDate(date);
 }
 
-function parseMediumDate(value: string): Date | null {
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 /* =========================================================
    COVER IMAGES
 ========================================================= */
@@ -191,71 +169,6 @@ function getCoverImage(
       topEntry?.artist ??
       fallbackTitle,
   );
-}
-
-/* =========================================================
-   MEDIUM ARTICLES
-========================================================= */
-
-function getMediumThumbnail(item: any): string {
-  if (
-    typeof item.thumbnail === 'string' &&
-    item.thumbnail
-  ) {
-    return item.thumbnail;
-  }
-
-  if (typeof item.description === 'string') {
-    const imageMatch = item.description.match(
-      /<img[^>]+src=["']([^"']+)["']/i,
-    );
-
-    if (imageMatch?.[1]) {
-      return imageMatch[1];
-    }
-  }
-
-  return getFallbackImage(item.title ?? 'Medium');
-}
-
-async function fetchMediumArticles(): Promise<MediumArticle[]> {
-  const feedUrl = 'https://medium.com/feed/@eliocharts';
-
-  const apiUrl =
-    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
-      feedUrl,
-    )}`;
-
-  const response = await fetch(apiUrl);
-
-  if (!response.ok) {
-    throw new Error(
-      `Medium request failed: ${response.status}`,
-    );
-  }
-
-  const data = await response.json();
-
-  if (
-    data.status !== 'ok' ||
-    !Array.isArray(data.items)
-  ) {
-    throw new Error('Invalid Medium feed');
-  }
-
-  return data.items
-    .map((item: any) => ({
-      title: String(item.title ?? '').trim(),
-      link: String(item.link ?? '').trim(),
-      pubDate: String(item.pubDate ?? '').trim(),
-      thumbnail: getMediumThumbnail(item),
-    }))
-    .filter(
-      (article: MediumArticle) =>
-        article.title &&
-        article.link &&
-        article.pubDate,
-    );
 }
 
 /* =========================================================
@@ -299,48 +212,6 @@ function ArticleCard({
   );
 }
 
-function MediumArticleCard({
-  article,
-}: {
-  article: MediumArticle;
-}) {
-  const articleDate = parseMediumDate(article.pubDate);
-
-  if (!articleDate) return null;
-
-  return (
-    <article className="min-w-0">
-      <a
-        href={article.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group block"
-      >
-        <div className="relative aspect-[16/9] w-full overflow-hidden bg-black">
-          <img
-            src={article.thumbnail}
-            alt=""
-            className="h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-90"
-            onError={(event) => {
-              event.currentTarget.src = getFallbackImage(
-                article.title,
-              );
-            }}
-          />
-        </div>
-
-        <h3 className="mt-3 font-brown-bold text-base leading-[1.08] tracking-[-0.025em] text-black transition-colors duration-150 group-hover:text-[#0050FF] sm:text-lg">
-          {article.title}
-        </h3>
-
-        <p className="mt-2 font-brown-regular text-[0.58rem] uppercase tracking-[0.12em] text-black/40 sm:text-[0.62rem]">
-          {getRelativeTime(articleDate)}
-        </p>
-      </a>
-    </article>
-  );
-}
-
 /* =========================================================
    CHART BEAT
 ========================================================= */
@@ -353,9 +224,6 @@ export default function WeeklyHot100Articles({
 
   const [artistData, setArtistData] =
     useState<WeeklyArtistPayload | null>(null);
-
-  const [mediumArticles, setMediumArticles] =
-    useState<MediumArticle[]>([]);
 
   /* =========================================================
      LOAD TOP RECORDS
@@ -409,35 +277,6 @@ export default function WeeklyHot100Articles({
     }
 
     void loadArtists();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  /* =========================================================
-     LOAD MEDIUM
-  ========================================================= */
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadMedium() {
-      try {
-        const articles = await fetchMediumArticles();
-
-        if (!cancelled) {
-          setMediumArticles(articles);
-        }
-      } catch (error) {
-        console.error(
-          'Failed to load Medium articles:',
-          error,
-        );
-      }
-    }
-
-    void loadMedium();
 
     return () => {
       cancelled = true;
@@ -576,45 +415,23 @@ export default function WeeklyHot100Articles({
      COMBINE ARTICLES
   ========================================================= */
 
-  const combinedArticles = useMemo<HomepageArticle[]>(() => {
-    const generated = [
+  const combinedArticles = useMemo<GeneratedArticle[]>(() => {
+    return [
       hot100Article,
       albumArticle,
       artistArticle,
-    ].filter(
-      (article): article is GeneratedArticle =>
-        article !== null,
-    );
-
-    const medium = mediumArticles
-      .map((article) => {
-        const date = parseMediumDate(article.pubDate);
-
-        if (!date) return null;
-
-        return {
-          type: 'medium' as const,
-          id: `medium-${article.link}`,
-          article,
-          date,
-        };
-      })
+    ]
       .filter(
-        (
-          article,
-        ): article is NonNullable<typeof article> =>
+        (article): article is GeneratedArticle =>
           article !== null,
       )
-      .slice(0, 1);
-
-    return [...generated, ...medium].sort(
-      (a, b) => b.date.getTime() - a.date.getTime(),
-    );
+      .sort(
+        (a, b) => b.date.getTime() - a.date.getTime(),
+      );
   }, [
     hot100Article,
     albumArticle,
     artistArticle,
-    mediumArticles,
   ]);
 
   if (combinedArticles.length === 0) {
@@ -647,26 +464,15 @@ export default function WeeklyHot100Articles({
       </div>
 
       <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-        {combinedArticles.map((item) => {
-          if (item.type === 'medium') {
-            return (
-              <MediumArticleCard
-                key={item.id}
-                article={item.article}
-              />
-            );
-          }
-
-          return (
-            <ArticleCard
-              key={item.id}
-              title={item.title}
-              href={item.href}
-              cover={item.cover}
-              date={item.date}
-            />
-          );
-        })}
+        {combinedArticles.map((item) => (
+          <ArticleCard
+            key={item.id}
+            title={item.title}
+            href={item.href}
+            cover={item.cover}
+            date={item.date}
+          />
+        ))}
       </div>
     </section>
   );

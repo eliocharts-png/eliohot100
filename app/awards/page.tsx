@@ -1297,7 +1297,7 @@ function AwardsContent() {
     selectedYear,
     setSelectedYear,
   ] = useState(
-    urlYear ?? '2025'
+    urlYear ?? '2026'
   );
 
   const [
@@ -1345,6 +1345,7 @@ function AwardsContent() {
 
   const years = useMemo(
     () => [
+      '2026',
       '2025',
       '2024',
       '2023',
