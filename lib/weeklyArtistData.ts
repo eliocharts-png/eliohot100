@@ -1,4 +1,3 @@
-
 import Papa from 'papaparse';
 
 import {
@@ -83,38 +82,38 @@ const TOP_RECORDS_CSV_URL =
 
 const TOP_RECORDS_START_DATE = '11/5/26';
 
+const NEW_METHODOLOGY_START_DATE = '11/5/26';
+
 /* =========================================================
  * NEW ARTIST CHART METHODOLOGY
  *
  * Effective November 5, 2026 onward.
  *
- * Hot 100 performance = 50 points
- * Albums performance = 50 points
+ * HOT 100:
+ * - Sum the raw points of all charting songs.
+ * - No weighting or normalization.
+ * - Overall #1 song = +50 points.
  *
- * Within each category:
- * Best entry = 70%
- * Remaining entries = 30%
+ * TOP RECORDS:
+ * - Album base points = units / 200 / 2.
+ * - Albums are ordered by chart rank.
+ * - Best-ranked album receives 100%.
+ * - Second-best receives 50%.
+ * - Third-best receives 25%.
+ * - Fourth-best receives 12.5%, etc.
+ * - Overall #1 album = +50 points.
  *
- * Additional entries use diminishing weights:
- * 50%, 25%, 12.5%, 6.25%, etc.
+ * No category normalization.
+ * No additional simultaneous #1 bonus.
  *
- * #1 Hot 100 song = +5
- * #1 album = +5
- * Both simultaneously = additional +5
- *
- * Maximum possible score = 115
+ * Historical weeks before November 12, 2026
+ * retain the original scoring methodology.
  * ======================================================= */
 
-const CATEGORY_MAX_SCORE = 50;
+const ADDITIONAL_ALBUM_DECAY = 0.50;
 
-const BEST_ENTRY_WEIGHT = 0.70;
-const REMAINING_ENTRIES_WEIGHT = 0.30;
-
-const ADDITIONAL_ENTRY_DECAY = 0.50;
-
-const NUMBER_ONE_SONG_BONUS = 5;
-const NUMBER_ONE_ALBUM_BONUS = 5;
-const DOUBLE_NUMBER_ONE_BONUS = 5;
+const NUMBER_ONE_SONG_BONUS = 50;
+const NUMBER_ONE_ALBUM_BONUS = 50;
 
 /* =========================================================
  * TYPES
@@ -233,7 +232,7 @@ function usesNewMethodology(
 ): boolean {
   return (
     parseDate(week) >=
-    parseDate(TOP_RECORDS_START_DATE)
+    parseDate(NEW_METHODOLOGY_START_DATE)
   );
 }
 
@@ -753,119 +752,57 @@ async function fetchTopRecords(): Promise<
 }
 
 /* =========================================================
- * DIMINISHING ENTRY SCORE
+ * WEIGHTED ALBUM SCORE
  *
- * Best entry receives 70%.
+ * Albums are sorted by chart rank.
  *
- * Remaining entries share 30%.
- * Their relative weights are:
+ * First album: 100%
+ * Second album: 50%
+ * Third album: 25%
+ * Fourth album: 12.5%
+ * Fifth album: 6.25%
+ * And so on.
  *
- * 50%, 25%, 12.5%, 6.25%, etc.
- *
- * If an artist has only one entry, that entry
- * receives its full value.
+ * Base album points = units / 200 / 2.
  * ======================================================= */
 
-function calculateWeightedEntryScore(
-  values: number[]
+function calculateWeightedAlbumScore(
+  albums: AlbumEntry[]
 ): number {
-  const sorted =
-    values
-      .filter(
-        (value) =>
-          Number.isFinite(value) &&
-          value > 0
-      )
-      .sort(
-        (a, b) => b - a
-      );
-
-  if (sorted.length === 0) {
-    return 0;
-  }
-
-  const bestEntry =
-    sorted[0];
-
-  if (sorted.length === 1) {
-    return bestEntry;
-  }
-
-  const additionalEntries =
-    sorted.slice(1);
-
-  const weights =
-    additionalEntries.map(
-      (_, index) =>
-        Math.pow(
-          ADDITIONAL_ENTRY_DECAY,
-          index
-        )
-    );
-
-  const totalWeight =
-    weights.reduce(
-      (sum, weight) =>
-        sum + weight,
-      0
-    );
-
-  const weightedAdditionalScore =
-    additionalEntries.reduce(
-      (sum, value, index) =>
-        sum +
-        value *
-          (
-            weights[index] /
-            totalWeight
-          ),
-      0
-    );
-
-  return (
-    bestEntry *
-      BEST_ENTRY_WEIGHT +
-    weightedAdditionalScore *
-      REMAINING_ENTRIES_WEIGHT
+  const sorted = [
+    ...albums,
+  ].sort(
+    (a, b) =>
+      a.rank - b.rank
   );
-}
 
-/* =========================================================
- * CATEGORY NORMALIZATION
- *
- * The strongest artist in each category receives
- * the full 50 points available for that category.
- *
- * Every other artist receives a proportional score.
- * ======================================================= */
+  return sorted.reduce(
+    (total, album, index) => {
+      const basePoints =
+        album.units / 200 / 2;
 
-function normalizeCategoryScores(
-  rawScores: number[]
-): number[] {
-  const maximum =
-    Math.max(
-      0,
-      ...rawScores
-    );
+      const weight =
+        Math.pow(
+          ADDITIONAL_ALBUM_DECAY,
+          index
+        );
 
-  if (maximum <= 0) {
-    return rawScores.map(
-      () => 0
-    );
-  }
-
-  return rawScores.map(
-    (score) =>
-      (
-        score /
-        maximum
-      ) *
-      CATEGORY_MAX_SCORE
+      return (
+        total +
+        basePoints * weight
+      );
+    },
+    0
   );
 }
 
 /* =========================================================
  * NUMBER ONE BONUS
+ *
+ * #1 Hot 100 song = +50
+ * #1 album = +50
+ *
+ * No additional simultaneous #1 bonus.
  * ======================================================= */
 
 function calculateNumberOneBonus(
@@ -884,27 +821,14 @@ function calculateNumberOneBonus(
         album.rank === 1
     );
 
-  let bonus = 0;
-
-  if (hasNumberOneSong) {
-    bonus +=
-      NUMBER_ONE_SONG_BONUS;
-  }
-
-  if (hasNumberOneAlbum) {
-    bonus +=
-      NUMBER_ONE_ALBUM_BONUS;
-  }
-
-  if (
-    hasNumberOneSong &&
-    hasNumberOneAlbum
-  ) {
-    bonus +=
-      DOUBLE_NUMBER_ONE_BONUS;
-  }
-
-  return bonus;
+  return (
+    (hasNumberOneSong
+      ? NUMBER_ONE_SONG_BONUS
+      : 0) +
+    (hasNumberOneAlbum
+      ? NUMBER_ONE_ALBUM_BONUS
+      : 0)
+  );
 }
 
 /* =========================================================
@@ -1397,17 +1321,15 @@ export async function fetchWeeklyArtistData(
           albums: data.albums,
 
           rawHot100Score:
-            calculateWeightedEntryScore(
-              data.songs.map(
-                (song) => song.points
-              )
+            data.songs.reduce(
+              (sum, song) =>
+                sum + song.points,
+              0
             ),
 
           rawAlbumsScore:
-            calculateWeightedEntryScore(
-              data.albums.map(
-                (album) => album.units
-              )
+            calculateWeightedAlbumScore(
+              data.albums
             ),
 
           bestHot100Rank,
@@ -1418,12 +1340,13 @@ export async function fetchWeeklyArtistData(
       /* ===================================================
        * CALCULATE ARTIST SCORES
        *
-       * BEFORE NOVEMBER 5, 2026:
+       * BEFORE NOVEMBER 12, 2026:
        * Original methodology:
        * Hot 100 points + album units / 100 / 2
        *
-       * NOVEMBER 5, 2026 ONWARD:
-       * New weighted 50/50 methodology.
+       * NOVEMBER 12, 2026 ONWARD:
+       * Raw Hot 100 points + weighted album points
+       * + applicable #1 bonuses.
        * ================================================= */
 
       let artistRows:
@@ -1441,25 +1364,9 @@ export async function fetchWeeklyArtistData(
          * NEW METHODOLOGY
          * ============================================= */
 
-        const hot100Scores =
-          normalizeCategoryScores(
-            weeklyArtistData.map(
-              (artist) =>
-                artist.rawHot100Score
-            )
-          );
-
-        const albumScores =
-          normalizeCategoryScores(
-            weeklyArtistData.map(
-              (artist) =>
-                artist.rawAlbumsScore
-            )
-          );
-
         artistRows =
           weeklyArtistData.map(
-            (artist, index) => {
+            (artist) => {
               const numberOneBonus =
                 calculateNumberOneBonus(
                   artist.songs,
@@ -1467,8 +1374,8 @@ export async function fetchWeeklyArtistData(
                 );
 
               const finalScore =
-                hot100Scores[index] +
-                albumScores[index] +
+                artist.rawHot100Score +
+                artist.rawAlbumsScore +
                 numberOneBonus;
 
               return {
@@ -1576,6 +1483,88 @@ export async function fetchWeeklyArtistData(
       );
 
       /* ===================================================
+       * NOVEMBER 12 DIAGNOSTIC
+       *
+       * Shows the Top 50 for the selected week.
+       * ================================================= */
+
+      if (
+        useNewScoring &&
+        currentWeek === week
+      ) {
+        const debugRows = artistRows
+          .slice(0, 50)
+          .map((artistRow, index) => {
+            const sourceIndex =
+              weeklyArtistData.findIndex(
+                (artist) =>
+                  normalize(artist.artist) ===
+                  normalize(artistRow.artist)
+              );
+
+            const source =
+              weeklyArtistData[sourceIndex];
+
+            if (!source) return null;
+
+            const hasNumberOneSong =
+              source.songs.some(
+                (song) => song.rank === 1
+              );
+
+            const hasNumberOneAlbum =
+              source.albums.some(
+                (album) => album.rank === 1
+              );
+
+            return {
+              Rank: index + 1,
+              Artist: artistRow.artist,
+
+              Hot100Songs: source.songs.length,
+
+              Hot100RawPoints:
+                source.rawHot100Score,
+
+              Hot100Score:
+                Number(
+                  source.rawHot100Score.toFixed(2)
+                ),
+
+              Albums: source.albums.length,
+
+              AlbumUnits:
+                source.albums.reduce(
+                  (sum, album) => sum + album.units,
+                  0
+                ),
+
+              AlbumScore:
+                Number(
+                  source.rawAlbumsScore.toFixed(2)
+                ),
+
+              SongNo1Bonus:
+                hasNumberOneSong ? 50 : 0,
+
+              AlbumNo1Bonus:
+                hasNumberOneAlbum ? 50 : 0,
+
+              Total:
+                Number(artistRow.points.toFixed(2)),
+            };
+          })
+          .filter(Boolean);
+
+        console.log('\n========================================');
+        console.log(`ARTIST POINTS BREAKDOWN: ${currentWeek}`);
+        console.log('NEW RAW HOT 100 + WEIGHTED ALBUM SYSTEM');
+        console.log('========================================');
+
+        console.table(debugRows);
+      }
+
+      /* ===================================================
        * TOP 20
        * ================================================= */
 
@@ -1605,7 +1594,7 @@ export async function fetchWeeklyArtistData(
        * CHECK WHETHER POINTS ARE COMPARABLE
        *
        * Do not compare old raw points against the new
-       * normalized score during the transition week.
+       * scoring system during the transition week.
        * ================================================= */
 
       const canComparePreviousPoints =
@@ -1790,7 +1779,7 @@ export async function fetchWeeklyArtistData(
     console.log(
       `[weeklyArtistData] Methodology for ${week}: ${
         usesNewMethodology(week)
-          ? 'NEW 50/50 WEIGHTED SYSTEM'
+          ? 'NEW RAW HOT 100 + WEIGHTED ALBUM SYSTEM'
           : 'ORIGINAL POINTS SYSTEM'
       }`
     );

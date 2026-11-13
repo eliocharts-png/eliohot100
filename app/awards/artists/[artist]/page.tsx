@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -1805,22 +1806,15 @@ export default function AwardsArtistPage() {
                         text-[2rem]
                         uppercase
                         tracking-[-0.05em]
+                        leading-[0.9]
                         sm:text-[3.2rem]
                         lg:text-[3.8rem]
                         xl:text-[4.2rem]
                       "
                     >
-                      {artistName.split(/\s+/).map((word, index) => (
-                        <span
-                          key={`${word}-${index}`}
-                          className="block"
-                          style={{
-                            lineHeight: 0.85,
-                          }}
-                        >
-                          {word}
-                        </span>
-                      ))}
+                      {artistName
+                        .trim()
+                        .replace(/\s+(?=\S+$)/, '\u00A0')}
                     </h1>
 
                     <div className="mt-10">
@@ -1841,9 +1835,9 @@ export default function AwardsArtistPage() {
                           <p
                             className="
                               font-brown-bold
-                              text-4xl
+                              text-5xl
                               leading-none
-                              sm:text-6xl
+                              sm:text-7xl
                             "
                           >
                             {totalWins}
@@ -1875,9 +1869,9 @@ export default function AwardsArtistPage() {
                           <p
                             className="
                               font-brown-bold
-                              text-4xl
+                              text-5xl
                               leading-none
-                              sm:text-6xl
+                              sm:text-7xl
                             "
                           >
                             {totalNominations}

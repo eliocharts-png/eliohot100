@@ -58,7 +58,6 @@ type GeneratedArticle = {
   title: string;
   href: string;
   cover: string;
-  date: Date;
 };
 
 /* =========================================================
@@ -102,8 +101,11 @@ function formatArticleDate(date: Date): string {
   });
 }
 
-function getRelativeTime(date: Date): string {
-  const difference = Date.now() - date.getTime();
+function getRelativeTime(
+  date: Date,
+  now: number,
+): string {
+  const difference = now - date.getTime();
 
   if (difference < 0) return 'just now';
 
@@ -125,11 +127,7 @@ function getRelativeTime(date: Date): string {
 
   const days = Math.floor(hours / 24);
 
-  if (days <= 3) {
-    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-  }
-
-  return formatArticleDate(date);
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
 /* =========================================================
@@ -179,13 +177,24 @@ function ArticleCard({
   title,
   href,
   cover,
-  date,
+  publishedAt,
+  now,
 }: {
   title: string;
   href: string;
   cover: string;
-  date: Date;
+  publishedAt: string | undefined;
+  now: number;
 }) {
+  const publishedDate = publishedAt
+    ? new Date(publishedAt)
+    : null;
+
+  const relativeTime =
+    publishedDate && !Number.isNaN(publishedDate.getTime())
+      ? getRelativeTime(publishedDate, now)
+      : null;
+
   return (
     <article className="min-w-0">
       <a href={href} className="group block">
@@ -204,9 +213,11 @@ function ArticleCard({
           {title}
         </h3>
 
-        <p className="mt-2 font-brown-regular text-[0.58rem] uppercase tracking-[0.12em] text-black/40 sm:text-[0.62rem]">
-          {getRelativeTime(date)}
-        </p>
+        {relativeTime && (
+          <p className="mt-2 font-brown-regular text-[0.58rem] uppercase tracking-[0.12em] text-black/40 sm:text-[0.62rem]">
+            {relativeTime}
+          </p>
+        )}
       </a>
     </article>
   );
@@ -224,6 +235,23 @@ export default function WeeklyHot100Articles({
 
   const [artistData, setArtistData] =
     useState<WeeklyArtistPayload | null>(null);
+
+  const [timestamps, setTimestamps] =
+    useState<Record<string, string>>({});
+
+  const [now, setNow] = useState(() => Date.now());
+
+  /* =========================================================
+     REFRESH RELATIVE TIMESTAMPS
+  ========================================================= */
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   /* =========================================================
      LOAD TOP RECORDS
@@ -309,17 +337,12 @@ export default function WeeklyHot100Articles({
 
     if (!article) return null;
 
-    const date = parseChartDate(week);
-
-    if (!date) return null;
-
     return {
       type: 'generated',
       id: `hot100-${week}`,
       title: getWeeklyHot100ArticleTitle(analysis),
       href: `/articles/${encodeURIComponent(week)}`,
       cover: getCoverImage(entries, 'Elio Hot 100'),
-      date,
     };
   }, [weeklyData]);
 
@@ -354,17 +377,12 @@ export default function WeeklyHot100Articles({
 
     if (!article) return null;
 
-    const date = parseChartDate(week);
-
-    if (!date) return null;
-
     return {
       type: 'generated',
       id: `albums-${week}`,
       title: getWeeklyAlbumArticleTitle(analysis),
       href: `/articles/albums/${encodeURIComponent(week)}`,
       cover: getCoverImage(entries, 'Top Records'),
-      date,
     };
   }, [albumData]);
 
@@ -397,17 +415,12 @@ export default function WeeklyHot100Articles({
 
     if (!article) return null;
 
-    const date = parseChartDate(week);
-
-    if (!date) return null;
-
     return {
       type: 'generated',
       id: `artists-${week}`,
       title: getWeeklyArtistArticleTitle(analysis),
       href: `/articles/artists/${encodeURIComponent(week)}`,
       cover: getCoverImage(entries, 'Artist Chart'),
-      date,
     };
   }, [artistData]);
 
@@ -424,15 +437,112 @@ export default function WeeklyHot100Articles({
       .filter(
         (article): article is GeneratedArticle =>
           article !== null,
-      )
-      .sort(
-        (a, b) => b.date.getTime() - a.date.getTime(),
       );
   }, [
     hot100Article,
     albumArticle,
     artistArticle,
   ]);
+
+  /* =========================================================
+     LOAD PERMANENT PUBLICATION TIMESTAMPS
+  ========================================================= */
+
+  const articleIds = combinedArticles
+    .map((article) => article.id)
+    .join('|');
+
+  useEffect(() => {
+    if (!articleIds) return;
+
+    let cancelled = false;
+
+    async function loadTimestamps() {
+      const ids = articleIds.split('|');
+
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const response = await fetch(
+              '/api/article-timestamps',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id }),
+                cache: 'no-store',
+              },
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `Timestamp request failed: ${response.status}`,
+              );
+            }
+
+            const result = await response.json();
+
+            if (!result.success || !result.timestamp) {
+              throw new Error(
+                result.error || 'Timestamp unavailable',
+              );
+            }
+
+            return {
+              id,
+              timestamp: result.timestamp as string,
+            };
+          } catch (error) {
+            console.error(
+              `Failed to load timestamp for ${id}:`,
+              error,
+            );
+
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      setTimestamps((previous) => {
+        const updated = { ...previous };
+
+        for (const result of results) {
+          if (result) {
+            updated[result.id] = result.timestamp;
+          }
+        }
+
+        return updated;
+      });
+    }
+
+    void loadTimestamps();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [articleIds]);
+
+  /* =========================================================
+     SORT ARTICLES BY PUBLICATION TIME
+  ========================================================= */
+
+  const sortedArticles = useMemo(() => {
+    return [...combinedArticles].sort((a, b) => {
+      const dateA = timestamps[a.id]
+        ? new Date(timestamps[a.id]).getTime()
+        : 0;
+
+      const dateB = timestamps[b.id]
+        ? new Date(timestamps[b.id]).getTime()
+        : 0;
+
+      return dateB - dateA;
+    });
+  }, [combinedArticles, timestamps]);
 
   if (combinedArticles.length === 0) {
     return null;
@@ -464,13 +574,14 @@ export default function WeeklyHot100Articles({
       </div>
 
       <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-        {combinedArticles.map((item) => (
+        {sortedArticles.map((item) => (
           <ArticleCard
             key={item.id}
             title={item.title}
             href={item.href}
             cover={item.cover}
-            date={item.date}
+            publishedAt={timestamps[item.id]}
+            now={now}
           />
         ))}
       </div>
